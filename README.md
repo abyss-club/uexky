@@ -1,4 +1,4 @@
-# xboard (temporarily)
+# Uexky
 
 一个新的讨论版程序
 
