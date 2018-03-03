@@ -1,21 +1,17 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
-	"github.com/julienschmidt/httprouter"
+	"github.com/CrowsT/uexky/api"
+	"github.com/CrowsT/uexky/model"
 )
 
-func index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	res := map[string]string{"hello": "world"}
-	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
-}
-
 func main() {
-	router := httprouter.New()
-	router.GET("/", index)
+	if err := model.Dial("localhost"); err != nil {
+		log.Fatal(err)
+	}
+	router := api.NewRouter()
 	log.Fatal(http.ListenAndServe(":5000", router))
 }

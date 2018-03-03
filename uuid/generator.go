@@ -1,4 +1,4 @@
-package uuin
+package uuid
 
 import (
 	"crypto/rand"
