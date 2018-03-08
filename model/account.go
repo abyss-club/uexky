@@ -18,7 +18,8 @@ var tokenGenerator = uuid.Generator{Sections: []uuid.Section{
 
 // Account for uexky
 type Account struct {
-	Token string `json:"token" bson:"token"`
+	ID    bson.ObjectId `json:"-" bson:"_id"`
+	Token string        `json:"token" bson:"token"`
 }
 
 // NewAccount make a new account
@@ -28,7 +29,7 @@ func NewAccount() (*Account, error) {
 		return nil, err
 	}
 
-	account := &Account{token}
+	account := &Account{bson.NewObjectId(), token}
 	session := mongoSession.Copy()
 	accountColle := session.DB("test").C("accounts")
 	if err := accountColle.Insert(account); err != nil {
