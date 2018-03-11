@@ -13,13 +13,13 @@ type AccountResolver struct {
 
 // Account resolve query 'account'
 func (r *Resolver) Account(ctx context.Context, args struct{ Token string }) (*AccountResolver, error) {
-	account, err := model.GetAccount(args.Token)
+	account, err := model.GetAccount(ctx, args.Token)
 	return &AccountResolver{account}, err
 }
 
 // AddAccount resolve mutation 'addAccount'
 func (r *Resolver) AddAccount(ctx context.Context) (*AccountResolver, error) {
-	account, err := model.NewAccount()
+	account, err := model.NewAccount(ctx)
 	return &AccountResolver{account}, err
 }
 
