@@ -1,0 +1,16 @@
+schema {
+    query: Query
+    mutation: Mutation
+}
+
+type Query {
+    account(token: ID!): Account!
+}
+
+type Mutation {
+    addAccount(): Account!
+}
+
+type Account {
+    token: String
+}
