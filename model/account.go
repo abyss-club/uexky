@@ -1,12 +1,10 @@
 package model
 
 import (
-	"net/http"
+	"fmt"
 
-	"github.com/globalsign/mgo/bson"
-
-	"github.com/CrowsT/uexky/api"
 	"github.com/CrowsT/uexky/uuid"
+	"github.com/globalsign/mgo/bson"
 )
 
 var tokenGenerator = uuid.Generator{Sections: []uuid.Section{
@@ -46,7 +44,7 @@ func GetAccount(token string) (*Account, error) {
 	if count, err := query.Count(); err != nil {
 		return nil, err
 	} else if count == 0 {
-		return nil, &api.HTTPError{http.StatusNotFound, "Can't find User"}
+		return nil, fmt.Errorf("Can't find User '%s'", token)
 	}
 	if err := query.One(&account); err != nil {
 		return nil, err

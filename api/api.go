@@ -1,50 +1,28 @@
 package api
 
 import (
-	"encoding/json"
+	"io/ioutil"
+	"log"
 	"net/http"
 
+	graphql "github.com/graph-gophers/graphql-go"
+	"github.com/graph-gophers/graphql-go/relay"
 	"github.com/julienschmidt/httprouter"
 )
 
+// Resolver for graphql
+type Resolver struct {
+}
+
 // NewRouter make router with all apis
-func NewRouter() *httprouter.Router {
-	router := httprouter.New()
-	router.GET("/", index)
-	accountApis(router)
-	return router
-}
-
-func index(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-	jsonRes(w, map[string]string{"hello": "world"})
-}
-
-func jsonRes(w http.ResponseWriter, res interface{}) {
-	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(res)
-}
-
-func errRes(w http.ResponseWriter, err error) {
-	var status int
-	var message string
-	if httpError, ok := err.(HTTPError); ok {
-		status = httpError.Status
-		message = httpError.Message
-	} else {
-		status = 502
-		message = err.Error()
+func NewRouter(schemaFile string) http.Handler {
+	b, err := ioutil.ReadFile(schemaFile)
+	if err != nil {
+		log.Fatal(err)
 	}
-	res := map[string]string{"error": message}
-	jsonRes(w, res)
-	w.WriteHeader(errCode)
-}
+	schema := graphql.MustParseSchema(string(b), &Resolver{})
 
-// HTTPError is a error with http status code
-type HTTPError struct {
-	Status  int
-	Message string
-}
-
-func (e *HTTPError) Error() string {
-	return e.Message
+	handler := httprouter.New()
+	handler.Handler("POST", "/graphql/", &relay.Handler{Schema: schema})
+	return handler
 }

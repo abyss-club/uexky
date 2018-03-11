@@ -4,7 +4,7 @@ schema {
 }
 
 type Query {
-    account: Account!
+    account(token: ID!): Account!
 }
 
 type Mutation {

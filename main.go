@@ -14,11 +14,13 @@ import (
 
 var (
 	configFile string
+	serve      string
 	config     *Config
 )
 
 func init() {
 	flag.StringVar(&configFile, "c", "", "config file")
+	flag.StringVar(&serve, "s", ":5000", "server address")
 }
 
 func parseFlag() {
@@ -53,6 +55,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	router := api.NewRouter()
-	log.Fatal(http.ListenAndServe(":5000", router))
+	router := api.NewRouter(config.APISchemaFile)
+	log.Fatal(http.ListenAndServe(serve, router))
 }
