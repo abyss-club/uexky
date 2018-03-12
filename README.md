@@ -69,4 +69,10 @@
 
 # API
 
+* 原计划的 RESTful 风格的 API 设计：
+
 [API Reference](https://github.com/CrowsT/uexky/wiki/API-Reference)
+
+* 现在打算使用更好的 GraphQL API 来设计，功能上和之前的 RESTful API 保持一致，Schema 请见：
+
+[GraphQL Schema](https://github.com/CrowsT/uexky/blob/master/api/schema.gql)
