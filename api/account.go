@@ -12,8 +12,8 @@ type AccountResolver struct {
 }
 
 // Account resolve query 'account'
-func (r *Resolver) Account(ctx context.Context, args struct{ Token string }) (*AccountResolver, error) {
-	account, err := model.GetAccount(ctx, args.Token)
+func (r *Resolver) Account(ctx context.Context) (*AccountResolver, error) {
+	account, err := model.GetAccount(ctx)
 	return &AccountResolver{account}, err
 }
 

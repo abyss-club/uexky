@@ -46,15 +46,12 @@ func NewAccount(ctx context.Context) (*Account, error) {
 }
 
 // GetAccount by token
-func GetAccount(ctx context.Context, token string) (*Account, error) {
+func GetAccount(ctx context.Context) (*Account, error) {
 	account, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if account.Token != token {
-		return nil, fmt.Errorf("Forbidden")
-	}
 	return account, nil
 }
 
@@ -72,7 +69,7 @@ func requireSignIn(ctx context.Context) (*Account, error) {
 	if count, err := query.Count(); err != nil {
 		return nil, err
 	} else if count == 0 {
-		return nil, fmt.Errorf("Can't find User '%s'", token)
+		return nil, fmt.Errorf("Invalid token")
 	}
 	if err := query.One(&account); err != nil {
 		return nil, err

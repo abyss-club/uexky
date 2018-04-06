@@ -4,13 +4,56 @@ schema {
 }
 
 type Query {
-    account(token: ID!): Account!
+    account(): Account!
 }
 
 type Mutation {
     addAccount(): Account!
+    setUserName(name: String!): Account!
+    pubThread(new: NewThread!): Thread!
+    pubPost(new: NewPost!): Post!
 }
 
+// Data Type Defines
 type Account {
-    token: String
+    token: String!
+    userName: String
+}
+
+type NewThread {
+    anonymous: Bool!
+    content: String!
+    mainTag: String!
+    subTag: [String]
+    title: String
+}
+
+type Thread {
+    id: String!
+    anonymous: Bool!
+    author: String!
+    content: String!
+    createdAt: Time!
+
+    mainTag: String!
+    subTag: [String]
+    title: String
+    replies: [Post!]
+}
+
+type NewPost {
+    anonymous: Bool!
+    content: String!
+    refers: [String!]
+}
+
+type Post {
+    id: String!
+    anonymous: Bool!
+    author: String!
+    content: String!
+    createdAt: Time!
+
+    refers: [String!]
+    refereds: [String!]
 }
