@@ -7,9 +7,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/CrowsT/uexky/model"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/julienschmidt/httprouter"
+	"github.com/nanozuki/uexky/model"
 )
 
 // Resolver for graphql

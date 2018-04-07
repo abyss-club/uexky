@@ -1,0 +1,35 @@
+hash: 27e08bb92922b32b7b53d8162241d09a52a64a234c9663e9dd8c25709743eb9c
+updated: 2018-04-07T14:20:02.671868+08:00
+imports:
+- name: github.com/globalsign/mgo
+  version: f76e4f9da92ecd56e3be26f5ba92580af1ef97b4
+  subpackages:
+  - bson
+  - internal/json
+  - internal/sasl
+  - internal/scram
+- name: github.com/graph-gophers/graphql-go
+  version: 00d30350cd817f2cbe7534c7db42f7649f83b04c
+  subpackages:
+  - errors
+  - internal/common
+  - internal/exec
+  - internal/exec/packer
+  - internal/exec/resolvable
+  - internal/exec/selected
+  - internal/query
+  - internal/schema
+  - internal/validation
+  - introspection
+  - log
+  - trace
+- name: github.com/julienschmidt/httprouter
+  version: 8c199fb6259ffc1af525cc3ad52ee60ba8359669
+- name: github.com/opentracing/opentracing-go
+  version: 5a4c9c6b841c283274c4b55324f9da7257d8c211
+  subpackages:
+  - ext
+  - log
+- name: github.com/pkg/errors
+  version: 645ef00459ed84a119197bfb8d8205042c6df63d
+testImports: []

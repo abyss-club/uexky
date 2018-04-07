@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/CrowsT/uexky/uuid"
 	"github.com/globalsign/mgo/bson"
+	"github.com/nanozuki/uexky/uuid"
 )
 
 // CtxTokenKey is contxt key for token

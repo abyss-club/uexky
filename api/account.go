@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"github.com/CrowsT/uexky/model"
+	"github.com/nanozuki/uexky/model"
 )
 
 // AccountResolver for graphql

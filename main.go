@@ -7,8 +7,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/CrowsT/uexky/api"
-	"github.com/CrowsT/uexky/model"
+	"github.com/nanozuki/uexky/api"
+	"github.com/nanozuki/uexky/model"
 	"github.com/pkg/errors"
 )
 
