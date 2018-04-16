@@ -38,7 +38,14 @@ type Thread {
     mainTag: String!
     subTag: [String]
     title: String
-    replies: [Post!]
+    replies(first: Number! after: String): {
+        posts: [Post!]
+    }
+}
+
+type PageInfo {
+    firstCursor: String!
+    lastCursor: String!
 }
 
 type NewPost {
