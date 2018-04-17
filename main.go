@@ -23,19 +23,16 @@ func init() {
 	flag.StringVar(&serve, "s", ":5000", "server address")
 }
 
-func parseFlag() {
-	flag.Parse()
-	if configFile == "" {
-		log.Fatal("Must specified config file")
-	}
-}
-
 // Config for whole project, saved by json
 type Config struct {
 	APISchemaFile string `json:"api_schema"`
 }
 
-func readConfig() {
+func loadConfig() {
+	flag.Parse()
+	if configFile == "" {
+		log.Fatal("Must specified config file")
+	}
 	b, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "Read config error"))
@@ -48,8 +45,7 @@ func readConfig() {
 }
 
 func main() {
-	parseFlag()
-	readConfig()
+	loadConfig()
 
 	if err := model.Dial("localhost"); err != nil {
 		log.Fatal(err)
