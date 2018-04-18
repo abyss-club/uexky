@@ -5,6 +5,8 @@ schema {
 
 type Query {
     account(): Account!
+    threadSlice(tag: [String] first: Int! after: String): ThreadSlice!
+    thread(id: String): Thread!
 }
 
 type Mutation {
@@ -14,14 +16,21 @@ type Mutation {
     pubPost(new: NewPost!): Post!
 }
 
+type SliceInfo {
+    firstCursor: String!
+    lastCursor: String!
+}
+
+scalar Time
+
 // Data Type Defines
 type Account {
     token: String!
-    userName: String
+    names: [String]
 }
 
 type NewThread {
-    anonymous: Bool!
+    anonymous: Boolean!
     content: String!
     mainTag: String!
     subTag: [String]
@@ -30,7 +39,7 @@ type NewThread {
 
 type Thread {
     id: String!
-    anonymous: Bool!
+    anonymous: Boolean!
     author: String!
     content: String!
     createdAt: Time!
@@ -38,29 +47,33 @@ type Thread {
     mainTag: String!
     subTag: [String]
     title: String
-    replies(first: Number! after: String): {
-        posts: [Post!]
-    }
+    replies(first: Int! after: String): PostSlice!
 }
 
-type PageInfo {
-    firstCursor: String!
-    lastCursor: String!
+type ThreadSlice {
+  threads: [Thread]
+  sliceInfo: SliceInfo!
 }
+
 
 type NewPost {
-    anonymous: Bool!
+    anonymous: Boolean!
     content: String!
     refers: [String!]
 }
 
 type Post {
     id: String!
-    anonymous: Bool!
+    anonymous: Boolean!
     author: String!
     content: String!
     createdAt: Time!
 
     refers: [String!]
     refereds: [String!]
+}
+
+type PostSlice {
+  posts: [Post!]
+  sliceInfo: SliceInfo!
 }

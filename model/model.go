@@ -4,7 +4,8 @@ import (
 	"github.com/globalsign/mgo"
 )
 
-var mongoSession *mgo.Session
+// MongoSession ...
+var MongoSession *mgo.Session
 
 // Dial to Mongodb, write to mongoSession
 func Dial(url string) error {
@@ -12,6 +13,6 @@ func Dial(url string) error {
 	if err != nil {
 		return err
 	}
-	mongoSession = s
+	MongoSession = s
 	return nil
 }

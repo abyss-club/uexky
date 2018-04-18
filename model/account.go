@@ -23,6 +23,7 @@ var tokenGenerator = uuid.Generator{Sections: []uuid.Section{
 type Account struct {
 	ID    bson.ObjectId `json:"-" bson:"_id"`
 	Token string        `json:"token" bson:"token"`
+	Names []string      `json:"names" bson:"names"`
 }
 
 // NewAccount make a new account
@@ -36,8 +37,8 @@ func NewAccount(ctx context.Context) (*Account, error) {
 		return nil, err
 	}
 
-	account := &Account{bson.NewObjectId(), token}
-	session := mongoSession.Copy()
+	account := &Account{bson.NewObjectId(), token, []string{}}
+	session := MongoSession.Copy()
 	accountColle := session.DB("test").C("accounts")
 	if err := accountColle.Insert(account); err != nil {
 		return nil, err
@@ -61,7 +62,7 @@ func requireSignIn(ctx context.Context) (*Account, error) {
 		return nil, fmt.Errorf("Forbidden, no access token")
 	}
 
-	session := mongoSession.Copy()
+	session := MongoSession.Copy()
 	defer session.Close()
 
 	query := session.DB("test").C("accounts").Find(bson.M{"token": token})
