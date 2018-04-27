@@ -31,16 +31,15 @@ func NewAccount(ctx context.Context) (*Account, error) {
 	if err := requireNotSignIn(ctx); err != nil {
 		return nil, err
 	}
-
 	token, err := tokenGenerator.New()
 	if err != nil {
 		return nil, err
 	}
 
 	account := &Account{bson.NewObjectId(), token, []string{}}
-	session := MongoSession.Copy()
-	accountColle := session.DB("test").C("accounts")
-	if err := accountColle.Insert(account); err != nil {
+	c, cs := Colle("accounts")
+	defer cs()
+	if err := c.Insert(account); err != nil {
 		return nil, err
 	}
 	return account, nil
@@ -62,10 +61,10 @@ func requireSignIn(ctx context.Context) (*Account, error) {
 		return nil, fmt.Errorf("Forbidden, no access token")
 	}
 
-	session := MongoSession.Copy()
-	defer session.Close()
+	c, cs := Colle("accounts")
+	defer cs()
 
-	query := session.DB("test").C("accounts").Find(bson.M{"token": token})
+	query := c.Find(bson.M{"token": token})
 	var account Account
 	if count, err := query.Count(); err != nil {
 		return nil, err

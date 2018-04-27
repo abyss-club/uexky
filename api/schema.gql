@@ -5,7 +5,7 @@ schema {
 
 type Query {
     account(): Account!
-    threadSlice(tag: [String] first: Int! after: String): ThreadSlice!
+    threadSlice(tag: [String] limit: Int! after: String): ThreadSlice!
     thread(id: String): Thread!
 }
 
@@ -42,12 +42,12 @@ type Thread {
     anonymous: Boolean!
     author: String!
     content: String!
-    createdAt: Time!
+    createdTime: Time!
 
     mainTag: String!
     subTag: [String]
     title: String
-    replies(first: Int! after: String): PostSlice!
+    replies(limit: Int! after: String): PostSlice!
 }
 
 type ThreadSlice {

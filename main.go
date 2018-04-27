@@ -26,6 +26,10 @@ func init() {
 // Config for whole project, saved by json
 type Config struct {
 	APISchemaFile string `json:"api_schema"`
+	Mongo         struct {
+		URI string `json:"mongo_uri"`
+		DB  string `json:"db"`
+	} `json:"mongo"`
 }
 
 func loadConfig() {
@@ -47,7 +51,7 @@ func loadConfig() {
 func main() {
 	loadConfig()
 
-	if err := model.Dial("localhost"); err != nil {
+	if err := model.Dial(config.Mongo.URI, config.Mongo.DB); err != nil {
 		log.Fatal(err)
 	}
 

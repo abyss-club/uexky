@@ -1,19 +1,22 @@
 package api
 
-import "context"
+import (
+	"context"
+
+	"github.com/nanozuki/uexky/model"
+)
 
 // SliceInfoResolver ...
 type SliceInfoResolver struct {
-	firstCursor string
-	lastCursor  string
+	SliceInfo *model.SliceInfo
 }
 
 // FirstCursor ...
 func (si *SliceInfoResolver) FirstCursor(ctx context.Context) (string, error) {
-	return si.firstCursor, nil
+	return si.SliceInfo.FirstCursor, nil
 }
 
 // LastCursor ...
 func (si *SliceInfoResolver) LastCursor(ctx context.Context) (string, error) {
-	return si.lastCursor, nil
+	return si.SliceInfo.LastCursor, nil
 }

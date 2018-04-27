@@ -2,8 +2,8 @@ package api
 
 import (
 	"context"
+	"time"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/nanozuki/uexky/model"
 )
 
@@ -19,17 +19,12 @@ type ThreadResolver struct {
 }
 
 // ThreadSlice ...
-func (ts *Resolver) ThreadSlice(ctx context.Context, tags []string, first int, after string) (
+func (ts *Resolver) ThreadSlice(ctx context.Context, tags []string, limit int, after string) (
 	*ThreadSliceResolver, error,
 ) {
-	session := model.MongoSession.Copy()
-	defer session.Close()
-	query := session.DB("test").C("threads").Find(bson.M{
-		"tags": bson.M{"$in": tags},
-		"_id":  bson.M{"$gt": bson.ObjectIdHex(after)},
-	}).Sort("-_id").Limit(first)
-	threads := []*model.Thread{}
-	if err := query.All(threads); err != nil {
+	sq := &model.SliceQuery{Limit: limit, After: after}
+	threads, sliceInfo, err = model.GetThreadsByTags(ctx, tags, sq)
+	if err != nil {
 		return nil, err
 	}
 
@@ -37,13 +32,7 @@ func (ts *Resolver) ThreadSlice(ctx context.Context, tags []string, first int, a
 	for _, t := range threads {
 		trs = append(trs, &ThreadResolver{Thread: t})
 	}
-	return &ThreadSliceResolver{
-		threads: trs,
-		sliceInfo: &SliceInfoResolver{
-			firstCursor: threads[0].ID,
-			lastCursor:  threads[len(threads)-1].ID, // TODO: empty list
-		},
-	}, nil
+	return &ThreadSliceResolver{threads: trs, sliceInfo: sliceInfo}, nil
 }
 
 // Threads ...
@@ -61,37 +50,59 @@ func (tr *ThreadResolver) ID(ctx context.Context) (string, error) {
 	return tr.Thread.ID, nil
 }
 
-// Anonyumous ...
-func (tr *ThreadResolver) Anonyumous(ctx context.Context) (bool, error) {
-	return tr.Thread.Anonyumous, nil
+// Anonymous ...
+func (tr *ThreadResolver) Anonymous(ctx context.Context) (bool, error) {
+	return tr.Thread.Anonymous, nil
 }
 
-// ID ...
-func (tr *ThreadResolver) ID(ctx context.Context) (string, error) {
-	return tr.Thread.ID, nil
+// Author ...
+func (tr *ThreadResolver) Author(ctx context.Context) (string, error) {
+	return tr.Thread.Author, nil
 }
 
-// ID ...
-func (tr *ThreadResolver) ID(ctx context.Context) (string, error) {
-	return tr.Thread.ID, nil
+// Content ...
+func (tr *ThreadResolver) Content(ctx context.Context) (string, error) {
+	return tr.Thread.Content, nil
 }
 
-// ID ...
-func (tr *ThreadResolver) ID(ctx context.Context) (string, error) {
-	return tr.Thread.ID, nil
+// CreateTime ...
+func (tr *ThreadResolver) CreateTime(ctx context.Context) (time.Time, error) {
+	return tr.Thread.CreateTime, nil
 }
 
-// ID ...
-func (tr *ThreadResolver) ID(ctx context.Context) (string, error) {
-	return tr.Thread.ID, nil
+// MainTag ...
+func (tr *ThreadResolver) MainTag(ctx context.Context) (string, error) {
+	return tr.Thread.MainTag, nil
 }
 
-// ID ...
-func (tr *ThreadResolver) ID(ctx context.Context) (string, error) {
-	return tr.Thread.ID, nil
+// SubTags ...
+func (tr *ThreadResolver) SubTags(ctx context.Context) ([]string, error) {
+	return tr.Thread.SubTags, nil
 }
 
-// ID ...
-func (tr *ThreadResolver) ID(ctx context.Context) (string, error) {
-	return tr.Thread.ID, nil
+// Title ...
+func (tr *ThreadResolver) Title(ctx context.Context) (string, error) {
+	return tr.Thread.Title, nil
+}
+
+// PostResolver ...
+type PostResolver struct {
+	Post *model.Post
+}
+
+// Replies ...
+func (tr *ThreadResolver) Replies(ctx context.Context, limit int, after string) (
+	*PostResolver, *SliceInfo, error,
+) {
+	sq := &model.SliceQuery{Limit: limit, After: after}
+	posts, sliceInfo, err := tr.Thread.GetReplies(ctx, sq)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var prs []*PostResolver
+	for _, p := range posts {
+		prs = append(prs, &PostResolver{Post: p})
+	}
+	return prs, sliceInfo, nil
 }

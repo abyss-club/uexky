@@ -13,8 +13,7 @@ import (
 )
 
 // Resolver for graphql
-type Resolver struct {
-}
+type Resolver struct{}
 
 // NewRouter make router with all apis
 func NewRouter(schemaFile string) http.Handler {
