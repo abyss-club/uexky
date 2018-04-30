@@ -68,3 +68,11 @@ func (pr *PostResolver) Refers(ctx context.Context) (*[]*PostResolver, error) {
 	}
 	return &rps, nil
 }
+
+// PostInput ...
+type PostInput struct {
+	ThreadID string
+	Author   *string
+	Content  string
+	Refers   *[]string
+}

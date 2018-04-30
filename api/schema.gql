@@ -12,8 +12,8 @@ type Query {
 type Mutation {
     addAccount(): Account!
     addName(name: String!): Account!
-    pubThread(new: NewThread!): Thread!
-    pubPost(new: NewPost!): Post!
+    pubThread(thread: ThreadInput!): Thread!
+    pubPost(post: PostInput!): Post!
 }
 
 type SliceInfo {
@@ -29,11 +29,11 @@ type Account {
     names: [String!]
 }
 
-type NewThread {
-    name: String
+input ThreadInput {
+    author: String
     content: String!
     mainTag: String!
-    subTag: [String]
+    subTags: [String!]
     title: String
 }
 
@@ -56,8 +56,9 @@ type ThreadSlice {
 }
 
 
-type NewPost {
-    name: String
+input PostInput {
+    threadID: String!
+    author: String
     content: String!
     refers: [String!]
 }

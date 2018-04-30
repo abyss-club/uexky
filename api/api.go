@@ -136,3 +136,49 @@ func (r *Resolver) AddName(ctx context.Context, args struct{ Name string }) (*Ac
 	}
 	return &AccountResolver{Account: account}, nil
 }
+
+// PubThread ...
+func (r *Resolver) PubThread(
+	ctx context.Context,
+	args struct{ Thread *ThreadInput },
+) (
+	*ThreadResolver, error,
+) {
+	t := model.Thread{
+		Content: args.Thread.Content,
+		MainTag: args.Thread.MainTag,
+	}
+	if args.Thread.Author != nil {
+		t.Author = *args.Thread.Author
+	}
+	if args.Thread.Title != nil {
+		t.Title = *args.Thread.Title
+	}
+	if args.Thread.SubTags != nil {
+		t.SubTags = *args.Thread.SubTags
+	}
+	if err := model.InsertThread(ctx, &t); err != nil {
+		return nil, err
+	}
+	return &ThreadResolver{Thread: &t}, nil
+}
+
+// PubPost ...
+func (r *Resolver) PubPost(
+	ctx context.Context,
+	args struct{ Post *PostInput },
+) (
+	*PostResolver, error,
+) {
+	p := model.Post{
+		ThreadID: args.Post.ThreadID,
+		Content:  args.Post.Content,
+	}
+	if args.Post.Author != nil {
+		p.Author = *args.Post.Author
+	}
+	if args.Post.Refers != nil {
+		p.Refers = *args.Post.Refers
+	}
+	return nil, nil
+}

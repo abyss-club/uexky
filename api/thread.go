@@ -13,11 +13,6 @@ type ThreadSliceResolver struct {
 	sliceInfo *SliceInfoResolver
 }
 
-// ThreadResolver ...
-type ThreadResolver struct {
-	Thread *model.Thread
-}
-
 // Threads ...
 func (tsr *ThreadSliceResolver) Threads(ctx context.Context) ([]*ThreadResolver, error) {
 	return tsr.threads, nil
@@ -26,6 +21,11 @@ func (tsr *ThreadSliceResolver) Threads(ctx context.Context) ([]*ThreadResolver,
 // SliceInfo ...
 func (tsr *ThreadSliceResolver) SliceInfo(ctx context.Context) (*SliceInfoResolver, error) {
 	return tsr.sliceInfo, nil
+}
+
+// ThreadResolver ...
+type ThreadResolver struct {
+	Thread *model.Thread
 }
 
 // ID ...
@@ -97,4 +97,13 @@ func (tr *ThreadResolver) Replies(ctx context.Context, args struct {
 	}
 	sir := &SliceInfoResolver{sliceInfo}
 	return &PostSliceResolver{posts: prs, sliceInfo: sir}, nil
+}
+
+// ThreadInput ...
+type ThreadInput struct {
+	Author  *string
+	Content string
+	MainTag string
+	SubTags *[]string
+	Title   *string
 }

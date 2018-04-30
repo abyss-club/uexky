@@ -19,6 +19,13 @@ var tokenGenerator = uuid.Generator{Sections: []uuid.Section{
 	&uuid.RandomSection{Length: 5},
 }}
 
+// aid generator for post, thread and anonymous id.
+var aidGenerator = uuid.Generator{Sections: []uuid.Section{
+	&uuid.TimestampSection{Length: 7},
+	&uuid.RandomSection{Length: 1},
+	&uuid.CounterSection{Length: 2},
+}}
+
 const (
 	nameLimit = 5
 )
@@ -67,10 +74,68 @@ func (a *Account) AddName(ctx context.Context, name string) error {
 	a.Names = append(a.Names, name)
 	c, cs := Colle("accounts")
 	defer cs()
-	if err := c.Update(bson.M{"token": a.Token}, bson.M{"$set": bson.M{"names": a.Names}}); err != nil {
+	if err := c.Update(bson.M{"token": a.Token}, bson.M{
+		"$set": bson.M{"names": a.Names},
+	}); err != nil {
 		return err
 	}
 	return nil
+}
+
+// HaveName ...
+func (a *Account) HaveName(name string) bool {
+	for _, n := range a.Names {
+		if name == n {
+			return true
+		}
+	}
+	return false
+}
+
+type accountAID struct {
+	ObjectID    bson.ObjectId `bson:"_id"`
+	Token       string        `bson:"token"`
+	ThreadID    string        `bson:"thread_id"`
+	AnonymousID string        `bson:"anonymous_id"`
+}
+
+// AnonymousID ...
+func (a *Account) AnonymousID(threadID string, new bool) (string, error) {
+	c, cs := Colle("accounts_aid")
+	c.EnsureIndexKey("thread_id", "token")
+	defer cs()
+
+	newAID := func() (string, error) {
+		aid, err := aidGenerator.New()
+		if err != nil {
+			return "", err
+		}
+		aaid := accountAID{
+			ObjectID:    bson.NewObjectId(),
+			Token:       a.Token,
+			ThreadID:    threadID,
+			AnonymousID: aid,
+		}
+		if err := c.Insert(&aaid); err != nil {
+			return "", err
+		}
+		return aaid.AnonymousID, nil
+	}
+
+	if new {
+		return newAID()
+	}
+	query := c.Find(bson.M{"thread_id": threadID, "token": a.Token})
+	if count, err := query.Count(); err != nil {
+		return "", err
+	} else if count == 0 {
+		return newAID()
+	}
+	var aaid accountAID
+	if err := query.One(&aaid); err != nil {
+		return "", err
+	}
+	return aaid.AnonymousID, nil
 }
 
 func requireSignIn(ctx context.Context) (*Account, error) {
