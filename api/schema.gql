@@ -5,13 +5,13 @@ schema {
 
 type Query {
     account(): Account!
-    threadSlice(tag: [String] limit: Int! after: String): ThreadSlice!
-    thread(id: String): Thread!
+    threadSlice(limit: Int! tags: [String!] after: String!): ThreadSlice!
+    thread(id: String!): Thread!
 }
 
 type Mutation {
     addAccount(): Account!
-    setUserName(name: String!): Account!
+    addName(name: String!): Account!
     pubThread(new: NewThread!): Thread!
     pubPost(new: NewPost!): Post!
 }
@@ -26,11 +26,11 @@ scalar Time
 // Data Type Defines
 type Account {
     token: String!
-    names: [String]
+    names: [String!]
 }
 
 type NewThread {
-    anonymous: Boolean!
+    name: String
     content: String!
     mainTag: String!
     subTag: [String]
@@ -42,22 +42,22 @@ type Thread {
     anonymous: Boolean!
     author: String!
     content: String!
-    createdTime: Time!
+    createTime: Time!
 
     mainTag: String!
-    subTag: [String]
+    subTags: [String!]
     title: String
     replies(limit: Int! after: String): PostSlice!
 }
 
 type ThreadSlice {
-  threads: [Thread]
+  threads: [Thread]!
   sliceInfo: SliceInfo!
 }
 
 
 type NewPost {
-    anonymous: Boolean!
+    name: String
     content: String!
     refers: [String!]
 }
@@ -67,13 +67,12 @@ type Post {
     anonymous: Boolean!
     author: String!
     content: String!
-    createdAt: Time!
+    createTime: Time!
 
-    refers: [String!]
-    refereds: [String!]
+    refers: [Post!]
 }
 
 type PostSlice {
-  posts: [Post!]
+  posts: [Post]!
   sliceInfo: SliceInfo!
 }

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/globalsign/mgo/bson"
-	"github.com/nanozuki/uexky/model"
 )
 
 // Thread ...
@@ -25,7 +24,7 @@ type Thread struct {
 
 // GetThreadsByTags ...
 func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
-	[]*Threads, *SliceInfo, error,
+	[]*Thread, *SliceInfo, error,
 ) {
 	c, cs := Colle("threads")
 	defer cs()
@@ -34,12 +33,31 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		find["id"] = idQry
 	}
 
-	var threads []*model.Thread
+	var threads []*Thread
 	if err := c.Find(find).Sort("-id").Limit(sq.Limit).All(threads); err != nil {
+		return nil, nil, err
+	}
+	return threads, &SliceInfo{
+		FirstCursor: threads[0].ID,
+		LastCursor:  threads[len(threads)].ID,
+	}, nil
+}
+
+// FindThread by id
+func FindThread(ctx context.Context, ID string) (*Thread, error) {
+	c, cs := Colle("threads")
+	defer cs()
+	var th Thread
+	query := c.Find(bson.M{"id": ID})
+	if count, err := query.Count(); err != nil {
+		return nil, err
+	} else if count == 0 {
+		return nil, nil
+	}
+	if err := query.One(&th); err != nil {
 		return nil, err
 	}
-	cnt := len(threads)
-	return threads, &SliceInfo{FirstCursor: threads[0].ID, threads[cnt-1].ID}, nil
+	return &th, nil
 }
 
 // GetReplies ...
@@ -59,18 +77,4 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 	cnt := len(posts)
 	si := &SliceInfo{FirstCursor: posts[0].ID, LastCursor: posts[cnt-1].ID}
 	return posts, si, nil
-}
-
-// Post ...
-type Post struct {
-	ObjectID   bson.ObjectId `bson:"_id"`
-	ID         string        `bson:"id"`
-	Anonymous  string        `bson:"anonymous"`
-	Author     string        `bson:"author"`
-	Account    bson.ObjectId `bson:"account"`
-	CreateTime time.Time     `bson:"creaate_time"`
-
-	ThreadID bson.ObjectId `bson:"thread_id"`
-	Content  string        `bson:"content"`
-	Refers   []string      `bson:"refers"`
 }

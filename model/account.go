@@ -19,6 +19,10 @@ var tokenGenerator = uuid.Generator{Sections: []uuid.Section{
 	&uuid.RandomSection{Length: 5},
 }}
 
+const (
+	nameLimit = 5
+)
+
 // Account for uexky
 type Account struct {
 	ID    bson.ObjectId `json:"-" bson:"_id"`
@@ -53,6 +57,20 @@ func GetAccount(ctx context.Context) (*Account, error) {
 	}
 
 	return account, nil
+}
+
+// AddName ...
+func (a *Account) AddName(ctx context.Context, name string) error {
+	if len(a.Names) >= nameLimit {
+		return fmt.Errorf("You already have %v names, cannot add more", len(a.Names))
+	}
+	a.Names = append(a.Names, name)
+	c, cs := Colle("accounts")
+	defer cs()
+	if err := c.Update(bson.M{"token": a.Token}, bson.M{"$set": bson.M{"names": a.Names}}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func requireSignIn(ctx context.Context) (*Account, error) {

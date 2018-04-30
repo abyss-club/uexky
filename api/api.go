@@ -12,9 +12,6 @@ import (
 	"github.com/nanozuki/uexky/model"
 )
 
-// Resolver for graphql
-type Resolver struct{}
-
 // NewRouter make router with all apis
 func NewRouter(schemaFile string) http.Handler {
 	b, err := ioutil.ReadFile(schemaFile)
@@ -64,4 +61,78 @@ func withToken(handle httprouter.Handle) httprouter.Handle {
 		req.WithContext(ctx)
 		handle(w, req, p)
 	}
+}
+
+// Resolver for graphql
+type Resolver struct{}
+
+// Query:
+
+// Account resolve query 'account'
+func (r *Resolver) Account(ctx context.Context) (*AccountResolver, error) {
+	account, err := model.GetAccount(ctx)
+	return &AccountResolver{account}, err
+}
+
+// ThreadSlice ...
+func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
+	Limit int
+	Tags  *[]string
+	After *string
+}) (
+	*ThreadSliceResolver, error,
+) {
+	after := ""
+	if args.After != nil {
+		after = *args.After
+	}
+	tags := []string{}
+	if args.Tags != nil {
+		tags = *args.Tags
+	}
+
+	sq := &model.SliceQuery{Limit: args.Limit, After: after}
+	threads, sliceInfo, err := model.GetThreadsByTags(ctx, tags, sq)
+	if err != nil {
+		return nil, err
+	}
+
+	var trs []*ThreadResolver
+	for _, t := range threads {
+		trs = append(trs, &ThreadResolver{Thread: t})
+	}
+	sir := &SliceInfoResolver{SliceInfo: sliceInfo}
+	return &ThreadSliceResolver{threads: trs, sliceInfo: sir}, nil
+}
+
+// Thread ...
+func (r *Resolver) Thread(ctx context.Context, args struct{ ID string }) (*ThreadResolver, error) {
+	th, err := model.FindThread(ctx, args.ID)
+	if err != nil {
+		return nil, err
+	}
+	if th == nil {
+		return nil, nil
+	}
+	return &ThreadResolver{Thread: th}, nil
+}
+
+// Mutation:
+
+// AddAccount resolve mutation 'addAccount'
+func (r *Resolver) AddAccount(ctx context.Context) (*AccountResolver, error) {
+	account, err := model.NewAccount(ctx)
+	return &AccountResolver{account}, err
+}
+
+// AddName ...
+func (r *Resolver) AddName(ctx context.Context, args struct{ Name string }) (*AccountResolver, error) {
+	account, err := model.GetAccount(ctx)
+	if err != nil {
+		return nil, nil
+	}
+	if err := account.AddName(ctx, args.Name); err != nil {
+		return nil, err
+	}
+	return &AccountResolver{Account: account}, nil
 }
