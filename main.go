@@ -7,8 +7,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/CrowsT/uexky/api"
-	"github.com/CrowsT/uexky/model"
+	"github.com/nanozuki/uexky/api"
+	"github.com/nanozuki/uexky/model"
 	"github.com/pkg/errors"
 )
 
@@ -23,19 +23,20 @@ func init() {
 	flag.StringVar(&serve, "s", ":5000", "server address")
 }
 
-func parseFlag() {
+// Config for whole project, saved by json
+type Config struct {
+	APISchemaFile string `json:"api_schema"`
+	Mongo         struct {
+		URI string `json:"mongo_uri"`
+		DB  string `json:"db"`
+	} `json:"mongo"`
+}
+
+func loadConfig() {
 	flag.Parse()
 	if configFile == "" {
 		log.Fatal("Must specified config file")
 	}
-}
-
-// Config for whole project, saved by json
-type Config struct {
-	APISchemaFile string `json:"api_schema"`
-}
-
-func readConfig() {
 	b, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "Read config error"))
@@ -48,10 +49,9 @@ func readConfig() {
 }
 
 func main() {
-	parseFlag()
-	readConfig()
+	loadConfig()
 
-	if err := model.Dial("localhost"); err != nil {
+	if err := model.Dial(config.Mongo.URI, config.Mongo.DB); err != nil {
 		log.Fatal(err)
 	}
 

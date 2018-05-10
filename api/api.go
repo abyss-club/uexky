@@ -7,14 +7,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/CrowsT/uexky/model"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/julienschmidt/httprouter"
+	"github.com/nanozuki/uexky/model"
 )
-
-// Resolver for graphql
-type Resolver struct {
-}
 
 // NewRouter make router with all apis
 func NewRouter(schemaFile string) http.Handler {
@@ -65,4 +61,124 @@ func withToken(handle httprouter.Handle) httprouter.Handle {
 		req.WithContext(ctx)
 		handle(w, req, p)
 	}
+}
+
+// Resolver for graphql
+type Resolver struct{}
+
+// Query:
+
+// Account resolve query 'account'
+func (r *Resolver) Account(ctx context.Context) (*AccountResolver, error) {
+	account, err := model.GetAccount(ctx)
+	return &AccountResolver{account}, err
+}
+
+// ThreadSlice ...
+func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
+	Limit int
+	Tags  *[]string
+	After *string
+}) (
+	*ThreadSliceResolver, error,
+) {
+	after := ""
+	if args.After != nil {
+		after = *args.After
+	}
+	tags := []string{}
+	if args.Tags != nil {
+		tags = *args.Tags
+	}
+
+	sq := &model.SliceQuery{Limit: args.Limit, After: after}
+	threads, sliceInfo, err := model.GetThreadsByTags(ctx, tags, sq)
+	if err != nil {
+		return nil, err
+	}
+
+	var trs []*ThreadResolver
+	for _, t := range threads {
+		trs = append(trs, &ThreadResolver{Thread: t})
+	}
+	sir := &SliceInfoResolver{SliceInfo: sliceInfo}
+	return &ThreadSliceResolver{threads: trs, sliceInfo: sir}, nil
+}
+
+// Thread ...
+func (r *Resolver) Thread(ctx context.Context, args struct{ ID string }) (*ThreadResolver, error) {
+	th, err := model.FindThread(ctx, args.ID)
+	if err != nil {
+		return nil, err
+	}
+	if th == nil {
+		return nil, nil
+	}
+	return &ThreadResolver{Thread: th}, nil
+}
+
+// Mutation:
+
+// AddAccount resolve mutation 'addAccount'
+func (r *Resolver) AddAccount(ctx context.Context) (*AccountResolver, error) {
+	account, err := model.NewAccount(ctx)
+	return &AccountResolver{account}, err
+}
+
+// AddName ...
+func (r *Resolver) AddName(ctx context.Context, args struct{ Name string }) (*AccountResolver, error) {
+	account, err := model.GetAccount(ctx)
+	if err != nil {
+		return nil, nil
+	}
+	if err := account.AddName(ctx, args.Name); err != nil {
+		return nil, err
+	}
+	return &AccountResolver{Account: account}, nil
+}
+
+// PubThread ...
+func (r *Resolver) PubThread(
+	ctx context.Context,
+	args struct{ Thread *ThreadInput },
+) (
+	*ThreadResolver, error,
+) {
+	t := model.Thread{
+		Content: args.Thread.Content,
+		MainTag: args.Thread.MainTag,
+	}
+	if args.Thread.Author != nil {
+		t.Author = *args.Thread.Author
+	}
+	if args.Thread.Title != nil {
+		t.Title = *args.Thread.Title
+	}
+	if args.Thread.SubTags != nil {
+		t.SubTags = *args.Thread.SubTags
+	}
+	if err := model.InsertThread(ctx, &t); err != nil {
+		return nil, err
+	}
+	return &ThreadResolver{Thread: &t}, nil
+}
+
+// PubPost ...
+func (r *Resolver) PubPost(
+	ctx context.Context,
+	args struct{ Post *PostInput },
+) (
+	*PostResolver, error,
+) {
+	p := model.Post{
+		ThreadID: args.Post.ThreadID,
+		Content:  args.Post.Content,
+	}
+	if args.Post.Author != nil {
+		p.Author = *args.Post.Author
+	}
+	if args.Post.Refers != nil {
+		p.Refers = *args.Post.Refers
+	}
+	return nil, nil
 }
