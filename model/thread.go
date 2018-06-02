@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/globalsign/mgo/bson"
-	"github.com/nanozuki/uexky/uuid"
+	"github.com/nanozuki/uexky/uuid64"
 )
 
 var mainTags = map[string]bool{
@@ -15,9 +15,9 @@ var mainTags = map[string]bool{
 	"桌游": true,
 }
 
-var postIDGenerator = uuid.Generator{Sections: []uuid.Section{
-	&uuid.TimestampSection{Length: 7},
-	&uuid.CounterSection{Length: 2},
+var postIDGenerator = uuid64.Generator{Sections: []uuid64.Section{
+	&uuid64.TimestampSection{Length: 7},
+	&uuid64.CounterSection{Length: 2},
 }}
 
 // Thread ...

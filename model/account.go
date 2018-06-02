@@ -5,25 +5,25 @@ import (
 	"fmt"
 
 	"github.com/globalsign/mgo/bson"
-	"github.com/nanozuki/uexky/uuid"
+	"github.com/nanozuki/uexky/uuid64"
 )
 
 // CtxTokenKey is contxt key for token
 type CtxTokenKey struct{}
 
 // 24 charactors Base64 token
-var tokenGenerator = uuid.Generator{Sections: []uuid.Section{
-	&uuid.RandomSection{Length: 10},
-	&uuid.CounterSection{Length: 2},
-	&uuid.TimestampSection{Length: 7},
-	&uuid.RandomSection{Length: 5},
+var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
+	&uuid64.RandomSection{Length: 10},
+	&uuid64.CounterSection{Length: 2},
+	&uuid64.TimestampSection{Length: 7},
+	&uuid64.RandomSection{Length: 5},
 }}
 
 // aid generator for post, thread and anonymous id.
-var aidGenerator = uuid.Generator{Sections: []uuid.Section{
-	&uuid.TimestampSection{Length: 7},
-	&uuid.RandomSection{Length: 1},
-	&uuid.CounterSection{Length: 2},
+var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
+	&uuid64.TimestampSection{Length: 7},
+	&uuid64.RandomSection{Length: 1},
+	&uuid64.CounterSection{Length: 2},
 }}
 
 const (
