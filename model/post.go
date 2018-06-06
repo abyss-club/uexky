@@ -24,6 +24,23 @@ type Post struct {
 	Refers   []string `bson:"refers"`
 }
 
+// FindPost ...
+func FindPost(ctx context.Context, ID string) (*Post, error) {
+	c, cs := Colle("posts")
+	defer cs()
+	query := c.Find(bson.M{"id": ID})
+	if count, err := query.Count(); err != nil {
+		return nil, err
+	} else if count == 0 {
+		return nil, nil
+	}
+	post := &Post{}
+	if err := query.One(post); err != nil {
+		return nil, err
+	}
+	return post, nil
+}
+
 // ReferPosts ...
 func (p *Post) ReferPosts(ctx context.Context) ([]*Post, error) {
 	c, cs := Colle("posts")

@@ -76,16 +76,20 @@ func (tr *ThreadResolver) Title(ctx context.Context) (*string, error) {
 
 // Replies ...
 func (tr *ThreadResolver) Replies(ctx context.Context, args struct {
-	Limit int
-	After *string
+	Limit  int
+	After  *string
+	Before *string
 }) (
 	*PostSliceResolver, error,
 ) {
-	after := ""
+	var after, before string
 	if args.After != nil {
 		after = *args.After
 	}
-	sq := &model.SliceQuery{Limit: args.Limit, After: after}
+	if args.Before != nil {
+		before = *args.Before
+	}
+	sq := &model.SliceQuery{Limit: args.Limit, After: after, Before: before}
 	posts, sliceInfo, err := tr.Thread.GetReplies(ctx, sq)
 	if err != nil {
 		return nil, err

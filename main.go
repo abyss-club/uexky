@@ -56,5 +56,6 @@ func main() {
 	}
 
 	router := api.NewRouter(config.APISchemaFile)
+	log.Print("start to serve")
 	log.Fatal(http.ListenAndServe(serve, router))
 }

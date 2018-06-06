@@ -117,6 +117,18 @@ func (r *Resolver) Thread(ctx context.Context, args struct{ ID string }) (*Threa
 	return &ThreadResolver{Thread: th}, nil
 }
 
+// Post ...
+func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostResolver, error) {
+	post, err := model.FindPost(ctx, args.ID)
+	if err != nil {
+		return nil, err
+	}
+	if post == nil {
+		return nil, nil
+	}
+	return &PostResolver{Post: post}, nil
+}
+
 // Mutation:
 
 // AddAccount resolve mutation 'addAccount'

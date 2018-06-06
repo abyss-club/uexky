@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/nanozuki/uexky/uuid64"
@@ -14,16 +15,16 @@ type CtxTokenKey struct{}
 // 24 charactors Base64 token
 var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
 	&uuid64.RandomSection{Length: 10},
-	&uuid64.CounterSection{Length: 2},
-	&uuid64.TimestampSection{Length: 7},
+	&uuid64.CounterSection{Length: 2, Unit: time.Millisecond},
+	&uuid64.TimestampSection{Length: 7, Unit: time.Millisecond},
 	&uuid64.RandomSection{Length: 5},
 }}
 
 // aid generator for post, thread and anonymous id.
 var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
-	&uuid64.TimestampSection{Length: 7},
+	&uuid64.TimestampSection{Length: 6, Unit: time.Second, NoPadding: true},
+	&uuid64.CounterSection{Length: 2, Unit: time.Second},
 	&uuid64.RandomSection{Length: 1},
-	&uuid64.CounterSection{Length: 2},
 }}
 
 const (
