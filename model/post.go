@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/globalsign/mgo/bson"
+	"github.com/pkg/errors"
 )
 
 const referLimit = 5
@@ -70,6 +71,12 @@ func (p *Post) InsertPost(ctx context.Context) error {
 	account, err := requireSignIn(ctx)
 	if err != nil {
 		return err
+	}
+
+	if exist, err := isThreadExist(p.ThreadID); err != nil {
+		return err
+	} else if !exist {
+		return errors.Errorf("Thread %s is not exist", p.ThreadID)
 	}
 
 	p.ObjectID = bson.NewObjectId()

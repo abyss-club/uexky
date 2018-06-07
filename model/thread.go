@@ -73,6 +73,16 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 	return &th, nil
 }
 
+func isThreadExist(threadID string) (bool, error) {
+	c, cs := Colle("threads")
+	defer cs()
+	count, err := c.Find(bson.M{"id": threadID}).Count()
+	if err != nil {
+		return false, err
+	}
+	return count != 0, nil
+}
+
 // InsertThread init new thread and insert to db
 func InsertThread(ctx context.Context, thread *Thread) error {
 	account, err := requireSignIn(ctx)

@@ -192,5 +192,8 @@ func (r *Resolver) PubPost(
 	if args.Post.Refers != nil {
 		p.Refers = *args.Post.Refers
 	}
+	if err := p.InsertPost(ctx); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
