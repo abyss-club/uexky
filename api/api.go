@@ -53,12 +53,14 @@ func graphqlHandle(schema *graphql.Schema) httprouter.Handle {
 func withToken(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		token := req.Header.Get("Access-Token")
+		log.Print("get token", token)
 		if token != "" && len(token) != 24 {
 			http.Error(w, "Invalid Token Format", http.StatusForbidden)
 			return
 		}
-		ctx := context.WithValue(req.Context(), model.CtxTokenKey{}, token)
-		req.WithContext(ctx)
+		ctx := context.WithValue(req.Context(), model.ContextKeyToken, token)
+		req = req.WithContext(ctx)
+		log.Printf("set token value to ctx: '%+v'", req.Context().Value("token"))
 		handle(w, req, p)
 	}
 }

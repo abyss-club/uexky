@@ -3,14 +3,18 @@ package model
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/nanozuki/uexky/uuid64"
 )
 
-// CtxTokenKey is contxt key for token
-type CtxTokenKey struct{}
+// ContextKey ...
+type ContextKey string
+
+// ContextKeyToken ...
+const ContextKeyToken = ContextKey("token")
 
 // 24 charactors Base64 token
 var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
@@ -140,10 +144,11 @@ func (a *Account) AnonymousID(threadID string, new bool) (string, error) {
 }
 
 func requireSignIn(ctx context.Context) (*Account, error) {
-	token, ok := ctx.Value(CtxTokenKey{}).(string)
+	token, ok := ctx.Value(ContextKeyToken).(string)
 	if !ok || token == "" {
 		return nil, fmt.Errorf("Forbidden, no access token")
 	}
+	log.Printf("find token '%v'", token)
 
 	c, cs := Colle("accounts")
 	defer cs()
@@ -162,9 +167,10 @@ func requireSignIn(ctx context.Context) (*Account, error) {
 }
 
 func requireNotSignIn(ctx context.Context) error {
-	token, ok := ctx.Value(CtxTokenKey{}).(string)
+	token, ok := ctx.Value(ContextKeyToken).(string)
 	if ok && token != "" {
 		return fmt.Errorf("You have already signed in")
 	}
+	log.Printf("find token '%v'", token)
 	return nil
 }
