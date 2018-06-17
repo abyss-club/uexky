@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 
@@ -13,13 +12,8 @@ import (
 )
 
 // NewRouter make router with all apis
-func NewRouter(schemaFile string) http.Handler {
-	b, err := ioutil.ReadFile(schemaFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	schema := graphql.MustParseSchema(string(b), &Resolver{})
-
+func NewRouter() http.Handler {
+	schema := graphql.MustParseSchema(schema, &Resolver{})
 	handler := httprouter.New()
 	handler.POST("/graphql/", withToken(graphqlHandle(schema)))
 	return handler
@@ -143,9 +137,29 @@ func (r *Resolver) AddAccount(ctx context.Context) (*AccountResolver, error) {
 func (r *Resolver) AddName(ctx context.Context, args struct{ Name string }) (*AccountResolver, error) {
 	account, err := model.GetAccount(ctx)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	if err := account.AddName(ctx, args.Name); err != nil {
+		return nil, err
+	}
+	return &AccountResolver{Account: account}, nil
+}
+
+// SyncTags ...
+func (r *Resolver) SyncTags(
+	ctx context.Context, args struct{ Tags []*string },
+) (*AccountResolver, error) {
+	account, err := model.GetAccount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tags := []string{}
+	for _, t := range args.Tags {
+		if t != nil {
+			tags = append(tags, *t)
+		}
+	}
+	if err := account.SyncTags(ctx, tags); err != nil {
 		return nil, err
 	}
 	return &AccountResolver{Account: account}, nil

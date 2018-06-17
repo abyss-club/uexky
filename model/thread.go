@@ -16,8 +16,9 @@ var mainTags = map[string]bool{
 }
 
 var postIDGenerator = uuid64.Generator{Sections: []uuid64.Section{
-	&uuid64.TimestampSection{Length: 7},
-	&uuid64.CounterSection{Length: 2},
+	&uuid64.TimestampSection{Length: 6, Unit: time.Second, NoPadding: true},
+	&uuid64.CounterSection{Length: 2, Unit: time.Second},
+	&uuid64.RandomSection{Length: 1},
 }}
 
 // Thread ...

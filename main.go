@@ -25,8 +25,7 @@ func init() {
 
 // Config for whole project, saved by json
 type Config struct {
-	APISchemaFile string `json:"api_schema"`
-	Mongo         struct {
+	Mongo struct {
 		URI string `json:"mongo_uri"`
 		DB  string `json:"db"`
 	} `json:"mongo"`
@@ -55,7 +54,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	router := api.NewRouter(config.APISchemaFile)
+	router := api.NewRouter()
 	log.Print("start to serve")
 	log.Fatal(http.ListenAndServe(serve, router))
 }

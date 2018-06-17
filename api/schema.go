@@ -1,3 +1,6 @@
+package api
+
+const schema = `
 schema {
     query: Query
     mutation: Mutation
@@ -13,6 +16,7 @@ type Query {
 type Mutation {
     addAccount(): Account!
     addName(name: String!): Account!
+    syncTags(tags: [String]!): Account!
     pubThread(thread: ThreadInput!): Thread!
     pubPost(post: PostInput!): Post!
 }
@@ -28,6 +32,7 @@ scalar Time
 type Account {
     token: String!
     names: [String!]
+    tags: [String!]
 }
 
 input ThreadInput {
@@ -77,3 +82,4 @@ type PostSlice {
   posts: [Post]!
   sliceInfo: SliceInfo!
 }
+`

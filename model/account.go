@@ -8,6 +8,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/nanozuki/uexky/uuid64"
+	"github.com/pkg/errors"
 )
 
 // ContextKey ...
@@ -33,13 +34,15 @@ var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
 
 const (
 	nameLimit = 5
+	tagLimit  = 15
 )
 
 // Account for uexky
 type Account struct {
-	ID    bson.ObjectId `json:"-" bson:"_id"`
+	ID    bson.ObjectId `json:"id" bson:"id"`
 	Token string        `json:"token" bson:"token"`
 	Names []string      `json:"names" bson:"names"`
+	Tags  []string      `json:"tags" bson:"tags"`
 }
 
 // NewAccount make a new account
@@ -52,7 +55,10 @@ func NewAccount(ctx context.Context) (*Account, error) {
 		return nil, err
 	}
 
-	account := &Account{bson.NewObjectId(), token, []string{}}
+	account := &Account{
+		ID:    bson.NewObjectId(),
+		Token: token,
+	}
 	c, cs := Colle("accounts")
 	defer cs()
 	if err := c.Insert(account); err != nil {
@@ -67,8 +73,14 @@ func GetAccount(ctx context.Context) (*Account, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return account, nil
+}
+
+func isNameUesd(name string) (bool, error) {
+	c, cs := Colle("accounts")
+	defer cs()
+	count, err := c.Find(bson.M{"names": name}).Count()
+	return count != 0, err
 }
 
 // AddName ...
@@ -76,25 +88,57 @@ func (a *Account) AddName(ctx context.Context, name string) error {
 	if len(a.Names) >= nameLimit {
 		return fmt.Errorf("You already have %v names, cannot add more", len(a.Names))
 	}
-	a.Names = append(a.Names, name)
+	if used, err := isNameUesd(name); err != nil {
+		return errors.Wrapf(err, "Check name '%s'", name)
+	} else if used {
+		return fmt.Errorf("This name is already in uesd")
+	}
+
+	names := append(a.Names, name)
 	c, cs := Colle("accounts")
 	defer cs()
 	if err := c.Update(bson.M{"token": a.Token}, bson.M{
-		"$set": bson.M{"names": a.Names},
+		"$set": bson.M{"names": names},
 	}); err != nil {
 		return err
 	}
+	a.Names = names
 	return nil
 }
 
 // HaveName ...
 func (a *Account) HaveName(name string) bool {
 	for _, n := range a.Names {
-		if name == n {
+		if n == name {
 			return true
 		}
 	}
 	return false
+}
+
+// SyncTags ...
+func (a *Account) SyncTags(ctx context.Context, tags []string) error {
+	tagSet := map[string]struct{}{}
+	tagList := []string{}
+	for _, tag := range tags {
+		tagSet[tag] = struct{}{}
+	}
+	for tag := range tagSet {
+		tagList = append(tagList, tag)
+	}
+	if len(tagList) > tagLimit {
+		tagList = tagList[:tagLimit]
+	}
+
+	c, cs := Colle("accounts")
+	defer cs()
+	if err := c.Update(bson.M{"token": a.Token}, bson.M{
+		"$set": bson.M{"tags": tagList},
+	}); err != nil {
+		return err
+	}
+	a.Tags = tagList
+	return nil
 }
 
 type accountAID struct {
