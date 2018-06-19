@@ -2,7 +2,9 @@ package model
 
 import (
 	"log"
+	"reflect"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 )
 
@@ -21,3 +23,10 @@ func tearDown() {
 		log.Fatal(errors.Wrap(err, "tear down"))
 	}
 }
+
+var strSliceCmp = cmp.Comparer(func(l, r []string) bool {
+	if len(l) == len(r) && len(l) == 0 {
+		return true
+	}
+	return reflect.DeepEqual(l, r)
+})

@@ -2,11 +2,11 @@ package model
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/nanozuki/uexky/uuid64"
+	"github.com/pkg/errors"
 )
 
 var mainTags = map[string]bool{
@@ -34,6 +34,59 @@ type Thread struct {
 	SubTags []string `bson:"sub_tags"`
 	Title   string   `bson:"title"`
 	Content string   `bson:"content"`
+}
+
+// ThreadInput ...
+type ThreadInput struct {
+	Author  *string
+	Content string
+	MainTag string
+	SubTags *[]string
+	Title   *string
+}
+
+// NewThread init new thread and insert to db
+func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
+	account, err := requireSignIn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if _, ok := mainTags[input.MainTag]; !ok {
+		return nil, errors.Errorf("Can't set main tag '%s'", input.MainTag)
+	}
+
+	thread := &Thread{
+		ObjectID:   bson.NewObjectId(),
+		Account:    account.Token,
+		CreateTime: time.Now(),
+	}
+
+	threadID, err := postIDGenerator.New()
+	if err != nil {
+		return nil, err
+	}
+	thread.ID = threadID
+
+	if input.Author == nil || *input.Author == "" {
+		thread.Anonymous = true
+		author, err := account.AnonymousID(thread.ID, true)
+		if err != nil {
+			return nil, err
+		}
+		thread.Author = author
+	} else {
+		if !account.HaveName(thread.Author) {
+			return nil, errors.Errorf("Can't find name '%s'", thread.Author)
+		}
+		thread.Author = *input.Author
+	}
+
+	c, cs := Colle("threads")
+	defer cs()
+	if err := c.Insert(thread); err != nil {
+		return nil, err
+	}
+	return thread, nil
 }
 
 // GetThreadsByTags ...
@@ -82,39 +135,6 @@ func isThreadExist(threadID string) (bool, error) {
 		return false, err
 	}
 	return count != 0, nil
-}
-
-// InsertThread init new thread and insert to db
-func InsertThread(ctx context.Context, thread *Thread) error {
-	account, err := requireSignIn(ctx)
-	if err != nil {
-		return err
-	}
-
-	if _, ok := mainTags[thread.MainTag]; !ok {
-		return fmt.Errorf("Can't set main tag '%s'", thread.MainTag)
-	}
-	thread.ObjectID = bson.NewObjectId()
-	thread.ID, err = postIDGenerator.New()
-	if err != nil {
-		return err
-	}
-	if thread.Author == "" {
-		thread.Anonymous = true
-		if thread.Author, err = account.AnonymousID(thread.ID, true); err != nil {
-			return nil
-		}
-	} else {
-		if !account.HaveName(thread.Author) {
-			return fmt.Errorf("Can't find name '%s'", thread.Author)
-		}
-	}
-	thread.Account = account.Token
-	thread.CreateTime = time.Now()
-
-	c, cs := Colle("threads")
-	defer cs()
-	return c.Insert(thread)
 }
 
 // GetReplies ...

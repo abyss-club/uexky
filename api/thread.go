@@ -102,12 +102,3 @@ func (tr *ThreadResolver) Replies(ctx context.Context, args struct {
 	sir := &SliceInfoResolver{sliceInfo}
 	return &PostSliceResolver{posts: prs, sliceInfo: sir}, nil
 }
-
-// ThreadInput ...
-type ThreadInput struct {
-	Author  *string
-	Content string
-	MainTag string
-	SubTags *[]string
-	Title   *string
-}

@@ -185,7 +185,7 @@ func (r *Resolver) PubThread(
 	if args.Thread.SubTags != nil {
 		t.SubTags = *args.Thread.SubTags
 	}
-	if err := model.InsertThread(ctx, &t); err != nil {
+	if err := model.NewThread(ctx, &t); err != nil {
 		return nil, err
 	}
 	return &ThreadResolver{Thread: &t}, nil
@@ -194,22 +194,13 @@ func (r *Resolver) PubThread(
 // PubPost ...
 func (r *Resolver) PubPost(
 	ctx context.Context,
-	args struct{ Post *PostInput },
+	args struct{ Post *model.PostInput },
 ) (
 	*PostResolver, error,
 ) {
-	p := model.Post{
-		ThreadID: args.Post.ThreadID,
-		Content:  args.Post.Content,
-	}
-	if args.Post.Author != nil {
-		p.Author = *args.Post.Author
-	}
-	if args.Post.Refers != nil {
-		p.Refers = *args.Post.Refers
-	}
-	if err := p.InsertPost(ctx); err != nil {
+	post, err := model.NewPost(ctx, args.Post)
+	if err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return &PostResolver{Post: post}, nil
 }

@@ -22,7 +22,83 @@ type Post struct {
 
 	ThreadID string   `bson:"thread_id"`
 	Content  string   `bson:"content"`
-	Refers   []string `bson:"refers"`
+	Refers   []string `bson:"refers,omitempty"`
+}
+
+// PostInput ...
+type PostInput struct {
+	ThreadID string
+	Author   *string
+	Content  string
+	Refers   *[]string
+}
+
+// NewPost ...
+func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
+	account, err := requireSignIn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if exist, err := isThreadExist(input.ThreadID); err != nil {
+		return nil, err
+	} else if !exist {
+		return nil, errors.Errorf("Thread %s is not exist", input.ThreadID)
+	}
+	if input.Content == "" {
+		return nil, errors.New("required params missed")
+	}
+	post := &Post{
+		ObjectID:   bson.NewObjectId(),
+		CreateTime: time.Now(),
+		Account:    account.Token,
+
+		ThreadID: input.ThreadID,
+		Content:  input.Content,
+	}
+
+	postID, err := postIDGenerator.New()
+	if err != nil {
+		return nil, err
+	}
+	post.ID = postID
+
+	if input.Author == nil || *(input.Author) == "" {
+		post.Anonymous = true
+		author, err := account.AnonymousID(input.ThreadID, false)
+		if err != nil {
+			return nil, err
+		}
+		post.Author = author
+	} else {
+		post.Anonymous = false
+		if !account.HaveName(*(input.Author)) {
+			return nil, fmt.Errorf("Can't find name '%s'", *(input.Author))
+		}
+		post.Author = *input.Author
+	}
+
+	if input.Refers != nil {
+		refers := *(input.Refers)
+		if len(refers) > referLimit {
+			return nil, fmt.Errorf("Count of Refers can't greater than 5")
+		}
+		for _, r := range refers {
+			ok, err := isPostExist(r)
+			if err != nil {
+				return nil, err
+			} else if !ok {
+				return nil, fmt.Errorf("Can't find post '%s'", r)
+			}
+		}
+		post.Refers = refers
+	}
+
+	c, cs := Colle("posts")
+	defer cs()
+	if err := c.Insert(post); err != nil {
+		return nil, err
+	}
+	return post, nil
 }
 
 // FindPost ...
@@ -44,12 +120,13 @@ func FindPost(ctx context.Context, ID string) (*Post, error) {
 
 // ReferPosts ...
 func (p *Post) ReferPosts(ctx context.Context) ([]*Post, error) {
-	c, cs := Colle("posts")
-	defer cs()
-
 	var refers []*Post
-	if err := c.Find(bson.M{"id": bson.M{"$in": p.Refers}}).All(&refers); err != nil {
-		return nil, err
+	for _, id := range p.Refers {
+		post, err := FindPost(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		refers = append(refers, post)
 	}
 	return refers, nil
 }
@@ -64,50 +141,4 @@ func isPostExist(postID string) (bool, error) {
 		return false, nil
 	}
 	return true, nil
-}
-
-// InsertPost ...
-func (p *Post) InsertPost(ctx context.Context) error {
-	account, err := requireSignIn(ctx)
-	if err != nil {
-		return err
-	}
-
-	if exist, err := isThreadExist(p.ThreadID); err != nil {
-		return err
-	} else if !exist {
-		return errors.Errorf("Thread %s is not exist", p.ThreadID)
-	}
-
-	p.ObjectID = bson.NewObjectId()
-	if p.ID, err = postIDGenerator.New(); err != nil {
-		return err
-	}
-	if p.Author == "" {
-		p.Anonymous = true
-		if p.Author, err = account.AnonymousID(p.ThreadID, false); err != nil {
-			return err
-		}
-	} else {
-		if !account.HaveName(p.Author) {
-			return fmt.Errorf("Can't find name '%s'", p.Author)
-		}
-	}
-	p.Author = account.Token
-	p.CreateTime = time.Now()
-	if len(p.Refers) > referLimit {
-		return fmt.Errorf("Count of Refers can't greater than 5")
-	}
-	for _, r := range p.Refers {
-		ok, err := isPostExist(p.ID)
-		if err != nil {
-			return err
-		} else if !ok {
-			return fmt.Errorf("Can't find post '%s'", r)
-		}
-	}
-
-	c, cs := Colle("posts")
-	defer cs()
-	return c.Insert(p)
 }

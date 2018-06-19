@@ -14,6 +14,17 @@
   version = "r2018.04.03"
 
 [[projects]]
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value"
+  ]
+  revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
+  version = "v0.2.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/graph-gophers/graphql-go"
   packages = [
@@ -64,6 +75,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2a83caab30f3a5abb2f423044d8ad432ff4bffca3e67b07d97b4f82250abe9ad"
+  inputs-digest = "760040aec10562d4d9947a4b107f99efbd333e8fa505b7aefb0cdd714148ea8e"
   solver-name = "gps-cdcl"
   solver-version = 1
