@@ -10,15 +10,17 @@ import (
 
 const testDB = "testing"
 
+var testMainTags = []string{"MainA", "MainB", "MainC"}
+
 // this file only have common test tools
 func dialTestDB() {
-	if err := Dial("localhost:27017", testDB); err != nil {
+	if err := Init("localhost:27017", testDB, testMainTags); err != nil {
 		log.Fatal(errors.Wrap(err, "Connect to test db"))
 	}
 }
 
 func tearDown() {
-	session := mongoSession.Copy()
+	session := pkg.mongoSession.Copy()
 	if err := session.DB(testDB).DropDatabase(); err != nil {
 		log.Fatal(errors.Wrap(err, "tear down"))
 	}

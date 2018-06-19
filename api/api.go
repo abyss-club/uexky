@@ -168,27 +168,15 @@ func (r *Resolver) SyncTags(
 // PubThread ...
 func (r *Resolver) PubThread(
 	ctx context.Context,
-	args struct{ Thread *ThreadInput },
+	args struct{ Thread *model.ThreadInput },
 ) (
 	*ThreadResolver, error,
 ) {
-	t := model.Thread{
-		Content: args.Thread.Content,
-		MainTag: args.Thread.MainTag,
-	}
-	if args.Thread.Author != nil {
-		t.Author = *args.Thread.Author
-	}
-	if args.Thread.Title != nil {
-		t.Title = *args.Thread.Title
-	}
-	if args.Thread.SubTags != nil {
-		t.SubTags = *args.Thread.SubTags
-	}
-	if err := model.NewThread(ctx, &t); err != nil {
+	thread, err := model.NewThread(ctx, args.Thread)
+	if err != nil {
 		return nil, err
 	}
-	return &ThreadResolver{Thread: &t}, nil
+	return &ThreadResolver{Thread: thread}, nil
 }
 
 // PubPost ...

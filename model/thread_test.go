@@ -1,47 +1,77 @@
 package model
 
 import (
-	"context"
-	"reflect"
 	"testing"
-	"time"
 
-	"github.com/globalsign/mgo/bson"
+	"github.com/google/go-cmp/cmp"
 )
 
-func TestThread(t *testing.T) {
-	input1 := &ThreadInput{
-		Author:  &(mockAccounts[1].Names[0]),
-		Content: "Thread1",
-		MainTag: mainTags[0],
-		SubTags: *[]string{},
-	}
-	type args struct {
-		ctx   context.Context
-		input *ThreadInput
-	}
+func TestNewThread(t *testing.T) {
+	account := mockAccounts[1]
+	t.Log("account:", account)
+	ctx := ctxWithToken(account.Token)
+	titles := []string{"thread1"}
 	tests := []struct {
 		name    string
-		args    args
-		want    *Thread
+		input   *ThreadInput
+		check   bool
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"normal, signed, titled", &ThreadInput{
+			&(account.Names[0]), "thread1", pkg.mainTags[0],
+			&[]string{"tag1", "tag2"}, &titles[0],
+		}, true, false},
+		{"normal, anonymous, non-title", &ThreadInput{
+			nil, "thread2", pkg.mainTags[0],
+			&[]string{"tag1", "tag2"}, nil,
+		}, true, false},
+		{"error, no-main-tag", &ThreadInput{
+			nil, "thread3", "em..", nil, nil,
+		}, false, true},
+		{"error, multi-main-tag", &ThreadInput{
+			nil, "thread3", pkg.mainTags[0], &[]string{pkg.mainTags[1]}, nil,
+		}, false, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewThread(tt.args.ctx, tt.args.input)
+			got, err := NewThread(ctx, tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewThread() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewThread() = %v, want %v", got, tt.want)
+			if !tt.check {
+				return
+			}
+			if got.ObjectID == "" || got.ID == "" ||
+				got.Account != account.Token ||
+				got.MainTag != tt.input.MainTag ||
+				!cmp.Equal(got.SubTags, *(tt.input.SubTags)) ||
+				got.Content != tt.input.Content {
+				t.Errorf("NewThread() = %v, input = %v", got, tt.input)
+			}
+			if tt.input.Title != nil && *(tt.input.Title) != "" {
+				if got.Title == "" {
+					t.Errorf("NewThread() = %v, should have title", got)
+				}
+			} else {
+				if got.Title != "" {
+					t.Errorf("NewThread() = %v, shouldn't have title", got)
+				}
+			}
+			if tt.input.Author != nil && *(tt.input.Author) != "" {
+				if got.Anonymous == true || got.Author != *(tt.input.Author) {
+					t.Errorf("NewThread() = %v, input = %v", got, tt.input)
+				}
+			} else {
+				if got.Anonymous == false || got.Author == "" {
+					t.Errorf("NewThread() = %v, input = %v", got, tt.input)
+				}
 			}
 		})
 	}
 }
 
+/*
 func TestGetThreadsByTags(t *testing.T) {
 	type args struct {
 		ctx  context.Context
@@ -182,3 +212,4 @@ func TestThread_GetReplies(t *testing.T) {
 		})
 	}
 }
+*/

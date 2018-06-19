@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func TestNewPost(t *testing.T) {
+func TestPost(t *testing.T) {
 	account := mockAccounts[2]
 	ctx := ctxWithToken(account.Token)
 	thread, err := NewThread(ctx, &ThreadInput{Content: "thread!", MainTag: "动画"})

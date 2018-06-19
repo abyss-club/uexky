@@ -29,6 +29,7 @@ type Config struct {
 		URI string `json:"mongo_uri"`
 		DB  string `json:"db"`
 	} `json:"mongo"`
+	MainTags []string `json:"main_tags"`
 }
 
 func loadConfig() {
@@ -50,7 +51,7 @@ func loadConfig() {
 func main() {
 	loadConfig()
 
-	if err := model.Dial(config.Mongo.URI, config.Mongo.DB); err != nil {
+	if err := model.Init(config.Mongo.URI, config.Mongo.DB, config.MainTags); err != nil {
 		log.Fatal(err)
 	}
 

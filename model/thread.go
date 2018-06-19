@@ -9,12 +9,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var mainTags = map[string]bool{
-	"动画": true,
-	"游戏": true,
-	"桌游": true,
-}
-
 var postIDGenerator = uuid64.Generator{Sections: []uuid64.Section{
 	&uuid64.TimestampSection{Length: 6, Unit: time.Second, NoPadding: true},
 	&uuid64.CounterSection{Length: 2, Unit: time.Second},
@@ -45,20 +39,45 @@ type ThreadInput struct {
 	Title   *string
 }
 
+func isMainTags(tag string) bool {
+	for _, mt := range pkg.mainTags {
+		if mt == tag {
+			return true
+		}
+	}
+	return false
+}
+
 // NewThread init new thread and insert to db
 func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 	account, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := mainTags[input.MainTag]; !ok {
+	if !isMainTags(input.MainTag) {
 		return nil, errors.Errorf("Can't set main tag '%s'", input.MainTag)
+	}
+	subTags := []string{}
+	if len(*input.SubTags) != 0 {
+		subTags = *input.SubTags
+	}
+	for _, tag := range subTags {
+		if isMainTags(tag) {
+			return nil, errors.Errorf("Can't set main tag to sub tags '%s'", tag)
+		}
+	}
+	if input.Content == "" {
+		return nil, errors.New("Can't post an empty thread")
 	}
 
 	thread := &Thread{
 		ObjectID:   bson.NewObjectId(),
 		Account:    account.Token,
 		CreateTime: time.Now(),
+
+		MainTag: input.MainTag,
+		SubTags: subTags,
+		Content: input.Content,
 	}
 
 	threadID, err := postIDGenerator.New()
@@ -75,10 +94,14 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 		}
 		thread.Author = author
 	} else {
-		if !account.HaveName(thread.Author) {
+		if !account.HaveName(*input.Author) {
 			return nil, errors.Errorf("Can't find name '%s'", thread.Author)
 		}
 		thread.Author = *input.Author
+	}
+
+	if input.Title != nil && *input.Title != "" {
+		thread.Title = *input.Title
 	}
 
 	c, cs := Colle("threads")
