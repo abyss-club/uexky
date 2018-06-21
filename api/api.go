@@ -8,7 +8,7 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/julienschmidt/httprouter"
-	"github.com/nanozuki/uexky/model"
+	"gitlab.com/abyss.club/uexky/model"
 )
 
 // NewRouter make router with all apis

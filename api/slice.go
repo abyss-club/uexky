@@ -3,7 +3,7 @@ package api
 import (
 	"context"
 
-	"github.com/nanozuki/uexky/model"
+	"gitlab.com/abyss.club/uexky/model"
 )
 
 // SliceInfoResolver ...

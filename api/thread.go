@@ -4,7 +4,7 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"github.com/nanozuki/uexky/model"
+	"gitlab.com/abyss.club/uexky/model"
 )
 
 // ThreadSliceResolver ...

@@ -7,8 +7,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/nanozuki/uexky/api"
-	"github.com/nanozuki/uexky/model"
+	"gitlab.com/abyss.club/uexky/api"
+	"gitlab.com/abyss.club/uexky/model"
 	"github.com/pkg/errors"
 )
 

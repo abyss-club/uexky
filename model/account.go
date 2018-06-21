@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/globalsign/mgo/bson"
-	"github.com/nanozuki/uexky/uuid64"
+	"gitlab.com/abyss.club/uexky/uuid64"
 	"github.com/pkg/errors"
 )
 
