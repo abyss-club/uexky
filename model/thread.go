@@ -2,11 +2,12 @@ package model
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
-	"gitlab.com/abyss.club/uexky/uuid64"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
 var postIDGenerator = uuid64.Generator{Sections: []uuid64.Section{
@@ -39,7 +40,7 @@ type ThreadInput struct {
 	Title   *string
 }
 
-func isMainTags(tag string) bool {
+func isMainTag(tag string) bool {
 	for _, mt := range pkg.mainTags {
 		if mt == tag {
 			return true
@@ -54,15 +55,15 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !isMainTags(input.MainTag) {
+	if !isMainTag(input.MainTag) {
 		return nil, errors.Errorf("Can't set main tag '%s'", input.MainTag)
 	}
 	subTags := []string{}
-	if len(*input.SubTags) != 0 {
+	if input.SubTags != nil && len(*input.SubTags) != 0 {
 		subTags = *input.SubTags
 	}
 	for _, tag := range subTags {
-		if isMainTags(tag) {
+		if isMainTag(tag) {
 			return nil, errors.Errorf("Can't set main tag to sub tags '%s'", tag)
 		}
 	}
@@ -116,20 +117,39 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 	[]*Thread, *SliceInfo, error,
 ) {
-	c, cs := Colle("threads")
-	defer cs()
-	find := bson.M{"tags": bson.M{"$in": tags}}
+	mainTags := []string{}
+	subTags := []string{}
+	for _, tag := range tags {
+		if isMainTag(tag) {
+			mainTags = append(mainTags, tag)
+		} else {
+			subTags = append(subTags, tag)
+		}
+	}
+	find := bson.M{}
+	if len(mainTags) != 0 {
+		find["main_tag"] = bson.M{"$in": mainTags}
+	}
+	if len(subTags) != 0 {
+		find["sub_tags"] = bson.M{"$in": subTags}
+	}
 	if idQry := sq.QueryObject(); idQry != nil {
 		find["id"] = idQry
 	}
 
+	c, cs := Colle("threads")
+	defer cs()
+	log.Printf("find obj is %v", find)
 	var threads []*Thread
-	if err := c.Find(find).Sort("-id").Limit(sq.Limit).All(threads); err != nil {
+	if err := c.Find(find).Sort("-id").Limit(sq.Limit).All(&threads); err != nil {
 		return nil, nil, err
+	}
+	if len(threads) == 0 {
+		return threads, &SliceInfo{}, nil
 	}
 	return threads, &SliceInfo{
 		FirstCursor: threads[0].ID,
-		LastCursor:  threads[len(threads)].ID,
+		LastCursor:  threads[len(threads)-1].ID,
 	}, nil
 }
 
@@ -142,7 +162,7 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 	if count, err := query.Count(); err != nil {
 		return nil, err
 	} else if count == 0 {
-		return nil, nil
+		return nil, errors.Errorf("Can't Find Thread '%v'", ID)
 	}
 	if err := query.One(&th); err != nil {
 		return nil, err
@@ -171,10 +191,9 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 		find["id"] = idQry
 	}
 
-	if err := c.Find(find).Sort("id").Limit(sq.Limit).All(posts); err != nil {
+	if err := c.Find(find).Sort("id").Limit(sq.Limit).All(&posts); err != nil {
 		return nil, nil, err
 	}
-	cnt := len(posts)
-	si := &SliceInfo{FirstCursor: posts[0].ID, LastCursor: posts[cnt-1].ID}
+	si := &SliceInfo{FirstCursor: posts[0].ID, LastCursor: posts[len(posts)-1].ID}
 	return posts, si, nil
 }

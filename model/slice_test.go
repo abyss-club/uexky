@@ -18,7 +18,7 @@ func TestSliceQuery_QueryObject(t *testing.T) {
 		fields fields
 		want   bson.M
 	}{
-		{"empty", fields{10, "", ""}, bson.M{}},
+		{"empty", fields{10, "", ""}, nil},
 		{"before", fields{10, "B", ""}, bson.M{"$lt": "B"}},
 		{"after", fields{10, "", "A"}, bson.M{"$gt": "A"}},
 		{"before & after", fields{10, "B", "A"}, bson.M{"$lt": "B", "$gt": "A"}},
