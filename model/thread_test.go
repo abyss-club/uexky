@@ -155,84 +155,77 @@ func TestGetThreadsByTags(t *testing.T) {
 			}
 		})
 	}
-}
-
-/*
-func TestFindThread(t *testing.T) {
-	type args struct {
-		ctx context.Context
-		ID  string
+	{
+		thread, err := FindThread(ctx, threads[0].ID)
+		if err != nil {
+			t.Errorf("FindThread(%v) error = %v", thread, err)
+		}
+		if thread.ID != threads[0].ID {
+			t.Errorf("FindThread(%v) got %v", threads[0].ID, thread.ID)
+		}
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *Thread
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := FindThread(tt.args.ctx, tt.args.ID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("FindThread() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("FindThread() = %v, want %v", got, tt.want)
-			}
-		})
+	{
+		thread, err := FindThread(ctx, "AA")
+		if err == nil {
+			t.Errorf("FindThread(%v) should be error, found %v", err, thread)
+		}
 	}
 }
 
 func TestThread_GetReplies(t *testing.T) {
-	type fields struct {
-		ObjectID   bson.ObjectId
-		ID         string
-		Anonymous  bool
-		Author     string
-		Account    string
-		CreateTime time.Time
-		MainTag    string
-		SubTags    []string
-		Title      string
-		Content    string
+	account := mockAccounts[1]
+	ctx := ctxWithToken(account.Token)
+	input := &ThreadInput{
+		Content: "content",
+		MainTag: pkg.mainTags[0],
 	}
-	type args struct {
-		ctx context.Context
-		sq  *SliceQuery
+	thread, err := NewThread(ctx, input)
+	if err != nil {
+		t.Errorf("FindThread(%v) should be error, found %v", err, thread)
 	}
+	posts := []*Post{}
+	for i := 0; i < 6; i++ {
+		pInput := &PostInput{
+			ThreadID: thread.ID,
+			Content:  "post",
+		}
+		post, err := NewPost(ctx, pInput)
+		if err != nil {
+			t.Fatalf("new post error: %v", err)
+		}
+		posts = append(posts, post)
+	}
+
 	tests := []struct {
 		name    string
-		fields  fields
-		args    args
+		sq      *SliceQuery
 		want    []*Post
 		want1   *SliceInfo
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{"first 3", &SliceQuery{Limit: 3}, []*Post{posts[0], posts[1], posts[2]},
+			&SliceInfo{posts[0].ID, posts[2].ID}, false},
+		{"3 after 3", &SliceQuery{Limit: 3, After: posts[2].ID},
+			[]*Post{posts[3], posts[4], posts[5]},
+			&SliceInfo{posts[3].ID, posts[5].ID}, false},
+		{"3 before 3", &SliceQuery{Limit: 3, Before: posts[3].ID},
+			[]*Post{posts[0], posts[1], posts[2]},
+			&SliceInfo{posts[0].ID, posts[2].ID}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t := &Thread{
-				ObjectID:   tt.fields.ObjectID,
-				ID:         tt.fields.ID,
-				Anonymous:  tt.fields.Anonymous,
-				Author:     tt.fields.Author,
-				Account:    tt.fields.Account,
-				CreateTime: tt.fields.CreateTime,
-				MainTag:    tt.fields.MainTag,
-				SubTags:    tt.fields.SubTags,
-				Title:      tt.fields.Title,
-				Content:    tt.fields.Content,
-			}
-			got, got1, err := t.GetReplies(tt.args.ctx, tt.args.sq)
+			got, got1, err := thread.GetReplies(ctx, tt.sq)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Thread.GetReplies() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if len(got) != len(tt.want) {
 				t.Errorf("Thread.GetReplies() got = %v, want %v", got, tt.want)
+			}
+			for i := 0; i < len(got); i++ {
+				if got[i].ID != tt.want[i].ID {
+					t.Errorf("Thread.GetReplies () got = %v, want %v", got[i].ID, tt.want[i].ID)
+				}
 			}
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("Thread.GetReplies() got1 = %v, want %v", got1, tt.want1)
@@ -240,4 +233,3 @@ func TestThread_GetReplies(t *testing.T) {
 		})
 	}
 }
-*/

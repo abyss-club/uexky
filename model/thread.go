@@ -162,7 +162,7 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 	if count, err := query.Count(); err != nil {
 		return nil, err
 	} else if count == 0 {
-		return nil, nil
+		return nil, errors.Errorf("Can't Find Thread '%v'", ID)
 	}
 	if err := query.One(&th); err != nil {
 		return nil, err
@@ -191,10 +191,9 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 		find["id"] = idQry
 	}
 
-	if err := c.Find(find).Sort("id").Limit(sq.Limit).All(posts); err != nil {
+	if err := c.Find(find).Sort("id").Limit(sq.Limit).All(&posts); err != nil {
 		return nil, nil, err
 	}
-	cnt := len(posts)
-	si := &SliceInfo{FirstCursor: posts[0].ID, LastCursor: posts[cnt-1].ID}
+	si := &SliceInfo{FirstCursor: posts[0].ID, LastCursor: posts[len(posts)-1].ID}
 	return posts, si, nil
 }
