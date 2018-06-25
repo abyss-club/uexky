@@ -3,7 +3,6 @@ package model
 import (
 	"context"
 	"log"
-	"os"
 	"reflect"
 	"testing"
 
@@ -42,14 +41,6 @@ func addMockUser() {
 func ctxWithToken(token string) context.Context {
 	ctx := context.Background()
 	return context.WithValue(ctx, ContextKeyToken, token)
-}
-
-func TestMain(m *testing.M) {
-	dialTestDB()
-	addMockUser()
-	ret := m.Run()
-	tearDown()
-	os.Exit(ret)
 }
 
 func TestNewAccount(t *testing.T) {

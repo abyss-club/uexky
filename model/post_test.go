@@ -11,7 +11,9 @@ import (
 func TestPost(t *testing.T) {
 	account := mockAccounts[2]
 	ctx := ctxWithToken(account.Token)
-	thread, err := NewThread(ctx, &ThreadInput{Content: "thread!", MainTag: "动画"})
+	thread, err := NewThread(ctx, &ThreadInput{
+		Content: "thread!", MainTag: pkg.mainTags[0],
+	})
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create thread"))
 	}

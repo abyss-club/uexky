@@ -18,7 +18,7 @@ type SliceQuery struct {
 // QueryObject ...
 func (sq *SliceQuery) QueryObject() bson.M {
 	if sq.After == "" && sq.Before == "" {
-		return bson.M{}
+		return nil
 	}
 	if sq.After != "" && sq.Before != "" {
 		return bson.M{"$gt": sq.After, "$lt": sq.Before}
