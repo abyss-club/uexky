@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/globalsign/mgo/bson"
-	"gitlab.com/abyss.club/uexky/uuid64"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
 // ContextKey ...
@@ -40,7 +40,7 @@ const (
 // Account for uexky
 type Account struct {
 	ID    bson.ObjectId `json:"id" bson:"id"`
-	Token string        `json:"token" bson:"token"`
+	Email string        `json:"email" bson:"email"`
 	Names []string      `json:"names" bson:"names"`
 	Tags  []string      `json:"tags" bson:"tags"`
 }
@@ -71,6 +71,35 @@ func NewAccount(ctx context.Context) (*Account, error) {
 func GetAccount(ctx context.Context) (*Account, error) {
 	account, err := requireSignIn(ctx)
 	if err != nil {
+		return nil, err
+	}
+	return account, nil
+}
+
+// FindAccountByEmail ...
+func FindAccountByEmail(ctx context.Context, email string) (*Account, error) {
+	c, cs := Colle("accounts")
+	defer cs()
+
+	query := c.Find(bson.M{"email": email})
+	count, err := query.Count()
+	if err != nil {
+		return nil, err
+	}
+	if count != 0 {
+		var account *Account
+		if err := query.One(account); err != nil {
+			return nil, err
+		}
+		return account, nil
+	}
+
+	// New Account
+	account := &Account{
+		ID:    bson.NewObjectId(),
+		Email: email,
+	}
+	if _, err := c.Upsert(bson.M{"email": email}, account); err != nil {
 		return nil, err
 	}
 	return account, nil

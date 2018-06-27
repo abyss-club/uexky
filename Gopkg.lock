@@ -14,6 +14,15 @@
   version = "r2018.04.03"
 
 [[projects]]
+  name = "github.com/gomodule/redigo"
+  packages = [
+    "internal",
+    "redis"
+  ]
+  revision = "9c11da706d9b7902c6da69c592f75637793fe121"
+  version = "v2.0.0"
+
+[[projects]]
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
@@ -75,6 +84,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "760040aec10562d4d9947a4b107f99efbd333e8fa505b7aefb0cdd714148ea8e"
+  inputs-digest = "30abab879f361727efc81bdc005c1a32173297e299cf015f9d4c9f1ff49c7d1f"
   solver-name = "gps-cdcl"
   solver-version = 1

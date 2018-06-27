@@ -15,7 +15,7 @@ import (
 func NewRouter() http.Handler {
 	schema := graphql.MustParseSchema(schema, &Resolver{})
 	handler := httprouter.New()
-	handler.POST("/graphql/", withToken(graphqlHandle(schema)))
+	handler.POST("/graphql/", withAuth(graphqlHandle(schema)))
 	return handler
 }
 
@@ -44,9 +44,9 @@ func graphqlHandle(schema *graphql.Schema) httprouter.Handle {
 	}
 }
 
-func withToken(handle httprouter.Handle) httprouter.Handle {
+func withAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
-		token := req.Header.Get("Access-Token")
+		token := req.Header.Get("Access-Token") // TODO: get from cookie
 		log.Print("get token", token)
 		if token != "" && len(token) != 24 {
 			http.Error(w, "Invalid Token Format", http.StatusForbidden)

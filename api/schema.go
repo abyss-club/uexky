@@ -11,6 +11,7 @@ type Query {
     threadSlice(limit: Int! tags: [String!] after: String!): ThreadSlice!
     thread(id: String!): Thread!
     post(id: String!): Post!
+	uexky(): Uexky!
 }
 
 type Mutation {
@@ -81,5 +82,9 @@ type Post {
 type PostSlice {
   posts: [Post]!
   sliceInfo: SliceInfo!
+}
+
+type Uexky {
+	mainTags: [String!]!
 }
 `
