@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/globalsign/mgo/bson"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/julienschmidt/httprouter"
 	"gitlab.com/abyss.club/uexky/model"
@@ -16,6 +17,7 @@ func NewRouter() http.Handler {
 	schema := graphql.MustParseSchema(schema, &Resolver{})
 	handler := httprouter.New()
 	handler.POST("/graphql/", withAuth(graphqlHandle(schema)))
+	handler.GET("/auth/", authHandle) // TODO: when user is already logged in
 	return handler
 }
 
@@ -46,17 +48,50 @@ func graphqlHandle(schema *graphql.Schema) httprouter.Handle {
 
 func withAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
-		token := req.Header.Get("Access-Token") // TODO: get from cookie
-		log.Print("get token", token)
+		tokenCookie, err := req.Cookie("token")
+		if err != nil { // err must be ErrNoCookie,  non-login user, do noting
+			handle(w, req, p)
+			return
+		}
+
+		accountID, err := authToken(tokenCookie.Value)
 		if token != "" && len(token) != 24 {
 			http.Error(w, "Invalid Token Format", http.StatusForbidden)
 			return
 		}
-		ctx := context.WithValue(req.Context(), model.ContextKeyToken, token)
+		log.Print("Login in user %v", accountID)
+
+		ctx := context.WithValue(req.Context(), model.ContextLoggedInAccount, accountID)
 		req = req.WithContext(ctx)
-		log.Printf("set token value to ctx: '%+v'", req.Context().Value("token"))
 		handle(w, req, p)
 	}
+}
+
+func authHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	code := req.URL.Query().Get("code")
+	if code == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write("缺乏必要信息")
+		return
+	}
+	token, err := authCode(code)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write("验证信息错误，或已失效")
+		return
+	}
+
+	// TODO: delete code in redis
+	cookie := &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Domain:   "abyss.club",
+		Secure:   true,
+		HttpOnly: true,
+	}
+	w.WriteHeader(http.StatusMovedPermanently)
+	http.SetCookie(w, cookie)
+	w.Header().Set("Location", "https://abyss.club")
 }
 
 // Resolver for graphql
@@ -127,10 +162,19 @@ func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostRes
 
 // Mutation:
 
-// AddAccount resolve mutation 'addAccount'
-func (r *Resolver) AddAccount(ctx context.Context) (*AccountResolver, error) {
-	account, err := model.NewAccount(ctx)
-	return &AccountResolver{account}, err
+// Auth ...
+func (r *Resolver) Auth(ctx content.Context, args struct{ Email string }) (bool, error) {
+	_, ok := ctx.Value(model.ContextLoggedInAccount).(bson.ObjectId)
+	if ok {
+		return false, nil
+	}
+
+	// TODO: validate email string
+	code := authEmail(args.Email)
+	if err := sendAuthMail(code); err != nil {
+		return nil, err
+	}
+	return nil, nil
 }
 
 // AddName ...

@@ -1,4 +1,4 @@
-package auth
+package api
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/globalsign/mgo/bson"
 	"github.com/gomodule/redigo/redis"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/model"
@@ -43,10 +44,7 @@ var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
 	&uuid64.RandomSection{Length: 5},
 }}
 
-var codeEmail = map[string]string{}
-
-// GenCodeURL ...
-func GenCodeURL(email string) string {
+func authEmail(email string) string {
 	code, err := codeGenerator.New()
 	if err != nil {
 		log.Fatal(err)
@@ -57,21 +55,37 @@ func GenCodeURL(email string) string {
 	return fmt.Sprintf("%s/auth/code?=%s", apiHostName, code)
 }
 
-// Auth ...
-func Auth(code string) string {
+func authCode(code string) (string, error) {
 	email, err := redis.String(redisConn.Do("GET", code))
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "check code"))
+	if err == redis.ErrNil {
+		return "", errors.New("Invalid code")
+	} else if err != nil {
+		return "", errors.Wrap(err, "Get code from redis")
 	}
-	_, err := model.FindAccountByEmail(context.Background(), email)
+	account, err := model.FindAccountByEmail(context.Background(), email)
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "find account"))
+		return "", errors.Wrap(err, "find account")
 	}
 	token, err := tokenGenerator.New()
 	if err != nil {
-		log.Fatal(errors.Wrap(err, "gen token"))
+		return "", errors.Wrap(err, "gen token")
 	}
-	if _, err := redisConn.Do("SET", token, email, "EX 86400"); err != nil {
-		log.Fatal(errors.Wrap(err, "set code to redis"))
+	if _, err := redisConn.Do("SET", token, account.ID.Hex(), "EX 86400"); err != nil {
+		return "", errors.Wrap(err, "set code to redis")
 	}
+	return token, nil
+}
+
+func sendAuthMail(code string) error {
+	return nil // TODO:
+}
+
+func authToken(token string) (string, error) {
+	idStr, err := redis.String(redisConn.Do("GET", token))
+	if err == redis.ErrNil {
+		return "", errors.New("Invalid Token")
+	} else if err != nil {
+		return "", errors.Wrap(err, "Get token from redis")
+	}
+	return bson.ObjectIdHex(idStr), nil
 }

@@ -15,7 +15,7 @@ type Query {
 }
 
 type Mutation {
-    addAccount(): Account!
+	auth(email: String!): Boolean!
     addName(name: String!): Account!
     syncTags(tags: [String]!): Account!
     pubThread(thread: ThreadInput!): Thread!

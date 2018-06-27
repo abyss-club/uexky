@@ -13,19 +13,12 @@ import (
 var mockAccounts []*Account
 
 func addMockUser() {
-	newToken := func() string {
-		token, err := tokenGenerator.New()
-		if err != nil {
-			log.Fatal(err)
-		}
-		return token
-	}
 	accounts := []*Account{
-		&Account{bson.NewObjectId(), newToken(), []string{"test0"},
+		&Account{bson.NewObjectId(), "0@mail.com", []string{"test0"},
 			[]string{"动画"}},
-		&Account{bson.NewObjectId(), newToken(), []string{"test1"},
+		&Account{bson.NewObjectId(), "1@mail.com", []string{"test1"},
 			[]string{}},
-		&Account{bson.NewObjectId(), newToken(), []string{"test2"},
+		&Account{bson.NewObjectId(), "2@mail.com", []string{"test2"},
 			[]string{}},
 	}
 	c, cs := Colle("accounts")
@@ -38,9 +31,9 @@ func addMockUser() {
 	mockAccounts = accounts
 }
 
-func ctxWithToken(token string) context.Context {
+func ctxWithToken(id bson.ObjectId) context.Context {
 	ctx := context.Background()
-	return context.WithValue(ctx, ContextKeyToken, token)
+	return context.WithValue(ctx, ContextLoggedInAccount, id)
 }
 
 func TestNewAccount(t *testing.T) {
@@ -53,7 +46,7 @@ func TestNewAccount(t *testing.T) {
 		wantErr bool
 	}{
 		{"new account", args{context.Background()}, false},
-		{"new account when signed in", args{ctxWithToken(mockAccounts[0].Token)}, true},
+		{"new account when signed in", args{ctxWithToken(mockAccounts[0].ID)}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
