@@ -10,7 +10,7 @@ import (
 
 func TestPost(t *testing.T) {
 	account := mockAccounts[2]
-	ctx := ctxWithToken(account.Token)
+	ctx := ctxWithAccount(account)
 	thread, err := NewThread(ctx, &ThreadInput{
 		Content: "thread!", MainTag: pkg.mainTags[0],
 	})
@@ -32,7 +32,7 @@ func TestPost(t *testing.T) {
 		t.Fatal(errors.Wrap(err, "create post1"))
 	}
 	if post1.ObjectID == "" || post1.ID == "" || post1.Anonymous == true ||
-		post1.Author != account.Names[0] || post1.Account != account.Token ||
+		post1.Author != account.Names[0] || post1.AccountID != account.ID ||
 		post1.ThreadID != thread.ID || post1.Content != input1.Content ||
 		len(post1.Refers) != 0 {
 		t.Fatal(errors.Errorf("Post1 wrong! get: %v", post1))

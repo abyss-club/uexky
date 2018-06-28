@@ -62,7 +62,7 @@ func authCode(code string) (string, error) {
 	} else if err != nil {
 		return "", errors.Wrap(err, "Get code from redis")
 	}
-	account, err := model.FindAccountByEmail(context.Background(), email)
+	account, err := model.GetAccountByEmail(context.Background(), email)
 	if err != nil {
 		return "", errors.Wrap(err, "find account")
 	}

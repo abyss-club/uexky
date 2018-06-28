@@ -31,38 +31,9 @@ func addMockUser() {
 	mockAccounts = accounts
 }
 
-func ctxWithToken(id bson.ObjectId) context.Context {
+func ctxWithAccount(a *Account) context.Context {
 	ctx := context.Background()
-	return context.WithValue(ctx, ContextLoggedInAccount, id)
-}
-
-func TestNewAccount(t *testing.T) {
-	type args struct {
-		ctx context.Context
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{"new account", args{context.Background()}, false},
-		{"new account when signed in", args{ctxWithToken(mockAccounts[0].ID)}, true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewAccount(tt.args.ctx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewAccount() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if err != nil {
-				return
-			}
-			if got.ID == "" || got.Token == "" {
-				t.Errorf("NewAccount() = %v, id or token not be set", got)
-			}
-		})
-	}
+	return context.WithValue(ctx, ContextLoggedInAccount, a.ID)
 }
 
 func TestGetAccount(t *testing.T) {
@@ -75,9 +46,9 @@ func TestGetAccount(t *testing.T) {
 		want    *Account
 		wantErr bool
 	}{
-		{"normal", args{ctxWithToken(mockAccounts[0].Token)}, mockAccounts[0], false},
-		{"test invalid token", args{ctxWithToken("invalid")}, nil, true},
-		{"test unexist token", args{ctxWithToken("AAAAAAAAAAAAAAAAAAAAAAAA")}, nil, true},
+		{"normal", args{ctxWithAccount(mockAccounts[0])}, mockAccounts[0], false},
+		{"test invalid token", args{ctxWithAccount(&Account{ID: "?"})}, nil, true},
+		{"test unexist token", args{ctxWithAccount(&Account{ID: bson.NewObjectId()})}, nil, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -92,7 +63,7 @@ func TestGetAccount(t *testing.T) {
 			if !reflect.DeepEqual(got.ID, tt.want.ID) {
 				t.Errorf("GetAccount() ID = %+v, want %+v", got, tt.want)
 			}
-			if !reflect.DeepEqual(got.Token, tt.want.Token) {
+			if !reflect.DeepEqual(got.Email, tt.want.Email) {
 				t.Errorf("GetAccount() Token = %+v, want %+v", got, tt.want)
 			}
 			if !reflect.DeepEqual(got.Names, tt.want.Names) {
@@ -100,6 +71,38 @@ func TestGetAccount(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got.Tags, tt.want.Tags) {
 				t.Errorf("GetAccount() Tags = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGetAccountByEmail(t *testing.T) {
+	type args struct {
+		ctx   context.Context
+		email string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{"exist account", args{
+			ctxWithAccount(mockAccounts[0]), mockAccounts[0].Email,
+		}, mockAccounts[0].Email, false},
+		{"new account", args{
+			context.Background(), "3@mail.com",
+		}, "3@mail.com", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetAccountByEmail(tt.args.ctx, tt.args.email)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetAccountByEmail() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got.Email, tt.want) {
+				t.Errorf("GetAccountByEmail() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -129,14 +132,16 @@ func TestAccount_AddName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := ctxWithAccount(tt.args.account)
 			if err := tt.args.account.AddName(ctx, tt.args.name); (err != nil) != tt.wantErr {
 				t.Errorf("Account.AddName() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			ctx = ctxWithToken(tt.args.account.Token)
 			a, err := GetAccount(ctx)
 			if err != nil {
 				t.Error(errors.Wrap(err, "Account.AddName() get account error"))
+			}
+			if a == nil {
+				return
 			}
 			if !reflect.DeepEqual(a.Names, tt.wantNames) || !reflect.DeepEqual(tt.args.account.Names, tt.wantNames) {
 				t.Errorf("Account.AddName() want = %v, in memory = %v, in db = %v",
@@ -168,7 +173,7 @@ func TestAccount_SyncTags(t *testing.T) {
 			if err := tt.args.account.SyncTags(ctx, tt.args.tags); (err != nil) != tt.wantErr {
 				t.Errorf("Account.SyncTags() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			ctx = ctxWithToken(tt.args.account.Token)
+			ctx = ctxWithAccount(tt.args.account)
 			a, err := GetAccount(ctx)
 			if err != nil {
 				t.Error(errors.Wrap(err, "Account.AddName() get account error"))
