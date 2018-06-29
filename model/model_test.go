@@ -8,15 +8,15 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
 const testDB = "testing"
 
-var testMainTags = []string{"MainA", "MainB", "MainC"}
-
 // this file only have common test tools
 func prepTestDB() {
-	if err := Init("localhost:27017", testDB, testMainTags); err != nil {
+	mgmt.Config.MainTags = []string{"MainA", "MainB", "MainC"}
+	if err := Init(); err != nil {
 		log.Fatal(errors.Wrap(err, "Connect to test db"))
 	}
 	session := pkg.mongoSession.Copy()

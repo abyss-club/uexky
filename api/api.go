@@ -9,11 +9,13 @@ import (
 	"github.com/globalsign/mgo/bson"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/julienschmidt/httprouter"
+	"gitlab.com/abyss.club/uexky/mgmt"
 	"gitlab.com/abyss.club/uexky/model"
 )
 
 // NewRouter make router with all apis
 func NewRouter() http.Handler {
+	initRedis()
 	schema := graphql.MustParseSchema(schema, &Resolver{})
 	handler := httprouter.New()
 	handler.POST("/graphql/", withAuth(graphqlHandle(schema)))
@@ -55,14 +57,15 @@ func withAuth(handle httprouter.Handle) httprouter.Handle {
 		}
 
 		accountID, err := authToken(tokenCookie.Value)
-		if token != "" && len(token) != 24 {
-			http.Error(w, "Invalid Token Format", http.StatusForbidden)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
-		log.Print("Login in user %v", accountID)
-
-		ctx := context.WithValue(req.Context(), model.ContextLoggedInAccount, accountID)
-		req = req.WithContext(ctx)
+		if accountID != "" {
+			log.Printf("Logged user %v", accountID)
+			ctx := context.WithValue(req.Context(), model.ContextLoggedInAccount, accountID)
+			req = req.WithContext(ctx)
+		}
 		handle(w, req, p)
 	}
 }
@@ -71,13 +74,13 @@ func authHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	code := req.URL.Query().Get("code")
 	if code == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write("缺乏必要信息")
+		w.Write([]byte("缺乏必要信息"))
 		return
 	}
 	token, err := authCode(code)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write("验证信息错误，或已失效")
+		w.Write([]byte("验证信息错误，或已失效"))
 		return
 	}
 
@@ -85,13 +88,13 @@ func authHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	cookie := &http.Cookie{
 		Name:     "token",
 		Value:    token,
-		Domain:   "abyss.club",
+		Domain:   mgmt.Config.Domain.WEB,
 		Secure:   true,
 		HttpOnly: true,
 	}
 	w.WriteHeader(http.StatusMovedPermanently)
 	http.SetCookie(w, cookie)
-	w.Header().Set("Location", "https://abyss.club")
+	w.Header().Set("Location", mgmt.APIURLPrefix())
 }
 
 // Resolver for graphql
@@ -160,10 +163,23 @@ func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostRes
 	return &PostResolver{Post: post}, nil
 }
 
+// Uexky ...
+func (r *Resolver) Uexky(ctx context.Context) (*UexkyResolver, error) {
+	return &UexkyResolver{}, nil
+}
+
+// UexkyResolver ...
+type UexkyResolver struct{}
+
+// MainTags ...
+func (ur *UexkyResolver) MainTags(ctx context.Context) ([]string, error) {
+	return mgmt.Config.MainTags, nil
+}
+
 // Mutation:
 
 // Auth ...
-func (r *Resolver) Auth(ctx content.Context, args struct{ Email string }) (bool, error) {
+func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool, error) {
 	_, ok := ctx.Value(model.ContextLoggedInAccount).(bson.ObjectId)
 	if ok {
 		return false, nil
@@ -172,9 +188,9 @@ func (r *Resolver) Auth(ctx content.Context, args struct{ Email string }) (bool,
 	// TODO: validate email string
 	code := authEmail(args.Email)
 	if err := sendAuthMail(code); err != nil {
-		return nil, err
+		return false, err
 	}
-	return nil, nil
+	return true, nil
 }
 
 // AddName ...

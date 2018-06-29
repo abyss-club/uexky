@@ -9,24 +9,20 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/gomodule/redigo/redis"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mgmt"
 	"gitlab.com/abyss.club/uexky/model"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
 var redisConn redis.Conn
 
-func init() {
-	c, err := redis.DialURL("redis://localhost:6379/0")
+func initRedis() {
+	c, err := redis.DialURL(mgmt.Config.RedisURI)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "Connect to redis"))
 	}
 	redisConn = c
 }
-
-const (
-	apiHostName  = "https://api.abyss.club"
-	siteHostName = "https://abyss.club"
-)
 
 // 36 charactors Base64 token
 var codeGenerator = uuid64.Generator{Sections: []uuid64.Section{
@@ -52,7 +48,7 @@ func authEmail(email string) string {
 	if _, err := redisConn.Do("SET", code, email, "EX 600"); err != nil {
 		log.Fatal(errors.Wrap(err, "set code to redis"))
 	}
-	return fmt.Sprintf("%s/auth/code?=%s", apiHostName, code)
+	return fmt.Sprintf("%s/auth/code?=%s", mgmt.WebURLPrefix(), code)
 }
 
 func authCode(code string) (string, error) {
@@ -80,12 +76,15 @@ func sendAuthMail(code string) error {
 	return nil // TODO:
 }
 
-func authToken(token string) (string, error) {
+func authToken(token string) (bson.ObjectId, error) {
 	idStr, err := redis.String(redisConn.Do("GET", token))
 	if err == redis.ErrNil {
-		return "", errors.New("Invalid Token")
+		return "", nil
 	} else if err != nil {
 		return "", errors.Wrap(err, "Get token from redis")
+	}
+	if !bson.IsObjectIdHex(idStr) {
+		return "", nil // Can't find valid account.
 	}
 	return bson.ObjectIdHex(idStr), nil
 }

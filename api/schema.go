@@ -31,7 +31,7 @@ scalar Time
 
 // Data Type Defines
 type Account {
-    token: String!
+    email: String!
     names: [String!]
     tags: [String!]
 }
