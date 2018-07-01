@@ -99,7 +99,7 @@ $ cd GOPATH/src/gitlab.com/abyss.club/uexky
 $ cp config.sample.json config.json
 # Install Go dependencies
 $ dep ensure
-# Compile and run
+# Compile and serve API server at port 5000
 $ go run main.go -c config.json
 # ... or build executable then run
 $ go build && ./uexky
