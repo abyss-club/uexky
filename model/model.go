@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/globalsign/mgo"
+	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
 // MongoSession ...
@@ -12,14 +13,14 @@ var pkg struct {
 }
 
 // Init to Mongodb, write to mongoSession
-func Init(url, db string, mainTags []string) error {
-	s, err := mgo.Dial(url)
+func Init() error {
+	s, err := mgo.Dial(mgmt.Config.Mongo.URI)
 	if err != nil {
 		return err
 	}
 	pkg.mongoSession = s
-	pkg.database = db
-	pkg.mainTags = mainTags
+	pkg.database = mgmt.Config.Mongo.DB
+	pkg.mainTags = mgmt.Config.MainTags
 	return nil
 }
 
@@ -31,4 +32,9 @@ func Colle(collection string) (*mgo.Collection, func()) {
 		session.Close()
 	}
 	return colle, close
+}
+
+// MainTags ...
+func MainTags() []string {
+	return pkg.mainTags
 }

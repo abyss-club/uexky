@@ -22,7 +22,7 @@ type Thread struct {
 	ID         string        `bson:"id"`
 	Anonymous  bool          `bson:"anonymous"`
 	Author     string        `bson:"author"`
-	Account    string        `bson:"account"` // not display in front
+	AccountID  bson.ObjectId `bson:"account_id"` // not display in front
 	CreateTime time.Time     `bson:"created_time"`
 
 	MainTag string   `bson:"main_tag"`
@@ -73,7 +73,7 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 
 	thread := &Thread{
 		ObjectID:   bson.NewObjectId(),
-		Account:    account.Token,
+		AccountID:  account.ID,
 		CreateTime: time.Now(),
 
 		MainTag: input.MainTag,

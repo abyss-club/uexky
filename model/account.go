@@ -3,12 +3,11 @@ package model
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
-	"gitlab.com/abyss.club/uexky/uuid64"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
 // ContextKey ...
@@ -17,13 +16,8 @@ type ContextKey string
 // ContextKeyToken ...
 const ContextKeyToken = ContextKey("token")
 
-// 24 charactors Base64 token
-var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
-	&uuid64.RandomSection{Length: 10},
-	&uuid64.CounterSection{Length: 2, Unit: time.Millisecond},
-	&uuid64.TimestampSection{Length: 7, Unit: time.Millisecond},
-	&uuid64.RandomSection{Length: 5},
-}}
+// ContextLoggedInAccount ...
+const ContextLoggedInAccount = ContextKey("loggedIn")
 
 // aid generator for post, thread and anonymous id.
 var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
@@ -39,38 +33,46 @@ const (
 
 // Account for uexky
 type Account struct {
-	ID    bson.ObjectId `json:"id" bson:"id"`
-	Token string        `json:"token" bson:"token"`
+	ID    bson.ObjectId `json:"id" bson:"_id"`
+	Email string        `json:"email" bson:"email"`
 	Names []string      `json:"names" bson:"names"`
 	Tags  []string      `json:"tags" bson:"tags"`
 }
 
-// NewAccount make a new account
-func NewAccount(ctx context.Context) (*Account, error) {
-	if err := requireNotSignIn(ctx); err != nil {
-		return nil, err
-	}
-	token, err := tokenGenerator.New()
+// GetAccount by id (in context)
+func GetAccount(ctx context.Context) (*Account, error) {
+	account, err := requireSignIn(ctx)
 	if err != nil {
-		return nil, err
-	}
-
-	account := &Account{
-		ID:    bson.NewObjectId(),
-		Token: token,
-	}
-	c, cs := Colle("accounts")
-	defer cs()
-	if err := c.Insert(account); err != nil {
 		return nil, err
 	}
 	return account, nil
 }
 
-// GetAccount by token
-func GetAccount(ctx context.Context) (*Account, error) {
-	account, err := requireSignIn(ctx)
+// GetAccountByEmail ...
+func GetAccountByEmail(ctx context.Context, email string) (*Account, error) {
+	c, cs := Colle("accounts")
+	defer cs()
+	c.EnsureIndexKey("email")
+
+	query := c.Find(bson.M{"email": email})
+	count, err := query.Count()
 	if err != nil {
+		return nil, err
+	}
+	if count != 0 {
+		var account *Account
+		if err := query.One(&account); err != nil {
+			return nil, err
+		}
+		return account, nil
+	}
+
+	// New Account
+	account := &Account{
+		ID:    bson.NewObjectId(),
+		Email: email,
+	}
+	if _, err := c.Upsert(bson.M{"email": email}, bson.M{"$set": account}); err != nil {
 		return nil, err
 	}
 	return account, nil
@@ -97,7 +99,7 @@ func (a *Account) AddName(ctx context.Context, name string) error {
 	names := append(a.Names, name)
 	c, cs := Colle("accounts")
 	defer cs()
-	if err := c.Update(bson.M{"token": a.Token}, bson.M{
+	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
 		"$set": bson.M{"names": names},
 	}); err != nil {
 		return err
@@ -132,7 +134,7 @@ func (a *Account) SyncTags(ctx context.Context, tags []string) error {
 
 	c, cs := Colle("accounts")
 	defer cs()
-	if err := c.Update(bson.M{"token": a.Token}, bson.M{
+	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
 		"$set": bson.M{"tags": tagList},
 	}); err != nil {
 		return err
@@ -143,6 +145,7 @@ func (a *Account) SyncTags(ctx context.Context, tags []string) error {
 
 type accountAID struct {
 	ObjectID    bson.ObjectId `bson:"_id"`
+	AccountID   bson.ObjectId `bson:"account_id"`
 	Token       string        `bson:"token"`
 	ThreadID    string        `bson:"thread_id"`
 	AnonymousID string        `bson:"anonymous_id"`
@@ -151,7 +154,7 @@ type accountAID struct {
 // AnonymousID ...
 func (a *Account) AnonymousID(threadID string, new bool) (string, error) {
 	c, cs := Colle("accounts_aid")
-	c.EnsureIndexKey("thread_id", "token")
+	c.EnsureIndexKey("thread_id", "account_id")
 	defer cs()
 
 	newAID := func() (string, error) {
@@ -161,7 +164,7 @@ func (a *Account) AnonymousID(threadID string, new bool) (string, error) {
 		}
 		aaid := accountAID{
 			ObjectID:    bson.NewObjectId(),
-			Token:       a.Token,
+			AccountID:   a.ID,
 			ThreadID:    threadID,
 			AnonymousID: aid,
 		}
@@ -174,7 +177,7 @@ func (a *Account) AnonymousID(threadID string, new bool) (string, error) {
 	if new {
 		return newAID()
 	}
-	query := c.Find(bson.M{"thread_id": threadID, "token": a.Token})
+	query := c.Find(bson.M{"thread_id": threadID, "account_id": a.ID})
 	if count, err := query.Count(); err != nil {
 		return "", err
 	} else if count == 0 {
@@ -188,33 +191,16 @@ func (a *Account) AnonymousID(threadID string, new bool) (string, error) {
 }
 
 func requireSignIn(ctx context.Context) (*Account, error) {
-	token, ok := ctx.Value(ContextKeyToken).(string)
-	if !ok || token == "" {
+	accountID, ok := ctx.Value(ContextLoggedInAccount).(bson.ObjectId)
+	if !ok {
 		return nil, fmt.Errorf("Forbidden, no access token")
 	}
-	log.Printf("find token '%v'", token)
-
 	c, cs := Colle("accounts")
 	defer cs()
 
-	query := c.Find(bson.M{"token": token})
-	var account Account
-	if count, err := query.Count(); err != nil {
-		return nil, err
-	} else if count == 0 {
-		return nil, fmt.Errorf("Invalid token")
+	var account *Account
+	if err := c.FindId(accountID).One(&account); err != nil {
+		return nil, errors.Wrap(err, "Find account")
 	}
-	if err := query.One(&account); err != nil {
-		return nil, err
-	}
-	return &account, nil
-}
-
-func requireNotSignIn(ctx context.Context) error {
-	token, ok := ctx.Value(ContextKeyToken).(string)
-	if ok && token != "" {
-		return fmt.Errorf("You have already signed in")
-	}
-	log.Printf("find token '%v'", token)
-	return nil
+	return account, nil
 }

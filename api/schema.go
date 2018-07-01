@@ -11,10 +11,11 @@ type Query {
     threadSlice(limit: Int! tags: [String!] after: String!): ThreadSlice!
     thread(id: String!): Thread!
     post(id: String!): Post!
+	uexky(): Uexky!
 }
 
 type Mutation {
-    addAccount(): Account!
+	auth(email: String!): Boolean!
     addName(name: String!): Account!
     syncTags(tags: [String]!): Account!
     pubThread(thread: ThreadInput!): Thread!
@@ -30,7 +31,7 @@ scalar Time
 
 // Data Type Defines
 type Account {
-    token: String!
+    email: String!
     names: [String!]
     tags: [String!]
 }
@@ -81,5 +82,9 @@ type Post {
 type PostSlice {
   posts: [Post]!
   sliceInfo: SliceInfo!
+}
+
+type Uexky {
+	mainTags: [String!]!
 }
 `

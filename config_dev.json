@@ -1,7 +1,0 @@
-{
-  "mongo" :{
-    "uri": "localhost:27017",
-    "db": "develop"
-  },
-  "mainTags": ["动画", "漫画", "游戏", "桌游"]
-}

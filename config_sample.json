@@ -1,0 +1,12 @@
+{
+  "mainTags": ["动画", "漫画", "游戏", "桌游"],
+  "mail": {
+    "private_key": "private_key",
+    "public_key": "public_key"
+  },
+  "proto": "http",
+  "domain": {
+    "web": "uexky.com",
+    "api": "api.uexky.com"
+  }
+}

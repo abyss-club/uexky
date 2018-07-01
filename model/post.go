@@ -17,7 +17,7 @@ type Post struct {
 	ID         string        `bson:"id"`
 	Anonymous  bool          `bson:"anonymous"`
 	Author     string        `bson:"author"`
-	Account    string        `bson:"account"`
+	AccountID  bson.ObjectId `bson:"account_id"`
 	CreateTime time.Time     `bson:"creaate_time"`
 
 	ThreadID string   `bson:"thread_id"`
@@ -50,7 +50,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 	post := &Post{
 		ObjectID:   bson.NewObjectId(),
 		CreateTime: time.Now(),
-		Account:    account.Token,
+		AccountID:  account.ID,
 
 		ThreadID: input.ThreadID,
 		Content:  input.Content,

@@ -14,6 +14,15 @@
   version = "r2018.04.03"
 
 [[projects]]
+  name = "github.com/gomodule/redigo"
+  packages = [
+    "internal",
+    "redis"
+  ]
+  revision = "9c11da706d9b7902c6da69c592f75637793fe121"
+  version = "v2.0.0"
+
+[[projects]]
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
@@ -51,6 +60,12 @@
   version = "v1.1"
 
 [[projects]]
+  name = "github.com/mailgun/mailgun-go"
+  packages = ["."]
+  revision = "a4002e2df2e8ca2da6a6fbb4a72871b504e49f50"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/opentracing/opentracing-go"
   packages = [
     ".",
@@ -75,6 +90,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "760040aec10562d4d9947a4b107f99efbd333e8fa505b7aefb0cdd714148ea8e"
+  inputs-digest = "208589a9498828e0142cbc0314831411a0d267de54bfd01a67a81253fb6efe5e"
   solver-name = "gps-cdcl"
   solver-version = 1

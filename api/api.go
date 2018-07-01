@@ -3,19 +3,25 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
+	"github.com/globalsign/mgo/bson"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mgmt"
 	"gitlab.com/abyss.club/uexky/model"
 )
 
 // NewRouter make router with all apis
 func NewRouter() http.Handler {
+	initRedis()
 	schema := graphql.MustParseSchema(schema, &Resolver{})
 	handler := httprouter.New()
-	handler.POST("/graphql/", withToken(graphqlHandle(schema)))
+	handler.POST("/graphql/", withAuth(graphqlHandle(schema)))
+	handler.GET("/auth/", authHandle) // TODO: when user is already logged in
 	return handler
 }
 
@@ -44,19 +50,59 @@ func graphqlHandle(schema *graphql.Schema) httprouter.Handle {
 	}
 }
 
-func withToken(handle httprouter.Handle) httprouter.Handle {
+func withAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
-		token := req.Header.Get("Access-Token")
-		log.Print("get token", token)
-		if token != "" && len(token) != 24 {
-			http.Error(w, "Invalid Token Format", http.StatusForbidden)
+		tokenCookie, err := req.Cookie("token")
+		log.Printf("find token cookie %v", tokenCookie)
+		if err != nil { // err must be ErrNoCookie,  non-login user, do noting
+			handle(w, req, p)
 			return
 		}
-		ctx := context.WithValue(req.Context(), model.ContextKeyToken, token)
-		req = req.WithContext(ctx)
-		log.Printf("set token value to ctx: '%+v'", req.Context().Value("token"))
+
+		accountID, err := authToken(tokenCookie.Value)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+		if accountID != "" {
+			log.Printf("Logged user %v", accountID)
+			ctx := context.WithValue(req.Context(), model.ContextLoggedInAccount, accountID)
+			req = req.WithContext(ctx)
+		}
 		handle(w, req, p)
 	}
+}
+
+func authHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	code := req.URL.Query().Get("code")
+	if code == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("缺乏必要信息"))
+		return
+	}
+	token, err := authCode(code)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(fmt.Sprintf("验证信息错误，或已失效。 %v", err)))
+		return
+	}
+
+	redisConn.Do("DEL", code) // delete after use
+	cookie := &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		Domain:   mgmt.Config.Domain.WEB,
+		MaxAge:   86400,
+		HttpOnly: true,
+	}
+	if mgmt.Config.Proto == "https" {
+		cookie.Secure = true
+	}
+	http.SetCookie(w, cookie)
+	w.Header().Set("Location", mgmt.WebURLPrefix())
+	w.Header().Set("Cache-Control", "no-cache, no-store")
+	w.WriteHeader(http.StatusFound)
 }
 
 // Resolver for graphql
@@ -125,12 +171,39 @@ func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostRes
 	return &PostResolver{Post: post}, nil
 }
 
+// Uexky ...
+func (r *Resolver) Uexky(ctx context.Context) (*UexkyResolver, error) {
+	return &UexkyResolver{}, nil
+}
+
+// UexkyResolver ...
+type UexkyResolver struct{}
+
+// MainTags ...
+func (ur *UexkyResolver) MainTags(ctx context.Context) ([]string, error) {
+	return mgmt.Config.MainTags, nil
+}
+
 // Mutation:
 
-// AddAccount resolve mutation 'addAccount'
-func (r *Resolver) AddAccount(ctx context.Context) (*AccountResolver, error) {
-	account, err := model.NewAccount(ctx)
-	return &AccountResolver{account}, err
+// Auth ...
+func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool, error) {
+	_, ok := ctx.Value(model.ContextLoggedInAccount).(bson.ObjectId)
+	if ok {
+		return false, nil
+	}
+
+	if !isValidateEmail(args.Email) {
+		return false, errors.New("Invalid Email Address")
+	}
+	authURL, err := authEmail(args.Email)
+	if err != nil {
+		return false, nil
+	}
+	if err := sendAuthMail(authURL, args.Email); err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 // AddName ...

@@ -11,9 +11,9 @@ type AccountResolver struct {
 	Account *model.Account
 }
 
-// Token resolve account.token
-func (ar *AccountResolver) Token(ctx context.Context) (string, error) {
-	return ar.Account.Token, nil
+// Email resolve account.token
+func (ar *AccountResolver) Email(ctx context.Context) (string, error) {
+	return ar.Account.Email, nil
 }
 
 // Names resolve account.names
