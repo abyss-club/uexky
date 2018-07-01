@@ -87,17 +87,22 @@ func authHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		return
 	}
 
-	// redisConn.Do("DEL", code)
+	redisConn.Do("DEL", code) // delete after use
 	cookie := &http.Cookie{
-		Name:   "token",
-		Value:  token,
-		Domain: mgmt.Config.Domain.WEB,
-		MaxAge: 86400,
-		// HttpOnly: true,
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		Domain:   mgmt.Config.Domain.WEB,
+		MaxAge:   86400,
+		HttpOnly: true,
+	}
+	if mgmt.Config.Proto == "https" {
+		cookie.Secure = true
 	}
 	http.SetCookie(w, cookie)
 	w.Header().Set("Location", mgmt.WebURLPrefix())
-	w.WriteHeader(http.StatusMovedPermanently)
+	w.Header().Set("Cache-Control", "no-cache, no-store")
+	w.WriteHeader(http.StatusFound)
 }
 
 // Resolver for graphql

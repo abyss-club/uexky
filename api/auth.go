@@ -73,7 +73,7 @@ func authCode(code string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "gen token")
 	}
-	if _, err := redisConn.Do("SET", token, account.ID.Hex(), "EX", 86400); err != nil {
+	if _, err := redisConn.Do("SET", token, account.ID.Hex(), "EX", 600); err != nil {
 		return "", errors.Wrap(err, "set token to redis")
 	}
 	return token, nil
