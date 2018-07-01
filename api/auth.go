@@ -47,15 +47,15 @@ var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
 	&uuid64.RandomSection{Length: 5},
 }}
 
-func authEmail(email string) string {
+func authEmail(email string) (string, error) {
 	code, err := codeGenerator.New()
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
-	if _, err := redisConn.Do("SET", code, email, "EX 600"); err != nil {
-		log.Fatal(errors.Wrap(err, "set code to redis"))
+	if _, err := redisConn.Do("SET", code, email, "EX", 3600); err != nil {
+		return "", errors.Wrap(err, "set code to redis")
 	}
-	return fmt.Sprintf("%s/auth/code?=%s", mgmt.WebURLPrefix(), code)
+	return fmt.Sprintf("%s/auth/?code=%s", mgmt.APIURLPrefix(), code), nil
 }
 
 func authCode(code string) (string, error) {
@@ -73,8 +73,8 @@ func authCode(code string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "gen token")
 	}
-	if _, err := redisConn.Do("SET", token, account.ID.Hex(), "EX 86400"); err != nil {
-		return "", errors.Wrap(err, "set code to redis")
+	if _, err := redisConn.Do("SET", token, account.ID.Hex(), "EX", 86400); err != nil {
+		return "", errors.Wrap(err, "set token to redis")
 	}
 	return token, nil
 }
@@ -86,17 +86,16 @@ func sendAuthMail(url, to string) error {
 		fmt.Sprintf("点击此链接进入 Abyss：%s", url),
 		to,
 	)
-	msg.SetHtml(`
+	msg.SetHtml(fmt.Sprintf(`
 <html>
     <head>
         <meta charset="utf-8">
         <title>点击登入 Abyss!</title>
     </head>
     <body>
-        <H2>点击下面的链接进入 Abyss</H2>
-        <p><a href=""></a></p>
+        <p>点击 <a href="%s">此链接</a> 进入 Abyss</p>
     </body>
-</html>`)
+</html>`, url))
 	res, id, err := mailClient.Send(msg)
 	if err != nil {
 		return errors.Wrap(err, "Send Auth Email")

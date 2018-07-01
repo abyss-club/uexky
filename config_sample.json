@@ -3,5 +3,10 @@
   "mail": {
     "private_key": "private_key",
     "public_key": "public_key"
+  },
+  "proto": "http",
+  "domain": {
+    "web": "uxkey.com",
+    "api": "api.uxkey.com"
   }
 }

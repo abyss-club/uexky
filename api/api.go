@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -52,6 +53,7 @@ func graphqlHandle(schema *graphql.Schema) httprouter.Handle {
 func withAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		tokenCookie, err := req.Cookie("token")
+		log.Printf("find token cookie %v", tokenCookie)
 		if err != nil { // err must be ErrNoCookie,  non-login user, do noting
 			handle(w, req, p)
 			return
@@ -81,21 +83,21 @@ func authHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	token, err := authCode(code)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("验证信息错误，或已失效"))
+		w.Write([]byte(fmt.Sprintf("验证信息错误，或已失效。 %v", err)))
 		return
 	}
 
-	// TODO: delete code in redis
+	// redisConn.Do("DEL", code)
 	cookie := &http.Cookie{
-		Name:     "token",
-		Value:    token,
-		Domain:   mgmt.Config.Domain.WEB,
-		Secure:   true,
-		HttpOnly: true,
+		Name:   "token",
+		Value:  token,
+		Domain: mgmt.Config.Domain.WEB,
+		MaxAge: 86400,
+		// HttpOnly: true,
 	}
-	w.WriteHeader(http.StatusMovedPermanently)
 	http.SetCookie(w, cookie)
-	w.Header().Set("Location", mgmt.APIURLPrefix())
+	w.Header().Set("Location", mgmt.WebURLPrefix())
+	w.WriteHeader(http.StatusMovedPermanently)
 }
 
 // Resolver for graphql
@@ -189,7 +191,10 @@ func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool,
 	if !isValidateEmail(args.Email) {
 		return false, errors.New("Invalid Email Address")
 	}
-	authURL := authEmail(args.Email)
+	authURL, err := authEmail(args.Email)
+	if err != nil {
+		return false, nil
+	}
 	if err := sendAuthMail(authURL, args.Email); err != nil {
 		return false, err
 	}
