@@ -9,6 +9,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/julienschmidt/httprouter"
+	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
 	"gitlab.com/abyss.club/uexky/model"
 )
@@ -185,9 +186,11 @@ func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool,
 		return false, nil
 	}
 
-	// TODO: validate email string
-	code := authEmail(args.Email)
-	if err := sendAuthMail(code); err != nil {
+	if !isValidateEmail(args.Email) {
+		return false, errors.New("Invalid Email Address")
+	}
+	authURL := authEmail(args.Email)
+	if err := sendAuthMail(authURL, args.Email); err != nil {
 		return false, err
 	}
 	return true, nil

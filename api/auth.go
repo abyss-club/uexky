@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/gomodule/redigo/redis"
+	mailgun "github.com/mailgun/mailgun-go"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
 	"gitlab.com/abyss.club/uexky/model"
@@ -15,6 +17,7 @@ import (
 )
 
 var redisConn redis.Conn
+var mailClient mailgun.Mailgun
 
 func initRedis() {
 	c, err := redis.DialURL(mgmt.Config.RedisURI)
@@ -22,6 +25,10 @@ func initRedis() {
 		log.Fatal(errors.Wrap(err, "Connect to redis"))
 	}
 	redisConn = c
+	mailClient = mailgun.NewMailgun(
+		mgmt.Config.Mail.Domain, mgmt.Config.Mail.PrivateKey,
+		mgmt.Config.Mail.PublicKey,
+	)
 }
 
 // 36 charactors Base64 token
@@ -72,8 +79,30 @@ func authCode(code string) (string, error) {
 	return token, nil
 }
 
-func sendAuthMail(code string) error {
-	return nil // TODO:
+func sendAuthMail(url, to string) error {
+	msg := mailClient.NewMessage(
+		fmt.Sprintf("auth@%s", mgmt.Config.Mail.Domain),
+		"点击登入 Abyss!",
+		fmt.Sprintf("点击此链接进入 Abyss：%s", url),
+		to,
+	)
+	msg.SetHtml(`
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>点击登入 Abyss!</title>
+    </head>
+    <body>
+        <H2>点击下面的链接进入 Abyss</H2>
+        <p><a href=""></a></p>
+    </body>
+</html>`)
+	res, id, err := mailClient.Send(msg)
+	if err != nil {
+		return errors.Wrap(err, "Send Auth Email")
+	}
+	log.Printf("Send Email to %s, id = %s, res = %s", to, id, res)
+	return nil
 }
 
 func authToken(token string) (bson.ObjectId, error) {
@@ -87,4 +116,12 @@ func authToken(token string) (bson.ObjectId, error) {
 		return "", nil // Can't find valid account.
 	}
 	return bson.ObjectIdHex(idStr), nil
+}
+
+func isValidateEmail(mail string) bool {
+	// TODO: use regular expression
+	if strings.Index(mail, "@") != -1 {
+		return true
+	}
+	return false
 }

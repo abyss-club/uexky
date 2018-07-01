@@ -60,6 +60,12 @@
   version = "v1.1"
 
 [[projects]]
+  name = "github.com/mailgun/mailgun-go"
+  packages = ["."]
+  revision = "a4002e2df2e8ca2da6a6fbb4a72871b504e49f50"
+  version = "v1.1.0"
+
+[[projects]]
   name = "github.com/opentracing/opentracing-go"
   packages = [
     ".",
@@ -84,6 +90,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "30abab879f361727efc81bdc005c1a32173297e299cf015f9d4c9f1ff49c7d1f"
+  inputs-digest = "208589a9498828e0142cbc0314831411a0d267de54bfd01a67a81253fb6efe5e"
   solver-name = "gps-cdcl"
   solver-version = 1

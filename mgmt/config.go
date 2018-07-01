@@ -15,13 +15,18 @@ var Config struct {
 		URI string `json:"mongo_uri"`
 		DB  string `json:"db"`
 	} `json:"mongo"`
-	RedisURI string
+	RedisURI string   `json:"redis_url"`
 	MainTags []string `json:"main_tags"`
-	Proto    string
+	Proto    string   `json:"proto"`
 	Domain   struct {
-		WEB string
-		API string
-	}
+		WEB string `json:"web"`
+		API string `json:"api"`
+	} `json:"domain"`
+	Mail struct {
+		Domain     string `json:"domain"`
+		PrivateKey string `json:"private_key"`
+		PublicKey  string `json:"public_key"`
+	} `json:"mail"`
 }
 
 func setDefaultConfig() {
@@ -31,6 +36,7 @@ func setDefaultConfig() {
 	Config.Proto = "https"
 	Config.Domain.WEB = "abyss.club"
 	Config.Domain.API = "api.abyss.club"
+	Config.Mail.Domain = "mail.abyss.club"
 }
 
 // WebURLPrefix ...
