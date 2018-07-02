@@ -9,15 +9,11 @@
 ## Build Instructions
 
 Dependencies needed:
+
 * `go`
 * `dep`
 * `redis`
 * `mongodb`
-
-### Redis & Mongo
-
-Check your db names in `mongo` to ensure no database named `develop`.
-Run `redis` and `mongod` before running Go server.
 
 ### Config File
 
@@ -90,11 +86,11 @@ API 使用 [graphql](https://graphql.org/)，API schema [见此](https://gitlab.
 
 1. 登录需要提供一个 email 地址：
 
-```
-type Mutation {
-    auth(email: String!): Boolean!
-}
-```
+    ```
+    type Mutation {
+        auth(email: String!): Boolean!
+    }
+    ```
 
 2. 如果返回 `true`，则会往提供的地址发送邮件，邮件中包含一个登录链接。点击登录
 链接将会被重定向至网站首页并设置好 cookie，此时登录完成。
