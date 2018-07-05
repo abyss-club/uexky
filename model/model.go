@@ -1,6 +1,8 @@
 package model
 
 import (
+	"os"
+
 	"github.com/globalsign/mgo"
 	"gitlab.com/abyss.club/uexky/mgmt"
 )
@@ -14,7 +16,12 @@ var pkg struct {
 
 // Init to Mongodb, write to mongoSession
 func Init() error {
-	s, err := mgo.Dial(mgmt.Config.Mongo.URI)
+	dbUri, found := os.LookupEnv("MONGO_URI")
+	if !found {
+		dbUri = mgmt.Config.Mongo.URI
+	}
+
+	s, err := mgo.Dial(dbUri)
 	if err != nil {
 		return err
 	}
