@@ -1,5 +1,5 @@
 {
-  "mainTags": ["动画", "漫画", "游戏", "桌游"],
+  "main_tags": ["动画", "漫画", "游戏", "桌游"],
   "mail": {
     "private_key": "private_key",
     "public_key": "public_key"

@@ -51,7 +51,7 @@
     "log",
     "trace"
   ]
-  revision = "e698b6abc17ead17ea89d3d22a4b2625299701e3"
+  revision = "bb9738501bd42a6536227b96068349b814379d6e"
 
 [[projects]]
   name = "github.com/julienschmidt/httprouter"
@@ -85,11 +85,11 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "1e491301e022f8f977054da4c2d852decd59571f"
+  revision = "ed29d75add3d7c4bf7ca65aac0c6df3d1420216f"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "208589a9498828e0142cbc0314831411a0d267de54bfd01a67a81253fb6efe5e"
+  inputs-digest = "ad701c04e933ae72afe15170557b696779a784ce61d8ac8aea87539c8859fe64"
   solver-name = "gps-cdcl"
   solver-version = 1
