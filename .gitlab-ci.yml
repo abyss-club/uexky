@@ -19,14 +19,18 @@ before_script:
   - go get github.com/golang/dep/cmd/dep
   - dep ensure
 
+# coverage regex "^total.*?(\d+.\d)%"
 test:
+  tags:
+    - docker
   services:
     - mongo
   variables:
     MONGO_URI: "mongodb://mongo"
   stage: test
   script:
-    - go test -v ./...
+    - go test -v ./... -coverprofile .testCoverage.txt
+    - go tool cover -func=.testCoverage.txt
 
 # mininal docker image
 # source: https://blog.kloia.com/micro-docker-images-for-go-applications-8a8701130c01
