@@ -17,7 +17,7 @@ type Post struct {
 	ID         string        `bson:"id"`
 	Anonymous  bool          `bson:"anonymous"`
 	Author     string        `bson:"author"`
-	AccountID  bson.ObjectId `bson:"account_id"`
+	UserID     bson.ObjectId `bson:"user_id"`
 	CreateTime time.Time     `bson:"creaate_time"`
 
 	ThreadID string   `bson:"thread_id"`
@@ -27,15 +27,15 @@ type Post struct {
 
 // PostInput ...
 type PostInput struct {
-	ThreadID string
-	Author   *string
-	Content  string
-	Refers   *[]string
+	ThreadID  string
+	Anonymous bool
+	Content   string
+	Refers    *[]string
 }
 
 // NewPost ...
 func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
-	account, err := requireSignIn(ctx)
+	user, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -49,8 +49,9 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 	}
 	post := &Post{
 		ObjectID:   bson.NewObjectId(),
+		Anonymous:  input.Anonymous,
+		UserID:     user.ID,
 		CreateTime: time.Now(),
-		AccountID:  account.ID,
 
 		ThreadID: input.ThreadID,
 		Content:  input.Content,
@@ -62,19 +63,17 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 	}
 	post.ID = postID
 
-	if input.Author == nil || *(input.Author) == "" {
-		post.Anonymous = true
-		author, err := account.AnonymousID(input.ThreadID, false)
+	if input.Anonymous {
+		author, err := user.AnonymousID(input.ThreadID, false)
 		if err != nil {
 			return nil, err
 		}
 		post.Author = author
 	} else {
-		post.Anonymous = false
-		if !account.HaveName(*(input.Author)) {
-			return nil, fmt.Errorf("Can't find name '%s'", *(input.Author))
+		if user.Name == "" {
+			return nil, fmt.Errorf("Can't find name for user")
 		}
-		post.Author = *input.Author
+		post.Author = user.Name
 	}
 
 	if input.Refers != nil {
@@ -93,7 +92,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		post.Refers = refers
 	}
 
-	c, cs := Colle("posts")
+	c, cs := Colle(collePost)
 	defer cs()
 	if err := c.Insert(post); err != nil {
 		return nil, err
@@ -103,7 +102,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 
 // FindPost ...
 func FindPost(ctx context.Context, ID string) (*Post, error) {
-	c, cs := Colle("posts")
+	c, cs := Colle(collePost)
 	defer cs()
 	query := c.Find(bson.M{"id": ID})
 	if count, err := query.Count(); err != nil {
@@ -132,7 +131,7 @@ func (p *Post) ReferPosts(ctx context.Context) ([]*Post, error) {
 }
 
 func isPostExist(postID string) (bool, error) {
-	c, cs := Colle("posts")
+	c, cs := Colle(collePost)
 	defer cs()
 
 	if cnt, err := c.Find(bson.M{"id": postID}).Count(); err != nil {

@@ -15,7 +15,10 @@ const testDB = "testing"
 
 // this file only have common test tools
 func prepTestDB() {
+	mgmt.LoadConfig("")
+	mgmt.Config.Mongo.DB = testDB
 	mgmt.Config.MainTags = []string{"MainA", "MainB", "MainC"}
+	mgmt.ReplaceConfigByEnv()
 	if err := Init(); err != nil {
 		log.Fatal(errors.Wrap(err, "Connect to test db"))
 	}

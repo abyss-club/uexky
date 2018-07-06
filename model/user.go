@@ -16,8 +16,8 @@ type ContextKey string
 // ContextKeyToken ...
 const ContextKeyToken = ContextKey("token")
 
-// ContextLoggedInAccount ...
-const ContextLoggedInAccount = ContextKey("loggedIn")
+// ContextLoggedInUser ...
+const ContextLoggedInUser = ContextKey("loggedIn")
 
 // aid generator for post, thread and anonymous id.
 var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
@@ -31,26 +31,26 @@ const (
 	tagLimit  = 15
 )
 
-// Account for uexky
-type Account struct {
+// User for uexky
+type User struct {
 	ID    bson.ObjectId `json:"id" bson:"_id"`
 	Email string        `json:"email" bson:"email"`
-	Names []string      `json:"names" bson:"names"`
+	Name  string        `json:"names" bson:"name"`
 	Tags  []string      `json:"tags" bson:"tags"`
 }
 
-// GetAccount by id (in context)
-func GetAccount(ctx context.Context) (*Account, error) {
-	account, err := requireSignIn(ctx)
+// GetUser by id (in context)
+func GetUser(ctx context.Context) (*User, error) {
+	user, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return account, nil
+	return user, nil
 }
 
-// GetAccountByEmail ...
-func GetAccountByEmail(ctx context.Context, email string) (*Account, error) {
-	c, cs := Colle("accounts")
+// GetUserByEmail ...
+func GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	c, cs := Colle(colleUser)
 	defer cs()
 	c.EnsureIndexKey("email")
 
@@ -60,35 +60,37 @@ func GetAccountByEmail(ctx context.Context, email string) (*Account, error) {
 		return nil, err
 	}
 	if count != 0 {
-		var account *Account
-		if err := query.One(&account); err != nil {
+		var user *User
+		if err := query.One(&user); err != nil {
 			return nil, err
 		}
-		return account, nil
+		return user, nil
 	}
 
-	// New Account
-	account := &Account{
+	// New User
+	user := &User{
 		ID:    bson.NewObjectId(),
 		Email: email,
 	}
-	if _, err := c.Upsert(bson.M{"email": email}, bson.M{"$set": account}); err != nil {
+	if _, err := c.Upsert(bson.M{"email": email}, bson.M{"$set": user}); err != nil {
 		return nil, err
 	}
-	return account, nil
+	return user, nil
 }
 
 func isNameUesd(name string) (bool, error) {
-	c, cs := Colle("accounts")
+	c, cs := Colle(colleUser)
 	defer cs()
-	count, err := c.Find(bson.M{"names": name}).Count()
+	c.EnsureIndexKey("name")
+
+	count, err := c.Find(bson.M{"name": name}).Count()
 	return count != 0, err
 }
 
-// AddName ...
-func (a *Account) AddName(ctx context.Context, name string) error {
-	if len(a.Names) >= nameLimit {
-		return fmt.Errorf("You already have %v names, cannot add more", len(a.Names))
+// SetName ...
+func (a *User) SetName(ctx context.Context, name string) error {
+	if a.Name != "" {
+		return fmt.Errorf("You already have name '%v'", a.Name)
 	}
 	if used, err := isNameUesd(name); err != nil {
 		return errors.Wrapf(err, "Check name '%s'", name)
@@ -96,30 +98,19 @@ func (a *Account) AddName(ctx context.Context, name string) error {
 		return fmt.Errorf("This name is already in uesd")
 	}
 
-	names := append(a.Names, name)
-	c, cs := Colle("accounts")
+	c, cs := Colle(colleUser)
 	defer cs()
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
-		"$set": bson.M{"names": names},
+		"$set": bson.M{"name": name},
 	}); err != nil {
 		return err
 	}
-	a.Names = names
+	a.Name = name
 	return nil
 }
 
-// HaveName ...
-func (a *Account) HaveName(name string) bool {
-	for _, n := range a.Names {
-		if n == name {
-			return true
-		}
-	}
-	return false
-}
-
 // SyncTags ...
-func (a *Account) SyncTags(ctx context.Context, tags []string) error {
+func (a *User) SyncTags(ctx context.Context, tags []string) error {
 	tagSet := map[string]struct{}{}
 	tagList := []string{}
 	for _, tag := range tags {
@@ -132,7 +123,7 @@ func (a *Account) SyncTags(ctx context.Context, tags []string) error {
 		tagList = tagList[:tagLimit]
 	}
 
-	c, cs := Colle("accounts")
+	c, cs := Colle(colleUser)
 	defer cs()
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
 		"$set": bson.M{"tags": tagList},
@@ -143,18 +134,17 @@ func (a *Account) SyncTags(ctx context.Context, tags []string) error {
 	return nil
 }
 
-type accountAID struct {
+type userAID struct {
 	ObjectID    bson.ObjectId `bson:"_id"`
-	AccountID   bson.ObjectId `bson:"account_id"`
-	Token       string        `bson:"token"`
+	UserID      bson.ObjectId `bson:"user_id"`
 	ThreadID    string        `bson:"thread_id"`
 	AnonymousID string        `bson:"anonymous_id"`
 }
 
 // AnonymousID ...
-func (a *Account) AnonymousID(threadID string, new bool) (string, error) {
-	c, cs := Colle("accounts_aid")
-	c.EnsureIndexKey("thread_id", "account_id")
+func (a *User) AnonymousID(threadID string, new bool) (string, error) {
+	c, cs := Colle(colleAID)
+	c.EnsureIndexKey("thread_id", "user_id")
 	defer cs()
 
 	newAID := func() (string, error) {
@@ -162,45 +152,45 @@ func (a *Account) AnonymousID(threadID string, new bool) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		aaid := accountAID{
+		uaid := userAID{
 			ObjectID:    bson.NewObjectId(),
-			AccountID:   a.ID,
+			UserID:      a.ID,
 			ThreadID:    threadID,
 			AnonymousID: aid,
 		}
-		if err := c.Insert(&aaid); err != nil {
+		if err := c.Insert(&uaid); err != nil {
 			return "", err
 		}
-		return aaid.AnonymousID, nil
+		return uaid.AnonymousID, nil
 	}
 
 	if new {
 		return newAID()
 	}
-	query := c.Find(bson.M{"thread_id": threadID, "account_id": a.ID})
+	query := c.Find(bson.M{"thread_id": threadID, "user_id": a.ID})
 	if count, err := query.Count(); err != nil {
 		return "", err
 	} else if count == 0 {
 		return newAID()
 	}
-	var aaid accountAID
+	var aaid userAID
 	if err := query.One(&aaid); err != nil {
 		return "", err
 	}
 	return aaid.AnonymousID, nil
 }
 
-func requireSignIn(ctx context.Context) (*Account, error) {
-	accountID, ok := ctx.Value(ContextLoggedInAccount).(bson.ObjectId)
+func requireSignIn(ctx context.Context) (*User, error) {
+	userID, ok := ctx.Value(ContextLoggedInUser).(bson.ObjectId)
 	if !ok {
 		return nil, fmt.Errorf("Forbidden, no access token")
 	}
-	c, cs := Colle("accounts")
+	c, cs := Colle(colleUser)
 	defer cs()
 
-	var account *Account
-	if err := c.FindId(accountID).One(&account); err != nil {
-		return nil, errors.Wrap(err, "Find account")
+	var user *User
+	if err := c.FindId(userID).One(&user); err != nil {
+		return nil, errors.Wrap(err, "Find user")
 	}
-	return account, nil
+	return user, nil
 }

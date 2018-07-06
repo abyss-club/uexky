@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/pkg/errors"
 )
@@ -39,6 +40,14 @@ func setDefaultConfig() {
 	Config.Mail.Domain = "mail.abyss.club"
 }
 
+// ReplaceConfigByEnv ...
+func ReplaceConfigByEnv() {
+	dbURI, found := os.LookupEnv("MONGO_URI")
+	if !found {
+		Config.Mongo.URI = dbURI
+	}
+}
+
 // WebURLPrefix ...
 func WebURLPrefix() string {
 	return fmt.Sprintf("%s://%s", Config.Proto, Config.Domain.WEB)
@@ -52,12 +61,16 @@ func APIURLPrefix() string {
 // LoadConfig from file
 func LoadConfig(filename string) {
 	setDefaultConfig()
-	b, err := ioutil.ReadFile(filename)
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "Read config file error"))
+
+	if filename != "" {
+		b, err := ioutil.ReadFile(filename)
+		if err != nil {
+			log.Fatal(errors.Wrap(err, "Read config file error"))
+		}
+		if err := json.Unmarshal(b, &Config); err != nil {
+			log.Fatal(errors.Wrap(err, "Read config error"))
+		}
 	}
-	if err := json.Unmarshal(b, &Config); err != nil {
-		log.Fatal(errors.Wrap(err, "Read config error"))
-	}
+
 	log.Printf("load config: %v", Config)
 }

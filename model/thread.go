@@ -22,7 +22,7 @@ type Thread struct {
 	ID         string        `bson:"id"`
 	Anonymous  bool          `bson:"anonymous"`
 	Author     string        `bson:"author"`
-	AccountID  bson.ObjectId `bson:"account_id"` // not display in front
+	UserID     bson.ObjectId `bson:"user_id"` // not display in front
 	CreateTime time.Time     `bson:"created_time"`
 
 	MainTag string   `bson:"main_tag"`
@@ -33,11 +33,11 @@ type Thread struct {
 
 // ThreadInput ...
 type ThreadInput struct {
-	Author  *string
-	Content string
-	MainTag string
-	SubTags *[]string
-	Title   *string
+	Anonymous bool
+	Content   string
+	MainTag   string
+	SubTags   *[]string
+	Title     *string
 }
 
 func isMainTag(tag string) bool {
@@ -51,7 +51,7 @@ func isMainTag(tag string) bool {
 
 // NewThread init new thread and insert to db
 func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
-	account, err := requireSignIn(ctx)
+	user, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,8 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 
 	thread := &Thread{
 		ObjectID:   bson.NewObjectId(),
-		AccountID:  account.ID,
+		Anonymous:  input.Anonymous,
+		UserID:     user.ID,
 		CreateTime: time.Now(),
 
 		MainTag: input.MainTag,
@@ -87,25 +88,24 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 	}
 	thread.ID = threadID
 
-	if input.Author == nil || *input.Author == "" {
-		thread.Anonymous = true
-		author, err := account.AnonymousID(thread.ID, true)
+	if input.Anonymous {
+		author, err := user.AnonymousID(thread.ID, true)
 		if err != nil {
 			return nil, err
 		}
 		thread.Author = author
 	} else {
-		if !account.HaveName(*input.Author) {
-			return nil, errors.Errorf("Can't find name '%s'", thread.Author)
+		if user.Name == "" {
+			return nil, errors.Errorf("Can't find name for user")
 		}
-		thread.Author = *input.Author
+		thread.Author = user.Name
 	}
 
 	if input.Title != nil && *input.Title != "" {
 		thread.Title = *input.Title
 	}
 
-	c, cs := Colle("threads")
+	c, cs := Colle(colleThread)
 	defer cs()
 	if err := c.Insert(thread); err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		find["id"] = idQry
 	}
 
-	c, cs := Colle("threads")
+	c, cs := Colle(colleThread)
 	defer cs()
 	log.Printf("find obj is %v", find)
 	var threads []*Thread
@@ -155,7 +155,7 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 
 // FindThread by id
 func FindThread(ctx context.Context, ID string) (*Thread, error) {
-	c, cs := Colle("threads")
+	c, cs := Colle(colleThread)
 	defer cs()
 	var th Thread
 	query := c.Find(bson.M{"id": ID})
@@ -171,7 +171,7 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 }
 
 func isThreadExist(threadID string) (bool, error) {
-	c, cs := Colle("threads")
+	c, cs := Colle(colleThread)
 	defer cs()
 	count, err := c.Find(bson.M{"id": threadID}).Count()
 	if err != nil {
@@ -182,7 +182,7 @@ func isThreadExist(threadID string) (bool, error) {
 
 // GetReplies ...
 func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *SliceInfo, error) {
-	c, cs := Colle("posts")
+	c, cs := Colle(collePost)
 	defer cs()
 
 	var posts []*Post

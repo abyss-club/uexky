@@ -9,9 +9,9 @@ import (
 )
 
 func TestNewThread(t *testing.T) {
-	account := mockAccounts[1]
-	t.Log("account:", account)
-	ctx := ctxWithAccount(account)
+	user := mockUsers[0]
+	t.Log("user:", user)
+	ctx := ctxWithUser(user)
 	titles := []string{"thread1"}
 	tests := []struct {
 		name    string
@@ -20,18 +20,18 @@ func TestNewThread(t *testing.T) {
 		wantErr bool
 	}{
 		{"normal, signed, titled", &ThreadInput{
-			&(account.Names[0]), "thread1", pkg.mainTags[0],
+			false, "thread1", pkg.mainTags[0],
 			&[]string{"tag1", "tag2"}, &titles[0],
 		}, true, false},
 		{"normal, anonymous, non-title", &ThreadInput{
-			nil, "thread2", pkg.mainTags[0],
+			true, "thread2", pkg.mainTags[0],
 			&[]string{"tag1", "tag2"}, nil,
 		}, true, false},
 		{"error, no-main-tag", &ThreadInput{
-			nil, "thread3", "em..", nil, nil,
+			true, "thread3", "em..", nil, nil,
 		}, false, true},
 		{"error, multi-main-tag", &ThreadInput{
-			nil, "thread3", pkg.mainTags[0], &[]string{pkg.mainTags[1]}, nil,
+			true, "thread3", pkg.mainTags[0], &[]string{pkg.mainTags[1]}, nil,
 		}, false, true},
 	}
 	for _, tt := range tests {
@@ -45,7 +45,7 @@ func TestNewThread(t *testing.T) {
 				return
 			}
 			if got.ObjectID == "" || got.ID == "" ||
-				got.AccountID != account.ID ||
+				got.UserID != user.ID ||
 				got.MainTag != tt.input.MainTag ||
 				!cmp.Equal(got.SubTags, *(tt.input.SubTags)) ||
 				got.Content != tt.input.Content {
@@ -60,12 +60,12 @@ func TestNewThread(t *testing.T) {
 					t.Errorf("NewThread() = %v, shouldn't have title", got)
 				}
 			}
-			if tt.input.Author != nil && *(tt.input.Author) != "" {
-				if got.Anonymous == true || got.Author != *(tt.input.Author) {
+			if !tt.input.Anonymous {
+				if got.Anonymous == true || got.Author != user.Name {
 					t.Errorf("NewThread() = %v, input = %v", got, tt.input)
 				}
 			} else {
-				if got.Anonymous == false || got.Author == "" {
+				if got.Anonymous == false || got.Author == user.Name {
 					t.Errorf("NewThread() = %v, input = %v", got, tt.input)
 				}
 			}
@@ -75,8 +75,8 @@ func TestNewThread(t *testing.T) {
 
 func TestGetThreadsByTags(t *testing.T) {
 	threads := []*Thread{}
-	account := mockAccounts[1]
-	ctx := ctxWithAccount(account)
+	user := mockUsers[1]
+	ctx := ctxWithUser(user)
 	for i := 0; i != 20; i++ {
 		subTags := []string{}
 		if i%2 == 0 {
@@ -86,9 +86,10 @@ func TestGetThreadsByTags(t *testing.T) {
 			subTags = append(subTags, "3")
 		}
 		input := &ThreadInput{
-			Content: "content",
-			MainTag: pkg.mainTags[0],
-			SubTags: &subTags,
+			Anonymous: true,
+			Content:   "content",
+			MainTag:   pkg.mainTags[0],
+			SubTags:   &subTags,
 		}
 		thread, err := NewThread(ctx, input)
 		if err != nil {
@@ -173,11 +174,12 @@ func TestGetThreadsByTags(t *testing.T) {
 }
 
 func TestThread_GetReplies(t *testing.T) {
-	account := mockAccounts[1]
-	ctx := ctxWithAccount(account)
+	user := mockUsers[1]
+	ctx := ctxWithUser(user)
 	input := &ThreadInput{
-		Content: "content",
-		MainTag: pkg.mainTags[0],
+		Content:   "content",
+		Anonymous: true,
+		MainTag:   pkg.mainTags[0],
 	}
 	thread, err := NewThread(ctx, input)
 	if err != nil {
@@ -186,8 +188,9 @@ func TestThread_GetReplies(t *testing.T) {
 	posts := []*Post{}
 	for i := 0; i < 6; i++ {
 		pInput := &PostInput{
-			ThreadID: thread.ID,
-			Content:  "post",
+			ThreadID:  thread.ID,
+			Anonymous: true,
+			Content:   "post",
 		}
 		post, err := NewPost(ctx, pInput)
 		if err != nil {
