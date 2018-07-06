@@ -93,7 +93,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		post.Refers = refers
 	}
 
-	c, cs := Colle("posts")
+	c, cs := Colle(collePost)
 	defer cs()
 	if err := c.Insert(post); err != nil {
 		return nil, err
@@ -103,7 +103,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 
 // FindPost ...
 func FindPost(ctx context.Context, ID string) (*Post, error) {
-	c, cs := Colle("posts")
+	c, cs := Colle(collePost)
 	defer cs()
 	query := c.Find(bson.M{"id": ID})
 	if count, err := query.Count(); err != nil {
@@ -132,7 +132,7 @@ func (p *Post) ReferPosts(ctx context.Context) ([]*Post, error) {
 }
 
 func isPostExist(postID string) (bool, error) {
-	c, cs := Colle("posts")
+	c, cs := Colle(collePost)
 	defer cs()
 
 	if cnt, err := c.Find(bson.M{"id": postID}).Count(); err != nil {

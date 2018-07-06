@@ -105,7 +105,7 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 		thread.Title = *input.Title
 	}
 
-	c, cs := Colle("threads")
+	c, cs := Colle(colleThread)
 	defer cs()
 	if err := c.Insert(thread); err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		find["id"] = idQry
 	}
 
-	c, cs := Colle("threads")
+	c, cs := Colle(colleThread)
 	defer cs()
 	log.Printf("find obj is %v", find)
 	var threads []*Thread
@@ -155,7 +155,7 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 
 // FindThread by id
 func FindThread(ctx context.Context, ID string) (*Thread, error) {
-	c, cs := Colle("threads")
+	c, cs := Colle(colleThread)
 	defer cs()
 	var th Thread
 	query := c.Find(bson.M{"id": ID})
@@ -171,7 +171,7 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 }
 
 func isThreadExist(threadID string) (bool, error) {
-	c, cs := Colle("threads")
+	c, cs := Colle(colleThread)
 	defer cs()
 	count, err := c.Find(bson.M{"id": threadID}).Count()
 	if err != nil {
@@ -182,7 +182,7 @@ func isThreadExist(threadID string) (bool, error) {
 
 // GetReplies ...
 func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *SliceInfo, error) {
-	c, cs := Colle("posts")
+	c, cs := Colle(collePost)
 	defer cs()
 
 	var posts []*Post

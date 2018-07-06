@@ -7,8 +7,10 @@ import (
 
 // collection name for model
 const (
-	colleUser = "users"
-	colleAID  = "anonymous_ids"
+	colleUser   = "users"
+	colleAID    = "anonymous_ids"
+	collePost   = "posts"
+	colleThread = "threads"
 )
 
 // MongoSession ...
