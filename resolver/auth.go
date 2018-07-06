@@ -1,4 +1,4 @@
-package api
+package resolver
 
 import (
 	"context"
@@ -16,15 +16,17 @@ import (
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
-var redisConn redis.Conn
+// RedisConn ...
+var RedisConn redis.Conn
 var mailClient mailgun.Mailgun
 
-func initRedis() {
+// InitRedis ...
+func InitRedis() {
 	c, err := redis.DialURL(mgmt.Config.RedisURI)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "Connect to redis"))
 	}
-	redisConn = c
+	RedisConn = c
 	mailClient = mailgun.NewMailgun(
 		mgmt.Config.Mail.Domain, mgmt.Config.Mail.PrivateKey,
 		mgmt.Config.Mail.PublicKey,
@@ -52,28 +54,29 @@ func authEmail(email string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := redisConn.Do("SET", code, email, "EX", 3600); err != nil {
+	if _, err := RedisConn.Do("SET", code, email, "EX", 3600); err != nil {
 		return "", errors.Wrap(err, "set code to redis")
 	}
 	return fmt.Sprintf("%s/auth/?code=%s", mgmt.APIURLPrefix(), code), nil
 }
 
-func authCode(code string) (string, error) {
-	email, err := redis.String(redisConn.Do("GET", code))
+// AuthCode ...
+func AuthCode(code string) (string, error) {
+	email, err := redis.String(RedisConn.Do("GET", code))
 	if err == redis.ErrNil {
 		return "", errors.New("Invalid code")
 	} else if err != nil {
 		return "", errors.Wrap(err, "Get code from redis")
 	}
-	account, err := model.GetAccountByEmail(context.Background(), email)
+	user, err := model.GetUserByEmail(context.Background(), email)
 	if err != nil {
-		return "", errors.Wrap(err, "find account")
+		return "", errors.Wrap(err, "find user")
 	}
 	token, err := tokenGenerator.New()
 	if err != nil {
 		return "", errors.Wrap(err, "gen token")
 	}
-	if _, err := redisConn.Do("SET", token, account.ID.Hex(), "EX", 600); err != nil {
+	if _, err := RedisConn.Do("SET", token, user.ID.Hex(), "EX", 600); err != nil {
 		return "", errors.Wrap(err, "set token to redis")
 	}
 	return token, nil
@@ -104,15 +107,16 @@ func sendAuthMail(url, to string) error {
 	return nil
 }
 
-func authToken(token string) (bson.ObjectId, error) {
-	idStr, err := redis.String(redisConn.Do("GET", token))
+// AuthToken ...
+func AuthToken(token string) (bson.ObjectId, error) {
+	idStr, err := redis.String(RedisConn.Do("GET", token))
 	if err == redis.ErrNil {
 		return "", nil
 	} else if err != nil {
 		return "", errors.Wrap(err, "Get token from redis")
 	}
 	if !bson.IsObjectIdHex(idStr) {
-		return "", nil // Can't find valid account.
+		return "", nil // Can't find valid user.
 	}
 	return bson.ObjectIdHex(idStr), nil
 }

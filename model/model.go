@@ -5,6 +5,12 @@ import (
 	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
+// collection name for model
+const (
+	colleUser = "users"
+	colleAID  = "anonymous_ids"
+)
+
 // MongoSession ...
 var pkg struct {
 	mongoSession *mgo.Session

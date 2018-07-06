@@ -17,7 +17,7 @@ type Post struct {
 	ID         string        `bson:"id"`
 	Anonymous  bool          `bson:"anonymous"`
 	Author     string        `bson:"author"`
-	AccountID  bson.ObjectId `bson:"account_id"`
+	UserID     bson.ObjectId `bson:"user_id"`
 	CreateTime time.Time     `bson:"creaate_time"`
 
 	ThreadID string   `bson:"thread_id"`
@@ -35,7 +35,7 @@ type PostInput struct {
 
 // NewPost ...
 func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
-	account, err := requireSignIn(ctx)
+	user, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 	post := &Post{
 		ObjectID:   bson.NewObjectId(),
 		CreateTime: time.Now(),
-		AccountID:  account.ID,
+		UserID:     user.ID,
 
 		ThreadID: input.ThreadID,
 		Content:  input.Content,
@@ -64,14 +64,14 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 
 	if input.Author == nil || *(input.Author) == "" {
 		post.Anonymous = true
-		author, err := account.AnonymousID(input.ThreadID, false)
+		author, err := user.AnonymousID(input.ThreadID, false)
 		if err != nil {
 			return nil, err
 		}
 		post.Author = author
 	} else {
 		post.Anonymous = false
-		if !account.HaveName(*(input.Author)) {
+		if user.Name != *(input.Author) {
 			return nil, fmt.Errorf("Can't find name '%s'", *(input.Author))
 		}
 		post.Author = *input.Author

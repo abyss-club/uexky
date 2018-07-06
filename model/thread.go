@@ -22,7 +22,7 @@ type Thread struct {
 	ID         string        `bson:"id"`
 	Anonymous  bool          `bson:"anonymous"`
 	Author     string        `bson:"author"`
-	AccountID  bson.ObjectId `bson:"account_id"` // not display in front
+	UserID     bson.ObjectId `bson:"user_id"` // not display in front
 	CreateTime time.Time     `bson:"created_time"`
 
 	MainTag string   `bson:"main_tag"`
@@ -51,7 +51,7 @@ func isMainTag(tag string) bool {
 
 // NewThread init new thread and insert to db
 func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
-	account, err := requireSignIn(ctx)
+	user, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 
 	thread := &Thread{
 		ObjectID:   bson.NewObjectId(),
-		AccountID:  account.ID,
+		UserID:     user.ID,
 		CreateTime: time.Now(),
 
 		MainTag: input.MainTag,
@@ -89,13 +89,13 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 
 	if input.Author == nil || *input.Author == "" {
 		thread.Anonymous = true
-		author, err := account.AnonymousID(thread.ID, true)
+		author, err := user.AnonymousID(thread.ID, true)
 		if err != nil {
 			return nil, err
 		}
 		thread.Author = author
 	} else {
-		if !account.HaveName(*input.Author) {
+		if user.Name != *(input.Author) {
 			return nil, errors.Errorf("Can't find name '%s'", thread.Author)
 		}
 		thread.Author = *input.Author

@@ -1,23 +1,24 @@
-package api
+package resolver
 
-const schema = `
+// Schema for api
+const Schema = `
 schema {
     query: Query
     mutation: Mutation
 }
 
 type Query {
-    account(): Account!
-    threadSlice(limit: Int! tags: [String!] after: String!): ThreadSlice!
+    profile(): User!
+    threadSlice(limit: Int! tags: [String!] after: String): ThreadSlice!
     thread(id: String!): Thread!
     post(id: String!): Post!
-	uexky(): Uexky!
+	tags(query: String): TagTree!
 }
 
 type Mutation {
 	auth(email: String!): Boolean!
-    addName(name: String!): Account!
-    syncTags(tags: [String]!): Account!
+    setName(name: String!): User!
+    syncTags(tags: [String]!): User!
     pubThread(thread: ThreadInput!): Thread!
     pubPost(post: PostInput!): Post!
 }
@@ -30,9 +31,9 @@ type SliceInfo {
 scalar Time
 
 // Data Type Defines
-type Account {
+type User {
     email: String!
-    names: [String!]
+    name: String
     tags: [String!]
 }
 
@@ -47,7 +48,6 @@ input ThreadInput {
 type Thread {
     id: String!
     anonymous: Boolean!
-    author: String!
     content: String!
     createTime: Time!
 
@@ -73,7 +73,6 @@ input PostInput {
 type Post {
     id: String!
     anonymous: Boolean!
-    author: String!
     content: String!
     createTime: Time!
     refers: [Post!]
@@ -84,7 +83,14 @@ type PostSlice {
   sliceInfo: SliceInfo!
 }
 
-type Uexky {
+type Tags {
 	mainTags: [String!]!
+	recommend: [String!]!
+	tree: [TagTree!]
+}
+
+type TagTree {
+	mainTag: String!
+	subTags: [String!]
 }
 `
