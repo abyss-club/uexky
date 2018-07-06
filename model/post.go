@@ -27,10 +27,10 @@ type Post struct {
 
 // PostInput ...
 type PostInput struct {
-	ThreadID string
-	Author   *string
-	Content  string
-	Refers   *[]string
+	ThreadID  string
+	Anonymous bool
+	Content   string
+	Refers    *[]string
 }
 
 // NewPost ...
@@ -49,8 +49,9 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 	}
 	post := &Post{
 		ObjectID:   bson.NewObjectId(),
-		CreateTime: time.Now(),
+		Anonymous:  input.Anonymous,
 		UserID:     user.ID,
+		CreateTime: time.Now(),
 
 		ThreadID: input.ThreadID,
 		Content:  input.Content,
@@ -62,19 +63,17 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 	}
 	post.ID = postID
 
-	if input.Author == nil || *(input.Author) == "" {
-		post.Anonymous = true
+	if input.Anonymous {
 		author, err := user.AnonymousID(input.ThreadID, false)
 		if err != nil {
 			return nil, err
 		}
 		post.Author = author
 	} else {
-		post.Anonymous = false
-		if user.Name != *(input.Author) {
-			return nil, fmt.Errorf("Can't find name '%s'", *(input.Author))
+		if user.Name == "" {
+			return nil, fmt.Errorf("Can't find name for user")
 		}
-		post.Author = *input.Author
+		post.Author = user.Name
 	}
 
 	if input.Refers != nil {

@@ -33,11 +33,11 @@ type Thread struct {
 
 // ThreadInput ...
 type ThreadInput struct {
-	Author  *string
-	Content string
-	MainTag string
-	SubTags *[]string
-	Title   *string
+	Anonymous bool
+	Content   string
+	MainTag   string
+	SubTags   *[]string
+	Title     *string
 }
 
 func isMainTag(tag string) bool {
@@ -73,6 +73,7 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 
 	thread := &Thread{
 		ObjectID:   bson.NewObjectId(),
+		Anonymous:  input.Anonymous,
 		UserID:     user.ID,
 		CreateTime: time.Now(),
 
@@ -87,18 +88,17 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 	}
 	thread.ID = threadID
 
-	if input.Author == nil || *input.Author == "" {
-		thread.Anonymous = true
+	if input.Anonymous {
 		author, err := user.AnonymousID(thread.ID, true)
 		if err != nil {
 			return nil, err
 		}
 		thread.Author = author
 	} else {
-		if user.Name != *(input.Author) {
-			return nil, errors.Errorf("Can't find name '%s'", thread.Author)
+		if user.Name == "" {
+			return nil, errors.Errorf("Can't find name for user")
 		}
-		thread.Author = *input.Author
+		thread.Author = user.Name
 	}
 
 	if input.Title != nil && *input.Title != "" {

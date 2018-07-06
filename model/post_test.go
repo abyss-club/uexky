@@ -12,7 +12,7 @@ func TestPost(t *testing.T) {
 	user := mockUsers[0]
 	ctx := ctxWithUser(user)
 	thread, err := NewThread(ctx, &ThreadInput{
-		Content: "thread!", MainTag: pkg.mainTags[0],
+		Content: "thread!", MainTag: pkg.mainTags[0], Anonymous: true,
 	})
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create thread"))
@@ -20,26 +20,26 @@ func TestPost(t *testing.T) {
 
 	t.Log("Post1, normal post, signed name")
 	input1 := &PostInput{
-		ThreadID: thread.ID,
-		Author:   &(user.Name),
-		Content:  "post1",
+		ThreadID:  thread.ID,
+		Anonymous: false,
+		Content:   "post1",
 	}
 	post1, err := NewPost(ctx, input1)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create post1"))
 	}
-	if post1.ObjectID == "" || post1.ID == "" || post1.Anonymous == true ||
+	if post1.ObjectID == "" || post1.ID == "" || post1.Anonymous != false ||
 		post1.Author != user.Name || post1.UserID != user.ID ||
 		post1.ThreadID != thread.ID || post1.Content != input1.Content ||
 		len(post1.Refers) != 0 {
-		t.Fatal(errors.Errorf("Post1 wrong! get: %v", post1))
+		t.Fatal(errors.Errorf("Post1 wrong! get: %+v, input = %+v, user = %+v", post1, input1, user))
 	}
 
 	t.Log("Post2, Anonymous Post")
 	input2 := &PostInput{
-		ThreadID: thread.ID,
-		Author:   nil,
-		Content:  "post2",
+		ThreadID:  thread.ID,
+		Anonymous: true,
+		Content:   "post2",
 	}
 	post2, err := NewPost(ctx, input2)
 	if err != nil {
@@ -57,10 +57,10 @@ func TestPost(t *testing.T) {
 
 	t.Log("Post3, has refers")
 	input3 := &PostInput{
-		ThreadID: thread.ID,
-		Author:   nil,
-		Content:  "post3",
-		Refers:   &[]string{post1.ID, post2.ID},
+		ThreadID:  thread.ID,
+		Anonymous: true,
+		Content:   "post3",
+		Refers:    &[]string{post1.ID, post2.ID},
 	}
 	post3, err := NewPost(ctx, input3)
 	if err != nil {

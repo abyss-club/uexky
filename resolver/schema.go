@@ -12,7 +12,7 @@ type Query {
     threadSlice(limit: Int! tags: [String!] after: String): ThreadSlice!
     thread(id: String!): Thread!
     post(id: String!): Post!
-	tags(query: String): TagTree!
+//	tags(query: String): TagTree!
 }
 
 type Mutation {
@@ -38,7 +38,7 @@ type User {
 }
 
 input ThreadInput {
-    author: String
+	anonymous: Boolean!
     content: String!
     mainTag: String!
     subTags: [String!]
@@ -65,7 +65,7 @@ type ThreadSlice {
 
 input PostInput {
     threadID: String!
-    author: String
+	anonymous: Boolean!
     content: String!
     refers: [String!]
 }
@@ -83,14 +83,14 @@ type PostSlice {
   sliceInfo: SliceInfo!
 }
 
-type Tags {
-	mainTags: [String!]!
-	recommend: [String!]!
-	tree: [TagTree!]
-}
-
-type TagTree {
-	mainTag: String!
-	subTags: [String!]
-}
+// type Tags {
+// 	mainTags: [String!]!
+// 	recommend: [String!]!
+// 	tree: [TagTree!]
+// }
+// 
+// type TagTree {
+// 	mainTag: String!
+// 	subTags: [String!]
+// }
 `
