@@ -9,16 +9,13 @@ import (
 )
 
 func TestPost(t *testing.T) {
-	user := mockUsers[2]
+	user := mockUsers[0]
 	ctx := ctxWithUser(user)
 	thread, err := NewThread(ctx, &ThreadInput{
 		Content: "thread!", MainTag: pkg.mainTags[0],
 	})
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create thread"))
-	}
-	if err := user.SetName(ctx, "testPost"); err != nil {
-		t.Fatal(errors.Wrap(err, "add name"))
 	}
 
 	t.Log("Post1, normal post, signed name")
