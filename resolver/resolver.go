@@ -21,22 +21,21 @@ func (r *Resolver) Profile(ctx context.Context) (*UserResolver, error) {
 
 // ThreadSlice ...
 func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
-	Limit int
 	Tags  *[]string
-	After *string
+	Query *SliceQuery
 }) (
 	*ThreadSliceResolver, error,
 ) {
-	after := ""
-	if args.After != nil {
-		after = *args.After
-	}
-	tags := []string{}
-	if args.Tags != nil {
-		tags = *args.Tags
+	sq, err := args.Query.Parse(true)
+	if err != nil {
+		return nil, err
 	}
 
-	sq := &model.SliceQuery{Limit: args.Limit, After: after}
+	var tags []string
+	if args.Tags != nil {
+		tags = *(args.Tags)
+	}
+
 	threads, sliceInfo, err := model.GetThreadsByTags(ctx, tags, sq)
 	if err != nil {
 		return nil, err

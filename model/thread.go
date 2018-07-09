@@ -126,30 +126,31 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 			subTags = append(subTags, tag)
 		}
 	}
-	find := bson.M{}
+
+	queryObj, err := sq.GenQueryByObjectID()
+	if err != nil {
+		return nil, nil, err
+	}
 	if len(mainTags) != 0 {
-		find["main_tag"] = bson.M{"$in": mainTags}
+		queryObj["main_tag"] = bson.M{"$in": mainTags}
 	}
 	if len(subTags) != 0 {
-		find["sub_tags"] = bson.M{"$in": subTags}
-	}
-	if idQry := sq.QueryObject(); idQry != nil {
-		find["id"] = idQry
+		queryObj["sub_tags"] = bson.M{"$in": subTags}
 	}
 
 	c, cs := Colle(colleThread)
 	defer cs()
-	log.Printf("find obj is %v", find)
+	log.Printf("query obj is %v", queryObj)
 	var threads []*Thread
-	if err := c.Find(find).Sort("-id").Limit(sq.Limit).All(&threads); err != nil {
+	if err := c.Find(queryObj).Sort("-id").Limit(sq.Limit).All(&threads); err != nil {
 		return nil, nil, err
 	}
 	if len(threads) == 0 {
 		return threads, &SliceInfo{}, nil
 	}
 	return threads, &SliceInfo{
-		FirstCursor: threads[0].ID,
-		LastCursor:  threads[len(threads)-1].ID,
+		FirstCursor: threads[0].ObjectID.Hex(),
+		LastCursor:  threads[len(threads)-1].ObjectID.Hex(),
 	}, nil
 }
 
@@ -182,18 +183,21 @@ func isThreadExist(threadID string) (bool, error) {
 
 // GetReplies ...
 func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *SliceInfo, error) {
-	c, cs := Colle(collePost)
-	defer cs()
-
-	var posts []*Post
-	find := bson.M{"thread_id": t.ID}
-	if idQry := sq.QueryObject(); idQry != nil {
-		find["id"] = idQry
-	}
-
-	if err := c.Find(find).Sort("id").Limit(sq.Limit).All(&posts); err != nil {
+	queryObj, err := sq.GenQueryByObjectID()
+	if err != nil {
 		return nil, nil, err
 	}
-	si := &SliceInfo{FirstCursor: posts[0].ID, LastCursor: posts[len(posts)-1].ID}
+	queryObj["thread_id"] = t.ID
+
+	c, cs := Colle(collePost)
+	defer cs()
+	var posts []*Post
+	if err := c.Find(queryObj).Sort("id").Limit(sq.Limit).All(&posts); err != nil {
+		return nil, nil, err
+	}
+	si := &SliceInfo{
+		FirstCursor: posts[0].ObjectID.Hex(),
+		LastCursor:  posts[len(posts)-1].ObjectID.Hex(),
+	}
 	return posts, si, nil
 }

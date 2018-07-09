@@ -1,6 +1,9 @@
 package model
 
-import "github.com/globalsign/mgo/bson"
+import (
+	"github.com/globalsign/mgo/bson"
+	"github.com/pkg/errors"
+)
 
 // SliceInfo ...
 type SliceInfo struct {
@@ -11,20 +14,21 @@ type SliceInfo struct {
 // SliceQuery ...
 type SliceQuery struct {
 	Limit  int
-	Before string
-	After  string
+	Desc   bool
+	Cursor string
 }
 
-// QueryObject ...
-func (sq *SliceQuery) QueryObject() bson.M {
-	if sq.After == "" && sq.Before == "" {
-		return nil
+// GenQueryByObjectID ...
+func (sq *SliceQuery) GenQueryByObjectID() (bson.M, error) {
+	if sq.Cursor == "" {
+		return bson.M{}, nil
 	}
-	if sq.After != "" && sq.Before != "" {
-		return bson.M{"$gt": sq.After, "$lt": sq.Before}
+	if !bson.IsObjectIdHex(sq.Cursor) {
+		return nil, errors.New("Invalid cursor")
 	}
-	if sq.After != "" {
-		return bson.M{"$gt": sq.After}
+	id := bson.ObjectIdHex(sq.Cursor)
+	if sq.Desc {
+		return bson.M{"_id": bson.M{"$lt": id}}, nil
 	}
-	return bson.M{"$lt": sq.Before}
+	return bson.M{"_id": bson.M{"$gt": id}}, nil
 }

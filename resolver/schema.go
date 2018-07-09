@@ -9,14 +9,14 @@ schema {
 
 type Query {
     profile(): User!
-    threadSlice(limit: Int! tags: [String!] after: String): ThreadSlice!
+	threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
     thread(id: String!): Thread!
     post(id: String!): Post!
-//	tags(query: String): TagTree!
+//    tags(query: String): TagTree!
 }
 
 type Mutation {
-	auth(email: String!): Boolean!
+    auth(email: String!): Boolean!
     setName(name: String!): User!
     syncTags(tags: [String]!): User!
     pubThread(thread: ThreadInput!): Thread!
@@ -26,6 +26,12 @@ type Mutation {
 type SliceInfo {
     firstCursor: String!
     lastCursor: String!
+}
+
+input SliceQuery {
+    before: String
+    after: String
+    limit: Int!
 }
 
 scalar Time
@@ -38,7 +44,7 @@ type User {
 }
 
 input ThreadInput {
-	anonymous: Boolean!
+    anonymous: Boolean!
     content: String!
     mainTag: String!
     subTags: [String!]
@@ -54,7 +60,7 @@ type Thread {
     mainTag: String!
     subTags: [String!]
     title: String
-    replies(limit: Int! after: String before: String): PostSlice!
+	replies(query: SliceQuery!): PostSlice!
 }
 
 type ThreadSlice {
@@ -65,7 +71,7 @@ type ThreadSlice {
 
 input PostInput {
     threadID: String!
-	anonymous: Boolean!
+    anonymous: Boolean!
     content: String!
     refers: [String!]
 }
@@ -84,13 +90,13 @@ type PostSlice {
 }
 
 // type Tags {
-// 	mainTags: [String!]!
-// 	recommend: [String!]!
-// 	tree: [TagTree!]
+//     mainTags: [String!]!
+//     recommend: [String!]!
+//     tree: [TagTree!]
 // }
 // 
 // type TagTree {
-// 	mainTag: String!
-// 	subTags: [String!]
+//     mainTag: String!
+//     subTags: [String!]
 // }
 `
