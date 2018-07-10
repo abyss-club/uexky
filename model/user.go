@@ -5,19 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/garyburd/redigo/redis"
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/api"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
-
-// ContextKey ...
-type ContextKey string
-
-// ContextKeyToken ...
-const ContextKeyToken = ContextKey("token")
-
-// ContextLoggedInUser ...
-const ContextLoggedInUser = ContextKey("loggedIn")
 
 // aid generator for post, thread and anonymous id.
 var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
@@ -181,7 +174,7 @@ func (a *User) AnonymousID(threadID string, new bool) (string, error) {
 }
 
 func requireSignIn(ctx context.Context) (*User, error) {
-	userID, ok := ctx.Value(ContextLoggedInUser).(bson.ObjectId)
+	userID, ok := ctx.Value(api.ContextKeyLoggedInUser).(bson.ObjectId)
 	if !ok {
 		return nil, fmt.Errorf("Forbidden, no access token")
 	}
@@ -193,4 +186,26 @@ func requireSignIn(ctx context.Context) (*User, error) {
 		return nil, errors.Wrap(err, "Find user")
 	}
 	return user, nil
+}
+
+// SignInUser ...
+func SignInUser(code string) (string, error) {
+	email, err := redis.String(RedisConn.Do("GET", code))
+	if err == redis.ErrNil {
+		return "", errors.New("Invalid code")
+	} else if err != nil {
+		return "", errors.Wrap(err, "Get code from redis")
+	}
+	user, err := GetUserByEmail(context.Background(), email)
+	if err != nil {
+		return "", errors.Wrap(err, "find user")
+	}
+	token, err := tokenGenerator.New()
+	if err != nil {
+		return "", errors.Wrap(err, "gen token")
+	}
+	if _, err := RedisConn.Do("SET", token, user.ID.Hex(), "EX", 600); err != nil {
+		return "", errors.Wrap(err, "set token to redis")
+	}
+	return token, nil
 }

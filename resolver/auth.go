@@ -41,15 +41,18 @@ var codeGenerator = uuid64.Generator{Sections: []uuid64.Section{
 	&uuid64.RandomSection{Length: 15},
 }}
 
-// 24 charactors Base64 token
-var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
-	&uuid64.RandomSection{Length: 10},
-	&uuid64.CounterSection{Length: 2, Unit: time.Millisecond},
-	&uuid64.TimestampSection{Length: 7, Unit: time.Millisecond},
-	&uuid64.RandomSection{Length: 5},
-}}
+func isValidateEmail(mail string) bool {
+	// TODO: use regular expression
+	if strings.Index(mail, "@") != -1 {
+		return true
+	}
+	return false
+}
 
 func authEmail(email string) (string, error) {
+	if !isValidateEmail(email) {
+		return "", errors.New("Invalid Email Address")
+	}
 	code, err := codeGenerator.New()
 	if err != nil {
 		return "", err
@@ -58,28 +61,6 @@ func authEmail(email string) (string, error) {
 		return "", errors.Wrap(err, "set code to redis")
 	}
 	return fmt.Sprintf("%s/auth/?code=%s", mgmt.APIURLPrefix(), code), nil
-}
-
-// AuthCode ...
-func AuthCode(code string) (string, error) {
-	email, err := redis.String(RedisConn.Do("GET", code))
-	if err == redis.ErrNil {
-		return "", errors.New("Invalid code")
-	} else if err != nil {
-		return "", errors.Wrap(err, "Get code from redis")
-	}
-	user, err := model.GetUserByEmail(context.Background(), email)
-	if err != nil {
-		return "", errors.Wrap(err, "find user")
-	}
-	token, err := tokenGenerator.New()
-	if err != nil {
-		return "", errors.Wrap(err, "gen token")
-	}
-	if _, err := RedisConn.Do("SET", token, user.ID.Hex(), "EX", 600); err != nil {
-		return "", errors.Wrap(err, "set token to redis")
-	}
-	return token, nil
 }
 
 func sendAuthMail(url, to string) error {
@@ -107,6 +88,28 @@ func sendAuthMail(url, to string) error {
 	return nil
 }
 
+// AuthCode ...
+func AuthCode(code string) (string, error) {
+	email, err := redis.String(RedisConn.Do("GET", code))
+	if err == redis.ErrNil {
+		return "", errors.New("Invalid code")
+	} else if err != nil {
+		return "", errors.Wrap(err, "Get code from redis")
+	}
+	user, err := model.GetUserByEmail(context.Background(), email)
+	if err != nil {
+		return "", errors.Wrap(err, "find user")
+	}
+	token, err := tokenGenerator.New()
+	if err != nil {
+		return "", errors.Wrap(err, "gen token")
+	}
+	if _, err := RedisConn.Do("SET", token, user.ID.Hex(), "EX", 600); err != nil {
+		return "", errors.Wrap(err, "set token to redis")
+	}
+	return token, nil
+}
+
 // AuthToken ...
 func AuthToken(token string) (bson.ObjectId, error) {
 	idStr, err := redis.String(RedisConn.Do("GET", token))
@@ -119,12 +122,4 @@ func AuthToken(token string) (bson.ObjectId, error) {
 		return "", nil // Can't find valid user.
 	}
 	return bson.ObjectIdHex(idStr), nil
-}
-
-func isValidateEmail(mail string) bool {
-	// TODO: use regular expression
-	if strings.Index(mail, "@") != -1 {
-		return true
-	}
-	return false
 }

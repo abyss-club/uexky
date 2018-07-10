@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-	"errors"
 
 	"github.com/globalsign/mgo/bson"
 	"gitlab.com/abyss.club/uexky/model"
@@ -82,9 +81,6 @@ func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool,
 		return false, nil
 	}
 
-	if !isValidateEmail(args.Email) {
-		return false, errors.New("Invalid Email Address")
-	}
 	authURL, err := authEmail(args.Email)
 	if err != nil {
 		return false, nil
