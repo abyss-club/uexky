@@ -31,10 +31,14 @@ func loadConfig() {
 }
 
 func newRouter() http.Handler {
-	resolver.InitRedis()
+	mongo := api.ConnectMongodb()
+	resolver.Init()
 	handler := httprouter.New()
-	handler.POST("/graphql/", api.WithAuth(resolver.GraphQLHandle()))
-	handler.GET("/auth/", api.AuthHandle)
+	handler.POST(
+		"/graphql/",
+		api.WithRedis(api.WithMongo(api.WithAuth(resolver.GraphQLHandle()), mongo)),
+	)
+	handler.GET("/auth/", api.WithMongo(api.AuthHandle))
 	return handler
 }
 

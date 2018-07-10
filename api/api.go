@@ -5,7 +5,9 @@ type ContextKey string
 
 // ContextKeys
 const (
-	ContextKeyToken        = ContextKey("token")
-	ContextKeyLoggedInUser = ContextKey("loggedIn")
-	ContextKeyMongo        = ContextKey("mongo")
+	ContextKeyToken = ContextKey("token")
+	ContextKeyEmail = ContextKey("loggedIn")
+	ContextKeyUser  = ContextKey("user")
+	ContextKeyMongo = ContextKey("mongo")
+	ContextKeyRedis = ContextKey("redis")
 )

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/api"
@@ -173,39 +172,10 @@ func (a *User) AnonymousID(threadID string, new bool) (string, error) {
 	return aaid.AnonymousID, nil
 }
 
-func requireSignIn(ctx context.Context) (*User, error) {
-	userID, ok := ctx.Value(api.ContextKeyLoggedInUser).(bson.ObjectId)
+func requireSignIn(ctx context.Context) (string, error) {
+	email, ok := ctx.Value(api.ContextKeyEmail).(string)
 	if !ok {
-		return nil, fmt.Errorf("Forbidden, no access token")
+		return "", fmt.Errorf("Forbidden, no access token")
 	}
-	c, cs := Colle(colleUser)
-	defer cs()
-
-	var user *User
-	if err := c.FindId(userID).One(&user); err != nil {
-		return nil, errors.Wrap(err, "Find user")
-	}
-	return user, nil
-}
-
-// SignInUser ...
-func SignInUser(code string) (string, error) {
-	email, err := redis.String(RedisConn.Do("GET", code))
-	if err == redis.ErrNil {
-		return "", errors.New("Invalid code")
-	} else if err != nil {
-		return "", errors.Wrap(err, "Get code from redis")
-	}
-	user, err := GetUserByEmail(context.Background(), email)
-	if err != nil {
-		return "", errors.Wrap(err, "find user")
-	}
-	token, err := tokenGenerator.New()
-	if err != nil {
-		return "", errors.Wrap(err, "gen token")
-	}
-	if _, err := RedisConn.Do("SET", token, user.ID.Hex(), "EX", 600); err != nil {
-		return "", errors.Wrap(err, "set token to redis")
-	}
-	return token, nil
+	return email, nil
 }

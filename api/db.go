@@ -16,14 +16,13 @@ type Mongo struct {
 	session *mgo.Session
 }
 
-// Dial ...
-func (m *Mongo) Dial() error {
+// ConnectMongodb ...
+func ConnectMongodb() *Mongo {
 	session, err := mgo.Dial(mgmt.Config.Mongo.URI)
 	if err != nil {
-		return errors.Wrap(err, "connect to mongodb")
+		log.Fatal(errors.Wrap(err, "connect to mongodb"))
 	}
-	m.session = session
-	return nil
+	return &Mongo{session: session}
 }
 
 // Copy ...

@@ -3,7 +3,7 @@ package resolver
 import (
 	"context"
 
-	"github.com/globalsign/mgo/bson"
+	"gitlab.com/abyss.club/uexky/api"
 	"gitlab.com/abyss.club/uexky/model"
 )
 
@@ -76,12 +76,12 @@ func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostRes
 
 // Auth ...
 func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool, error) {
-	_, ok := ctx.Value(model.ContextLoggedInUser).(bson.ObjectId)
+	_, ok := ctx.Value(api.ContextKeyEmail).(string)
 	if ok {
 		return false, nil
 	}
 
-	authURL, err := authEmail(args.Email)
+	authURL, err := authEmail(ctx, args.Email)
 	if err != nil {
 		return false, nil
 	}

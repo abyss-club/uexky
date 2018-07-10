@@ -22,15 +22,13 @@ var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
 	&uuid64.RandomSection{Length: 5},
 }}
 
-// RedisConn ...
-var RedisConn redis.Conn
-
 // User         Uexky
 //  |--- code --->|
 //  |<-- token ---|
 
-func authCode(code string) (string, error) {
-	email, err := redis.String(RedisConn.Do("GET", code))
+func authCode(ctx context.Context, code string) (string, error) {
+	rd := GetRedis(ctx)
+	email, err := redis.String(rd.Do("GET", code))
 	if err == redis.ErrNil {
 		return "", errors.New("Invalid code")
 	} else if err != nil {
@@ -40,7 +38,7 @@ func authCode(code string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "gen token")
 	}
-	if _, err := RedisConn.Do("SET", token, email, "EX", 600); err != nil {
+	if _, err := rd.Do("SET", token, email, "EX", 600); err != nil {
 		return "", errors.Wrap(err, "set token to redis")
 	}
 	return token, nil
@@ -54,14 +52,14 @@ func AuthHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		w.Write([]byte("缺乏必要信息"))
 		return
 	}
-	token, err := authCode(code)
+	token, err := authCode(req.Context(), code)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(fmt.Sprintf("验证信息错误，或已失效。 %v", err)))
 		return
 	}
 
-	RedisConn.Do("DEL", code) // delete after use
+	GetRedis(req.Context()).Do("DEL", code) // delete after use
 	cookie := &http.Cookie{
 		Name:     "token",
 		Value:    token,
@@ -82,8 +80,8 @@ func AuthHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 // User         Uexky
 //  |--- token -->|
 
-func authToken(token string) (string, error) {
-	email, err := redis.String(RedisConn.Do("GET", token))
+func authToken(ctx context.Context, token string) (string, error) {
+	email, err := redis.String(GetRedis(ctx).Do("GET", token))
 	if err == redis.ErrNil {
 		return "", nil
 	} else if err != nil {
@@ -102,14 +100,14 @@ func WithAuth(handle httprouter.Handle) httprouter.Handle {
 			return
 		}
 
-		email, err := authToken(tokenCookie.Value)
+		email, err := authToken(req.Context(), tokenCookie.Value)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
 		if email != "" {
 			log.Printf("Logged user %s", email)
-			ctx := context.WithValue(req.Context(), ContextKeyLoggedInUser, email)
+			ctx := context.WithValue(req.Context(), ContextKeyEmail, email)
 			req = req.WithContext(ctx)
 		}
 		handle(w, req, p)
