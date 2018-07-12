@@ -1,31 +1,38 @@
 package model
 
 import (
+	"context"
 	"log"
 	"os"
 	"reflect"
 	"testing"
 
+	"github.com/globalsign/mgo/bson"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/api"
 	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
 const testDB = "testing"
 
+var testCtx context.Context
+
 // this file only have common test tools
-func prepTestDB() {
+func prepTestDB() context.Context {
 	mgmt.LoadConfig("")
 	mgmt.Config.Mongo.DB = testDB
 	mgmt.Config.MainTags = []string{"MainA", "MainB", "MainC"}
 	mgmt.ReplaceConfigByEnv()
-	if err := Init(); err != nil {
-		log.Fatal(errors.Wrap(err, "Connect to test db"))
+
+	mongo := api.ConnectMongodb()
+	if err := mongo.DB().DropDatabase(); err != nil {
+		log.Fatal(errors.Wrap(err, "drop test dababase"))
 	}
-	session := pkg.mongoSession.Copy()
-	if err := session.DB(testDB).DropDatabase(); err != nil {
-		log.Fatal(errors.Wrap(err, "tear down"))
-	}
+	ctx := context.WithValue(
+		context.Background(), api.ContextKeyMongo, mongo,
+	)
+	return ctx
 }
 
 var strSliceCmp = cmp.Comparer(func(l, r []string) bool {
@@ -50,8 +57,26 @@ var threadSliceCmp = cmp.Comparer(func(l, r []*Thread) bool {
 	return true
 })
 
+func addMockUser(ctx context.Context) {
+	log.Print("addMockUser!")
+	users := []*User{
+		&User{bson.NewObjectId(), "0@mail.com", "test0", []string{"动画"}},
+		&User{bson.NewObjectId(), "1@mail.com", "", []string{}},
+		&User{bson.NewObjectId(), "2@mail.com", "", []string{}},
+	}
+
+	c := api.GetMongo(ctx).C(colleUser)
+	for _, user := range users {
+		if err := c.Insert(user); err != nil {
+			log.Fatal(errors.Wrap(err, "gen mock users"))
+		}
+	}
+	mockUsers = users
+}
+
 func TestMain(m *testing.M) {
-	prepTestDB()
-	addMockUser()
+	ctx := prepTestDB()
+	addMockUser(ctx)
+	testCtx = ctx
 	os.Exit(m.Run())
 }

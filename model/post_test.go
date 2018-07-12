@@ -6,13 +6,14 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
 func TestPost(t *testing.T) {
 	user := mockUsers[0]
 	ctx := ctxWithUser(user)
 	thread, err := NewThread(ctx, &ThreadInput{
-		Content: "thread!", MainTag: pkg.mainTags[0], Anonymous: true,
+		Content: "thread!", MainTag: mgmt.Config.MainTags[0], Anonymous: true,
 	})
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create thread"))

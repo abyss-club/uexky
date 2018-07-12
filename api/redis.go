@@ -27,10 +27,10 @@ var redisPool = redis.Pool{
 		_, err := c.Do("PING")
 		return err
 	},
-	MaxIdle:         128,
-	MaxActive:       1024,
-	Wait:            true,
-	MaxConnLifetime: time.Second * 60,
+	MaxIdle:     128,
+	MaxActive:   1024,
+	Wait:        true,
+	IdleTimeout: time.Second * 60,
 }
 
 // WithRedis ...

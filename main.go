@@ -8,7 +8,6 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"gitlab.com/abyss.club/uexky/api"
 	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/model"
 	"gitlab.com/abyss.club/uexky/resolver"
 )
 
@@ -38,17 +37,12 @@ func newRouter() http.Handler {
 		"/graphql/",
 		api.WithRedis(api.WithMongo(api.WithAuth(resolver.GraphQLHandle()), mongo)),
 	)
-	handler.GET("/auth/", api.WithMongo(api.AuthHandle))
+	handler.GET("/auth/", api.WithMongo(api.AuthHandle, mongo))
 	return handler
 }
 
 func main() {
 	loadConfig()
-
-	if err := model.Init(); err != nil {
-		log.Fatal(err)
-	}
-
 	router := newRouter()
 	log.Print("start to serve")
 	log.Fatal(http.ListenAndServe(serve, router))

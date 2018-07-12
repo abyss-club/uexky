@@ -21,6 +21,8 @@ var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
 const (
 	nameLimit = 5
 	tagLimit  = 15
+	// ContextKeyUser for logged in user
+	ContextKeyUser = api.ContextKey("user")
 )
 
 // User for uexky
@@ -42,8 +44,7 @@ func GetUser(ctx context.Context) (*User, error) {
 
 // GetUserByEmail ...
 func GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	c, cs := Colle(colleUser)
-	defer cs()
+	c := api.GetMongo(ctx).C(colleUser)
 	c.EnsureIndexKey("email")
 
 	query := c.Find(bson.M{"email": email})
@@ -70,9 +71,8 @@ func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	return user, nil
 }
 
-func isNameUesd(name string) (bool, error) {
-	c, cs := Colle(colleUser)
-	defer cs()
+func isNameUesd(ctx context.Context, name string) (bool, error) {
+	c := api.GetMongo(ctx).C(colleUser)
 	c.EnsureIndexKey("name")
 
 	count, err := c.Find(bson.M{"name": name}).Count()
@@ -84,14 +84,13 @@ func (a *User) SetName(ctx context.Context, name string) error {
 	if a.Name != "" {
 		return fmt.Errorf("You already have name '%v'", a.Name)
 	}
-	if used, err := isNameUesd(name); err != nil {
+	if used, err := isNameUesd(ctx, name); err != nil {
 		return errors.Wrapf(err, "Check name '%s'", name)
 	} else if used {
 		return fmt.Errorf("This name is already in uesd")
 	}
 
-	c, cs := Colle(colleUser)
-	defer cs()
+	c := api.GetMongo(ctx).C(colleUser)
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
 		"$set": bson.M{"name": name},
 	}); err != nil {
@@ -115,8 +114,7 @@ func (a *User) SyncTags(ctx context.Context, tags []string) error {
 		tagList = tagList[:tagLimit]
 	}
 
-	c, cs := Colle(colleUser)
-	defer cs()
+	c := api.GetMongo(ctx).C(colleUser)
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
 		"$set": bson.M{"tags": tagList},
 	}); err != nil {
@@ -134,10 +132,9 @@ type userAID struct {
 }
 
 // AnonymousID ...
-func (a *User) AnonymousID(threadID string, new bool) (string, error) {
-	c, cs := Colle(colleAID)
+func (a *User) AnonymousID(ctx context.Context, threadID string, new bool) (string, error) {
+	c := api.GetMongo(ctx).C(colleUser)
 	c.EnsureIndexKey("thread_id", "user_id")
-	defer cs()
 
 	newAID := func() (string, error) {
 		aid, err := aidGenerator.New()
@@ -172,10 +169,10 @@ func (a *User) AnonymousID(threadID string, new bool) (string, error) {
 	return aaid.AnonymousID, nil
 }
 
-func requireSignIn(ctx context.Context) (string, error) {
+func requireSignIn(ctx context.Context) (*User, error) {
 	email, ok := ctx.Value(api.ContextKeyEmail).(string)
 	if !ok {
-		return "", fmt.Errorf("Forbidden, no access token")
+		return nil, fmt.Errorf("Forbidden, no access token")
 	}
-	return email, nil
+	return GetUserByEmail(ctx, email)
 }

@@ -35,6 +35,11 @@ func (m *Mongo) Close() {
 	m.session.Close()
 }
 
+// DB ...
+func (m *Mongo) DB() *mgo.Database {
+	return m.session.DB(mgmt.Config.Mongo.DB)
+}
+
 // C return collection
 func (m *Mongo) C(name string) *mgo.Collection {
 	return m.session.DB(mgmt.Config.Mongo.DB).C(name)
