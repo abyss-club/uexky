@@ -6,7 +6,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/api"
+	"gitlab.com/abyss.club/uexky/mw"
 )
 
 // SliceInfo ...
@@ -54,7 +54,7 @@ func (sq *SliceQuery) Find(
 	}
 
 	log.Printf("slice do query '%+v'", queryObj)
-	query := api.GetMongo(ctx).C(collection).Find(queryObj).Limit(sq.Limit)
+	query := mw.GetMongo(ctx).C(collection).Find(queryObj).Limit(sq.Limit)
 	if sq.Desc {
 		query = query.Sort("-_id")
 	} else {

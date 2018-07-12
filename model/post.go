@@ -7,7 +7,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/api"
+	"gitlab.com/abyss.club/uexky/mw"
 )
 
 const referLimit = 5
@@ -93,7 +93,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		post.Refers = refers
 	}
 
-	c := api.GetMongo(ctx).C(collePost)
+	c := mw.GetMongo(ctx).C(collePost)
 	if err := c.Insert(post); err != nil {
 		return nil, err
 	}
@@ -102,7 +102,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 
 // FindPost ...
 func FindPost(ctx context.Context, ID string) (*Post, error) {
-	c := api.GetMongo(ctx).C(collePost)
+	c := mw.GetMongo(ctx).C(collePost)
 	query := c.Find(bson.M{"id": ID})
 	if count, err := query.Count(); err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ func (p *Post) ReferPosts(ctx context.Context) ([]*Post, error) {
 }
 
 func isPostExist(ctx context.Context, postID string) (bool, error) {
-	c := api.GetMongo(ctx).C(collePost)
+	c := mw.GetMongo(ctx).C(collePost)
 
 	if cnt, err := c.Find(bson.M{"id": postID}).Count(); err != nil {
 		return false, err

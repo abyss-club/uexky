@@ -6,4 +6,5 @@ const (
 	colleAID    = "anonymous_ids"
 	collePost   = "posts"
 	colleThread = "threads"
+	colleTag    = "tags"
 )

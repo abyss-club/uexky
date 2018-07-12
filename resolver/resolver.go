@@ -3,8 +3,8 @@ package resolver
 import (
 	"context"
 
-	"gitlab.com/abyss.club/uexky/api"
 	"gitlab.com/abyss.club/uexky/model"
+	"gitlab.com/abyss.club/uexky/mw"
 )
 
 // Resolver for graphql
@@ -76,7 +76,7 @@ func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostRes
 
 // Auth ...
 func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool, error) {
-	_, ok := ctx.Value(api.ContextKeyEmail).(string)
+	_, ok := ctx.Value(mw.ContextKeyEmail).(string)
 	if ok {
 		return false, nil
 	}

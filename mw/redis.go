@@ -1,7 +1,8 @@
-package api
+package mw
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -51,4 +52,36 @@ func GetRedis(ctx context.Context) redis.Conn {
 		log.Fatal("Can't find mongodb in context")
 	}
 	return c
+}
+
+// SetCache ...
+func SetCache(ctx context.Context, key string, value interface{}, expire int) error {
+	var err error
+	b, err := json.Marshal(value)
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "marshall cache"))
+	}
+	if expire > 0 {
+		_, err = GetRedis(ctx).Do("SET", key, string(b), "EX", expire)
+	} else {
+		_, err = GetRedis(ctx).Do("SET", key, string(b))
+	}
+	if err != nil {
+		return errors.Wrap(err, "set cache")
+	}
+	return nil
+}
+
+// GetCache ...
+func GetCache(ctx context.Context, key string, value interface{}) (bool, error) {
+	vs, err := redis.String(GetRedis(ctx).Do("GET", key))
+	if err == redis.ErrNil {
+		return false, nil
+	} else if err != nil {
+		return false, errors.Wrap(err, "get cache")
+	}
+	if err := json.Unmarshal([]byte(vs), value); err != nil {
+		log.Fatal(errors.Wrap(err, "unmarshall cache"))
+	}
+	return true, nil
 }

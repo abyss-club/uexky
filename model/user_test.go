@@ -6,13 +6,13 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/api"
+	"gitlab.com/abyss.club/uexky/mw"
 )
 
 var mockUsers []*User
 
 func ctxWithUser(u *User) context.Context {
-	return context.WithValue(testCtx, api.ContextKeyEmail, u.Email)
+	return context.WithValue(testCtx, mw.ContextKeyEmail, u.Email)
 }
 
 func TestGetUser(t *testing.T) {

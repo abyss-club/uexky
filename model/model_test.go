@@ -10,8 +10,8 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/api"
 	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/mw"
 )
 
 const testDB = "testing"
@@ -25,12 +25,12 @@ func prepTestDB() context.Context {
 	mgmt.Config.MainTags = []string{"MainA", "MainB", "MainC"}
 	mgmt.ReplaceConfigByEnv()
 
-	mongo := api.ConnectMongodb()
+	mongo := mw.ConnectMongodb()
 	if err := mongo.DB().DropDatabase(); err != nil {
 		log.Fatal(errors.Wrap(err, "drop test dababase"))
 	}
 	ctx := context.WithValue(
-		context.Background(), api.ContextKeyMongo, mongo,
+		context.Background(), mw.ContextKeyMongo, mongo,
 	)
 	return ctx
 }
@@ -65,7 +65,7 @@ func addMockUser(ctx context.Context) {
 		&User{bson.NewObjectId(), "2@mail.com", "", []string{}},
 	}
 
-	c := api.GetMongo(ctx).C(colleUser)
+	c := mw.GetMongo(ctx).C(colleUser)
 	for _, user := range users {
 		if err := c.Insert(user); err != nil {
 			log.Fatal(errors.Wrap(err, "gen mock users"))

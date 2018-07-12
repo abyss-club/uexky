@@ -6,8 +6,8 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/api"
 	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
@@ -106,7 +106,7 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 		thread.Title = *input.Title
 	}
 
-	c := api.GetMongo(ctx).C(colleThread)
+	c := mw.GetMongo(ctx).C(colleThread)
 	if err := c.Insert(thread); err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 
 // FindThread by id
 func FindThread(ctx context.Context, ID string) (*Thread, error) {
-	c := api.GetMongo(ctx).C(colleThread)
+	c := mw.GetMongo(ctx).C(colleThread)
 	var th Thread
 	query := c.Find(bson.M{"id": ID})
 	if count, err := query.Count(); err != nil {
@@ -168,7 +168,7 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 }
 
 func isThreadExist(ctx context.Context, threadID string) (bool, error) {
-	c := api.GetMongo(ctx).C(colleThread)
+	c := mw.GetMongo(ctx).C(colleThread)
 	count, err := c.Find(bson.M{"id": threadID}).Count()
 	if err != nil {
 		return false, err

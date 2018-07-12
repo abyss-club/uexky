@@ -9,8 +9,8 @@ import (
 
 	mailgun "github.com/mailgun/mailgun-go"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/api"
 	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
@@ -48,7 +48,7 @@ func authEmail(ctx context.Context, email string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := api.GetRedis(ctx).Do("SET", code, email, "EX", 3600); err != nil {
+	if _, err := mw.GetRedis(ctx).Do("SET", code, email, "EX", 3600); err != nil {
 		return "", errors.Wrap(err, "set code to redis")
 	}
 	return fmt.Sprintf("%s/auth/?code=%s", mgmt.APIURLPrefix(), code), nil

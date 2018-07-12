@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"gitlab.com/abyss.club/uexky/api"
 	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/resolver"
 )
 
@@ -30,14 +30,14 @@ func loadConfig() {
 }
 
 func newRouter() http.Handler {
-	mongo := api.ConnectMongodb()
+	mongo := mw.ConnectMongodb()
 	resolver.Init()
 	handler := httprouter.New()
 	handler.POST(
 		"/graphql/",
-		api.WithRedis(api.WithMongo(api.WithAuth(resolver.GraphQLHandle()), mongo)),
+		mw.WithRedis(mw.WithMongo(mw.WithAuth(resolver.GraphQLHandle()), mongo)),
 	)
-	handler.GET("/auth/", api.WithMongo(api.AuthHandle, mongo))
+	handler.GET("/auth/", mw.WithMongo(mw.AuthHandle, mongo))
 	return handler
 }
 
