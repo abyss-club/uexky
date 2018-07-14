@@ -6,7 +6,6 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
 	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
@@ -39,15 +38,6 @@ type ThreadInput struct {
 	MainTag   string
 	SubTags   *[]string
 	Title     *string
-}
-
-func isMainTag(tag string) bool {
-	for _, mt := range mgmt.Config.MainTags {
-		if mt == tag {
-			return true
-		}
-	}
-	return false
 }
 
 // NewThread init new thread and insert to db

@@ -9,10 +9,10 @@ schema {
 
 type Query {
     profile(): User!
-	threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
+    threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
     thread(id: String!): Thread!
     post(id: String!): Post!
-//    tags(query: String): TagTree!
+    tags(query: String): TagTree!
 }
 
 type Mutation {
@@ -60,7 +60,7 @@ type Thread {
     mainTag: String!
     subTags: [String!]
     title: String
-	replies(query: SliceQuery!): PostSlice!
+    replies(query: SliceQuery!): PostSlice!
 }
 
 type ThreadSlice {
@@ -89,14 +89,14 @@ type PostSlice {
   sliceInfo: SliceInfo!
 }
 
-// type Tags {
-//     mainTags: [String!]!
-//     recommend: [String!]!
-//     tree: [TagTree!]
-// }
-// 
-// type TagTree {
-//     mainTag: String!
-//     subTags: [String!]
-// }
+type Tags {
+    mainTags: [String!]!
+    recommend: [String!]!
+    tree: [TagTreeNode!]
+}
+
+type TagTreeNode {
+    mainTag: String!
+    subTags: [String!]
+}
 `

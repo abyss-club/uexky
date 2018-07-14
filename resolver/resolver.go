@@ -14,7 +14,7 @@ type Resolver struct{}
 
 // Profile resolve query 'profile'
 func (r *Resolver) Profile(ctx context.Context) (*UserResolver, error) {
-	user, err := model.GetUser(ctx)
+	user, err := model.GetUser(ctx) // TODO: not login, return nil
 	return &UserResolver{user}, err
 }
 
@@ -70,6 +70,11 @@ func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostRes
 		return nil, nil
 	}
 	return &PostResolver{Post: post}, nil
+}
+
+// Tags ...
+func (r *Resolver) Tags(ctx context.Context, args struct{ Query string }) (*TagResolver, error) {
+	return nil, nil // TODO
 }
 
 // Mutation:
