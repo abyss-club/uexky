@@ -32,6 +32,9 @@ func prepTestDB() context.Context {
 	ctx := context.WithValue(
 		context.Background(), mw.ContextKeyMongo, mongo,
 	)
+
+	rd := mw.RedisPool.Get()
+	ctx = context.WithValue(ctx, mw.ContextKeyRedis, rd)
 	return ctx
 }
 
@@ -72,6 +75,10 @@ func addMockUser(ctx context.Context) {
 		}
 	}
 	mockUsers = users
+}
+
+func ctxWithUser(u *User) context.Context {
+	return context.WithValue(testCtx, mw.ContextKeyEmail, u.Email)
 }
 
 func TestMain(m *testing.M) {

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/globalsign/mgo/bson"
-	"gitlab.com/abyss.club/uexky/api"
+	"gitlab.com/abyss.club/uexky/mw"
 )
 
 func TestSliceQuery_GenQueryByObjectID(t *testing.T) {
@@ -66,7 +66,7 @@ func TestSliceQuery_Find(t *testing.T) {
 	colle := "slice_sample"
 	var samples []*sample
 	for i := 0; i < 9; i++ {
-		c := api.GetMongo(testCtx).C(colle)
+		c := mw.GetMongo(testCtx).C(colle)
 		s := &sample{bson.NewObjectId(), "aha"}
 		if err := c.Insert(s); err != nil {
 			t.Fatal("insert slice sample", err)

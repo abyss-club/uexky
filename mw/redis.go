@@ -13,7 +13,8 @@ import (
 	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
-var redisPool = redis.Pool{
+// RedisPool ...
+var RedisPool = redis.Pool{
 	Dial: func() (redis.Conn, error) {
 		c, err := redis.DialURL(mgmt.Config.RedisURI)
 		if err != nil {
@@ -37,7 +38,7 @@ var redisPool = redis.Pool{
 // WithRedis ...
 func WithRedis(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
-		conn := redisPool.Get()
+		conn := RedisPool.Get()
 		defer conn.Close()
 		req = req.WithContext(context.WithValue(
 			req.Context(), ContextKeyRedis, conn))
@@ -47,9 +48,9 @@ func WithRedis(handle httprouter.Handle) httprouter.Handle {
 
 // GetRedis from context
 func GetRedis(ctx context.Context) redis.Conn {
-	c, ok := ctx.Value(ContextKeyMongo).(redis.Conn)
+	c, ok := ctx.Value(ContextKeyRedis).(redis.Conn)
 	if !ok {
-		log.Fatal("Can't find mongodb in context")
+		log.Fatal("Can't find redis in context")
 	}
 	return c
 }

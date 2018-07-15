@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/globalsign/mgo"
@@ -54,8 +55,9 @@ func UpsertTags(ctx context.Context, mainTag string, tagStrings []string) error 
 		if !isMainTag(mainTag) {
 			return errors.Errorf("'%s' is not main tag", mainTag)
 		}
-		if _, err := c.Upsert(bson.M{"name": tag}, bson.M{"$set": &Tag{
-			Name: tag, Parent: mainTag, UpdatedTime: time.Now(),
+		log.Printf("insert tag '%s'", tag)
+		if _, err := c.Upsert(bson.M{"name": tag}, bson.M{"$set": bson.M{
+			"name": tag, "parent": mainTag, "updated_time": time.Now(),
 		}}); err != nil {
 			return err
 		}
@@ -66,7 +68,7 @@ func UpsertTags(ctx context.Context, mainTag string, tagStrings []string) error 
 // GetTagTree ...
 func GetTagTree(ctx context.Context) (*TagTree, error) {
 	// try cache
-	var tree *TagTree
+	tree := &TagTree{}
 	if ok, err := mw.GetCache(ctx, tagTreeCacheKey, tree); err != nil {
 		return nil, err
 	} else if ok {
@@ -75,6 +77,7 @@ func GetTagTree(ctx context.Context) (*TagTree, error) {
 
 	tree = &TagTree{}
 	for _, mTag := range mgmt.Config.MainTags {
+		log.Printf("start fetch subTags for '%s'", mTag)
 		newest, err := getNewestSubTags(ctx, mTag)
 		if err != nil {
 			return nil, err
@@ -94,7 +97,7 @@ func getNewestSubTags(ctx context.Context, mainTag string) ([]string, error) {
 	c.EnsureIndexKey("parent")
 
 	var tags []*Tag
-	if err := c.Find(bson.M{"parent": mainTag}).Sort("-updated_time").Limit(10).All(tags); err != nil {
+	if err := c.Find(bson.M{"parent": mainTag}).Sort("-updated_time", "-_id").Limit(10).All(&tags); err != nil {
 		return nil, errors.Wrapf(err, "find newest sub tag for '%s'", mainTag)
 	}
 	var tagStrings []string

@@ -100,6 +100,11 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 	if err := c.Insert(thread); err != nil {
 		return nil, err
 	}
+
+	// Set Tag info
+	if err := UpsertTags(ctx, thread.MainTag, thread.SubTags); err != nil {
+		return nil, errors.Wrap(err, "set tag info")
+	}
 	return thread, nil
 }
 
