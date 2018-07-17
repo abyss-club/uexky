@@ -38,7 +38,8 @@ func authCode(ctx context.Context, code string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "gen token")
 	}
-	if _, err := rd.Do("SET", token, email, "EX", 600); err != nil {
+	// expire after one day
+	if _, err := rd.Do("SET", token, email, "EX", 86400); err != nil {
 		return "", errors.Wrap(err, "set token to redis")
 	}
 	return token, nil

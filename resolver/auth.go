@@ -19,7 +19,8 @@ var mailClient mailgun.Mailgun
 // Init ...
 func Init() {
 	mailClient = mailgun.NewMailgun(
-		mgmt.Config.Mail.Domain, mgmt.Config.Mail.PrivateKey,
+		mgmt.Config.Mail.Domain,
+		mgmt.Config.Mail.PrivateKey,
 		mgmt.Config.Mail.PublicKey,
 	)
 }
@@ -48,7 +49,8 @@ func authEmail(ctx context.Context, email string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if _, err := mw.GetRedis(ctx).Do("SET", code, email, "EX", 3600); err != nil {
+	// expired at 20 minutes.
+	if _, err := mw.GetRedis(ctx).Do("SET", code, email, "EX", 1200); err != nil {
 		return "", errors.Wrap(err, "set code to redis")
 	}
 	return fmt.Sprintf("%s/auth/?code=%s", mgmt.APIURLPrefix(), code), nil

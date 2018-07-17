@@ -12,7 +12,7 @@ type Query {
     threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
     thread(id: String!): Thread!
     post(id: String!): Post!
-    tags(query: String): TagTree!
+    tags(query: String): Tags!
 }
 
 type Mutation {
@@ -54,6 +54,7 @@ input ThreadInput {
 type Thread {
     id: String!
     anonymous: Boolean!
+    author: String!
     content: String!
     createTime: Time!
 
@@ -64,8 +65,8 @@ type Thread {
 }
 
 type ThreadSlice {
-  threads: [Thread]!
-  sliceInfo: SliceInfo!
+    threads: [Thread]!
+    sliceInfo: SliceInfo!
 }
 
 
@@ -79,14 +80,15 @@ input PostInput {
 type Post {
     id: String!
     anonymous: Boolean!
+    author: String!
     content: String!
     createTime: Time!
     refers: [Post!]
 }
 
 type PostSlice {
-  posts: [Post]!
-  sliceInfo: SliceInfo!
+    posts: [Post]!
+    sliceInfo: SliceInfo!
 }
 
 type Tags {

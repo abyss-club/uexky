@@ -16,14 +16,16 @@ type graphqlParams struct {
 
 // GraphQLHandle ...
 func GraphQLHandle() httprouter.Handle {
+	schema := graphql.MustParseSchema(Schema, &Resolver{})
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-		schema := graphql.MustParseSchema(Schema, &Resolver{})
 		params := graphqlParams{}
 		if err := json.NewDecoder(req.Body).Decode(&params); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
-		response := schema.Exec(req.Context(), params.Query, params.OperationName, params.Variables)
+		response := schema.Exec(
+			req.Context(), params.Query, params.OperationName, params.Variables,
+		)
 		responseJSON, err := json.Marshal(response)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

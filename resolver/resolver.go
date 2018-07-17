@@ -49,7 +49,9 @@ func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
 }
 
 // Thread ...
-func (r *Resolver) Thread(ctx context.Context, args struct{ ID string }) (*ThreadResolver, error) {
+func (r *Resolver) Thread(
+	ctx context.Context, args struct{ ID string },
+) (*ThreadResolver, error) {
 	th, err := model.FindThread(ctx, args.ID)
 	if err != nil {
 		return nil, err
@@ -61,7 +63,9 @@ func (r *Resolver) Thread(ctx context.Context, args struct{ ID string }) (*Threa
 }
 
 // Post ...
-func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostResolver, error) {
+func (r *Resolver) Post(
+	ctx context.Context, args struct{ ID string },
+) (*PostResolver, error) {
 	post, err := model.FindPost(ctx, args.ID)
 	if err != nil {
 		return nil, err
@@ -73,14 +77,18 @@ func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostRes
 }
 
 // Tags ...
-func (r *Resolver) Tags(ctx context.Context, args struct{ Query string }) (*TagResolver, error) {
-	return nil, nil // TODO
+func (r *Resolver) Tags(
+	ctx context.Context, args struct{ Query *string },
+) (*TagResolver, error) {
+	return &TagResolver{}, nil // TODO: query
 }
 
 // Mutation:
 
 // Auth ...
-func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool, error) {
+func (r *Resolver) Auth(
+	ctx context.Context, args struct{ Email string },
+) (bool, error) {
 	_, ok := ctx.Value(mw.ContextKeyEmail).(string)
 	if ok {
 		return false, nil
@@ -97,7 +105,9 @@ func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool,
 }
 
 // SetName ...
-func (r *Resolver) SetName(ctx context.Context, args struct{ Name string }) (*UserResolver, error) {
+func (r *Resolver) SetName(
+	ctx context.Context, args struct{ Name string },
+) (*UserResolver, error) {
 	user, err := model.GetUser(ctx)
 	if err != nil {
 		return nil, err

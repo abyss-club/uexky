@@ -94,3 +94,38 @@ API 使用 [graphql](https://graphql.org/)，API schema [见此](https://gitlab.
 
 2. 如果返回 `true`，则会往提供的地址发送邮件，邮件中包含一个登录链接。点击登录
 链接将会被重定向至网站首页并设置好 cookie，此时登录完成。
+
+### 分页
+
+基于 `游标/Cursor` 分页，游标为一个字符串。客户端无需理解游标的含义，
+也不应该利用游标的含义编程。使用分页查询的接口，需提供类型 `SliceQuery` 的参数：
+
+```
+input SliceQuery {
+    before: String
+    after: String
+    limit: Int!
+}
+```
+
+其中，`before` 和 `after` 中必须指定一个，如果指定空字符串表示 最后一个之前/第一个之后。
+返回值将会以如下方式展示（以 Thread 为例）：
+
+```
+type ThreadSlice {
+    threads: [Thread]!
+    sliceInfo: SliceInfo!
+}
+```
+
+`threads` 即为查询所得的 thread 列表，注意，如果指定的参数为 `before`，
+`threads` 的顺序为 **逆序**。注意，基于此分页的查询将会附加返回类型为 `SliceInfo` 的参数：
+
+```
+type SliceInfo {
+    firstCursor: String!
+    lastCursor: String!
+}
+```
+
+包含了代表返回值 threads 中第一个和最后一个对象的游标。可以基于此游标开始下一次查询。

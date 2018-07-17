@@ -46,7 +46,8 @@ func (m *Mongo) C(name string) *mgo.Collection {
 }
 
 // WithMongo set mongodb session to context
-func WithMongo(handle httprouter.Handle, mongo *Mongo) httprouter.Handle {
+func WithMongo(handle httprouter.Handle) httprouter.Handle {
+	mongo := ConnectMongodb()
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		m := mongo.Copy()
 		defer m.Close()
