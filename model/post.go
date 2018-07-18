@@ -7,6 +7,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mw"
 )
 
 const referLimit = 5
@@ -39,7 +40,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 	if err != nil {
 		return nil, err
 	}
-	if exist, err := isThreadExist(input.ThreadID); err != nil {
+	if exist, err := isThreadExist(ctx, input.ThreadID); err != nil {
 		return nil, err
 	} else if !exist {
 		return nil, errors.Errorf("Thread %s is not exist", input.ThreadID)
@@ -64,7 +65,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 	post.ID = postID
 
 	if input.Anonymous {
-		author, err := user.AnonymousID(input.ThreadID, false)
+		author, err := user.AnonymousID(ctx, input.ThreadID, false)
 		if err != nil {
 			return nil, err
 		}
@@ -82,7 +83,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 			return nil, fmt.Errorf("Count of Refers can't greater than 5")
 		}
 		for _, r := range refers {
-			ok, err := isPostExist(r)
+			ok, err := isPostExist(ctx, r)
 			if err != nil {
 				return nil, err
 			} else if !ok {
@@ -92,8 +93,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		post.Refers = refers
 	}
 
-	c, cs := Colle(collePost)
-	defer cs()
+	c := mw.GetMongo(ctx).C(collePost)
 	if err := c.Insert(post); err != nil {
 		return nil, err
 	}
@@ -102,8 +102,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 
 // FindPost ...
 func FindPost(ctx context.Context, ID string) (*Post, error) {
-	c, cs := Colle(collePost)
-	defer cs()
+	c := mw.GetMongo(ctx).C(collePost)
 	query := c.Find(bson.M{"id": ID})
 	if count, err := query.Count(); err != nil {
 		return nil, err
@@ -130,9 +129,8 @@ func (p *Post) ReferPosts(ctx context.Context) ([]*Post, error) {
 	return refers, nil
 }
 
-func isPostExist(postID string) (bool, error) {
-	c, cs := Colle(collePost)
-	defer cs()
+func isPostExist(ctx context.Context, postID string) (bool, error) {
+	c := mw.GetMongo(ctx).C(collePost)
 
 	if cnt, err := c.Find(bson.M{"id": postID}).Count(); err != nil {
 		return false, err

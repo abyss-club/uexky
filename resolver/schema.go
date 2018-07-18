@@ -9,14 +9,14 @@ schema {
 
 type Query {
     profile(): User!
-    threadSlice(limit: Int! tags: [String!] after: String): ThreadSlice!
+    threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
     thread(id: String!): Thread!
     post(id: String!): Post!
-//	tags(query: String): TagTree!
+    tags(query: String): Tags!
 }
 
 type Mutation {
-	auth(email: String!): Boolean!
+    auth(email: String!): Boolean!
     setName(name: String!): User!
     syncTags(tags: [String]!): User!
     pubThread(thread: ThreadInput!): Thread!
@@ -26,6 +26,12 @@ type Mutation {
 type SliceInfo {
     firstCursor: String!
     lastCursor: String!
+}
+
+input SliceQuery {
+    before: String
+    after: String
+    limit: Int!
 }
 
 scalar Time
@@ -38,7 +44,7 @@ type User {
 }
 
 input ThreadInput {
-	anonymous: Boolean!
+    anonymous: Boolean!
     content: String!
     mainTag: String!
     subTags: [String!]
@@ -48,24 +54,25 @@ input ThreadInput {
 type Thread {
     id: String!
     anonymous: Boolean!
+    author: String!
     content: String!
     createTime: Time!
 
     mainTag: String!
     subTags: [String!]
     title: String
-    replies(limit: Int! after: String before: String): PostSlice!
+    replies(query: SliceQuery!): PostSlice!
 }
 
 type ThreadSlice {
-  threads: [Thread]!
-  sliceInfo: SliceInfo!
+    threads: [Thread]!
+    sliceInfo: SliceInfo!
 }
 
 
 input PostInput {
     threadID: String!
-	anonymous: Boolean!
+    anonymous: Boolean!
     content: String!
     refers: [String!]
 }
@@ -73,24 +80,25 @@ input PostInput {
 type Post {
     id: String!
     anonymous: Boolean!
+    author: String!
     content: String!
     createTime: Time!
     refers: [Post!]
 }
 
 type PostSlice {
-  posts: [Post]!
-  sliceInfo: SliceInfo!
+    posts: [Post]!
+    sliceInfo: SliceInfo!
 }
 
-// type Tags {
-// 	mainTags: [String!]!
-// 	recommend: [String!]!
-// 	tree: [TagTree!]
-// }
-// 
-// type TagTree {
-// 	mainTag: String!
-// 	subTags: [String!]
-// }
+type Tags {
+    mainTags: [String!]!
+    recommend: [String!]!
+    tree: [TagTreeNode!]
+}
+
+type TagTreeNode {
+    mainTag: String!
+    subTags: [String!]
+}
 `

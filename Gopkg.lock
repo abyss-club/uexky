@@ -2,6 +2,15 @@
 
 
 [[projects]]
+  name = "github.com/garyburd/redigo"
+  packages = [
+    "internal",
+    "redis"
+  ]
+  revision = "a69d19351219b6dd56f274f96d85a7014a2ec34e"
+  version = "v1.6.0"
+
+[[projects]]
   name = "github.com/globalsign/mgo"
   packages = [
     ".",
@@ -12,15 +21,6 @@
   ]
   revision = "f76e4f9da92ecd56e3be26f5ba92580af1ef97b4"
   version = "r2018.04.03"
-
-[[projects]]
-  name = "github.com/gomodule/redigo"
-  packages = [
-    "internal",
-    "redis"
-  ]
-  revision = "9c11da706d9b7902c6da69c592f75637793fe121"
-  version = "v2.0.0"
 
 [[projects]]
   name = "github.com/google/go-cmp"
@@ -90,6 +90,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ad701c04e933ae72afe15170557b696779a784ce61d8ac8aea87539c8859fe64"
+  inputs-digest = "0212c9c9eb15a93c0371e7b2e12eaeb80d35db55f16110f3968c05a39c0515e4"
   solver-name = "gps-cdcl"
   solver-version = 1

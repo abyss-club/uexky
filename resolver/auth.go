@@ -7,28 +7,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/globalsign/mgo/bson"
-	"github.com/gomodule/redigo/redis"
 	mailgun "github.com/mailgun/mailgun-go"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/model"
+	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
-// RedisConn ...
-var RedisConn redis.Conn
 var mailClient mailgun.Mailgun
 
-// InitRedis ...
-func InitRedis() {
-	c, err := redis.DialURL(mgmt.Config.RedisURI)
-	if err != nil {
-		log.Fatal(errors.Wrap(err, "Connect to redis"))
-	}
-	RedisConn = c
+// Init ...
+func Init() {
 	mailClient = mailgun.NewMailgun(
-		mgmt.Config.Mail.Domain, mgmt.Config.Mail.PrivateKey,
+		mgmt.Config.Mail.Domain,
+		mgmt.Config.Mail.PrivateKey,
 		mgmt.Config.Mail.PublicKey,
 	)
 }
@@ -41,45 +33,27 @@ var codeGenerator = uuid64.Generator{Sections: []uuid64.Section{
 	&uuid64.RandomSection{Length: 15},
 }}
 
-// 24 charactors Base64 token
-var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
-	&uuid64.RandomSection{Length: 10},
-	&uuid64.CounterSection{Length: 2, Unit: time.Millisecond},
-	&uuid64.TimestampSection{Length: 7, Unit: time.Millisecond},
-	&uuid64.RandomSection{Length: 5},
-}}
+func isValidateEmail(mail string) bool {
+	// TODO: use regular expression
+	if strings.Index(mail, "@") != -1 {
+		return true
+	}
+	return false
+}
 
-func authEmail(email string) (string, error) {
+func authEmail(ctx context.Context, email string) (string, error) {
+	if !isValidateEmail(email) {
+		return "", errors.New("Invalid Email Address")
+	}
 	code, err := codeGenerator.New()
 	if err != nil {
 		return "", err
 	}
-	if _, err := RedisConn.Do("SET", code, email, "EX", 3600); err != nil {
+	// expired at 20 minutes.
+	if _, err := mw.GetRedis(ctx).Do("SET", code, email, "EX", 1200); err != nil {
 		return "", errors.Wrap(err, "set code to redis")
 	}
 	return fmt.Sprintf("%s/auth/?code=%s", mgmt.APIURLPrefix(), code), nil
-}
-
-// AuthCode ...
-func AuthCode(code string) (string, error) {
-	email, err := redis.String(RedisConn.Do("GET", code))
-	if err == redis.ErrNil {
-		return "", errors.New("Invalid code")
-	} else if err != nil {
-		return "", errors.Wrap(err, "Get code from redis")
-	}
-	user, err := model.GetUserByEmail(context.Background(), email)
-	if err != nil {
-		return "", errors.Wrap(err, "find user")
-	}
-	token, err := tokenGenerator.New()
-	if err != nil {
-		return "", errors.Wrap(err, "gen token")
-	}
-	if _, err := RedisConn.Do("SET", token, user.ID.Hex(), "EX", 600); err != nil {
-		return "", errors.Wrap(err, "set token to redis")
-	}
-	return token, nil
 }
 
 func sendAuthMail(url, to string) error {
@@ -105,26 +79,4 @@ func sendAuthMail(url, to string) error {
 	}
 	log.Printf("Send Email to %s, id = %s, res = %s", to, id, res)
 	return nil
-}
-
-// AuthToken ...
-func AuthToken(token string) (bson.ObjectId, error) {
-	idStr, err := redis.String(RedisConn.Do("GET", token))
-	if err == redis.ErrNil {
-		return "", nil
-	} else if err != nil {
-		return "", errors.Wrap(err, "Get token from redis")
-	}
-	if !bson.IsObjectIdHex(idStr) {
-		return "", nil // Can't find valid user.
-	}
-	return bson.ObjectIdHex(idStr), nil
-}
-
-func isValidateEmail(mail string) bool {
-	// TODO: use regular expression
-	if strings.Index(mail, "@") != -1 {
-		return true
-	}
-	return false
 }

@@ -7,17 +7,9 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
-
-// ContextKey ...
-type ContextKey string
-
-// ContextKeyToken ...
-const ContextKeyToken = ContextKey("token")
-
-// ContextLoggedInUser ...
-const ContextLoggedInUser = ContextKey("loggedIn")
 
 // aid generator for post, thread and anonymous id.
 var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
@@ -29,6 +21,8 @@ var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
 const (
 	nameLimit = 5
 	tagLimit  = 15
+	// ContextKeyUser for logged in user
+	ContextKeyUser = mw.ContextKey("user")
 )
 
 // User for uexky
@@ -50,8 +44,7 @@ func GetUser(ctx context.Context) (*User, error) {
 
 // GetUserByEmail ...
 func GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	c, cs := Colle(colleUser)
-	defer cs()
+	c := mw.GetMongo(ctx).C(colleUser)
 	c.EnsureIndexKey("email")
 
 	query := c.Find(bson.M{"email": email})
@@ -78,9 +71,8 @@ func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	return user, nil
 }
 
-func isNameUesd(name string) (bool, error) {
-	c, cs := Colle(colleUser)
-	defer cs()
+func isNameUesd(ctx context.Context, name string) (bool, error) {
+	c := mw.GetMongo(ctx).C(colleUser)
 	c.EnsureIndexKey("name")
 
 	count, err := c.Find(bson.M{"name": name}).Count()
@@ -92,14 +84,13 @@ func (a *User) SetName(ctx context.Context, name string) error {
 	if a.Name != "" {
 		return fmt.Errorf("You already have name '%v'", a.Name)
 	}
-	if used, err := isNameUesd(name); err != nil {
+	if used, err := isNameUesd(ctx, name); err != nil {
 		return errors.Wrapf(err, "Check name '%s'", name)
 	} else if used {
 		return fmt.Errorf("This name is already in uesd")
 	}
 
-	c, cs := Colle(colleUser)
-	defer cs()
+	c := mw.GetMongo(ctx).C(colleUser)
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
 		"$set": bson.M{"name": name},
 	}); err != nil {
@@ -123,8 +114,7 @@ func (a *User) SyncTags(ctx context.Context, tags []string) error {
 		tagList = tagList[:tagLimit]
 	}
 
-	c, cs := Colle(colleUser)
-	defer cs()
+	c := mw.GetMongo(ctx).C(colleUser)
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
 		"$set": bson.M{"tags": tagList},
 	}); err != nil {
@@ -142,10 +132,9 @@ type userAID struct {
 }
 
 // AnonymousID ...
-func (a *User) AnonymousID(threadID string, new bool) (string, error) {
-	c, cs := Colle(colleAID)
+func (a *User) AnonymousID(ctx context.Context, threadID string, new bool) (string, error) {
+	c := mw.GetMongo(ctx).C(colleUser)
 	c.EnsureIndexKey("thread_id", "user_id")
-	defer cs()
 
 	newAID := func() (string, error) {
 		aid, err := aidGenerator.New()
@@ -181,16 +170,9 @@ func (a *User) AnonymousID(threadID string, new bool) (string, error) {
 }
 
 func requireSignIn(ctx context.Context) (*User, error) {
-	userID, ok := ctx.Value(ContextLoggedInUser).(bson.ObjectId)
+	email, ok := ctx.Value(mw.ContextKeyEmail).(string)
 	if !ok {
 		return nil, fmt.Errorf("Forbidden, no access token")
 	}
-	c, cs := Colle(colleUser)
-	defer cs()
-
-	var user *User
-	if err := c.FindId(userID).One(&user); err != nil {
-		return nil, errors.Wrap(err, "Find user")
-	}
-	return user, nil
+	return GetUserByEmail(ctx, email)
 }

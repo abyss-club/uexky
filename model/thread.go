@@ -2,11 +2,11 @@ package model
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
@@ -38,15 +38,6 @@ type ThreadInput struct {
 	MainTag   string
 	SubTags   *[]string
 	Title     *string
-}
-
-func isMainTag(tag string) bool {
-	for _, mt := range pkg.mainTags {
-		if mt == tag {
-			return true
-		}
-	}
-	return false
 }
 
 // NewThread init new thread and insert to db
@@ -89,7 +80,7 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 	thread.ID = threadID
 
 	if input.Anonymous {
-		author, err := user.AnonymousID(thread.ID, true)
+		author, err := user.AnonymousID(ctx, thread.ID, true)
 		if err != nil {
 			return nil, err
 		}
@@ -105,10 +96,14 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 		thread.Title = *input.Title
 	}
 
-	c, cs := Colle(colleThread)
-	defer cs()
+	c := mw.GetMongo(ctx).C(colleThread)
 	if err := c.Insert(thread); err != nil {
 		return nil, err
+	}
+
+	// Set Tag info
+	if err := UpsertTags(ctx, thread.MainTag, thread.SubTags); err != nil {
+		return nil, errors.Wrap(err, "set tag info")
 	}
 	return thread, nil
 }
@@ -126,37 +121,34 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 			subTags = append(subTags, tag)
 		}
 	}
-	find := bson.M{}
+
+	queryObj, err := sq.GenQueryByObjectID()
+	if err != nil {
+		return nil, nil, err
+	}
 	if len(mainTags) != 0 {
-		find["main_tag"] = bson.M{"$in": mainTags}
+		queryObj["main_tag"] = bson.M{"$in": mainTags}
 	}
 	if len(subTags) != 0 {
-		find["sub_tags"] = bson.M{"$in": subTags}
-	}
-	if idQry := sq.QueryObject(); idQry != nil {
-		find["id"] = idQry
+		queryObj["sub_tags"] = bson.M{"$in": subTags}
 	}
 
-	c, cs := Colle(colleThread)
-	defer cs()
-	log.Printf("find obj is %v", find)
 	var threads []*Thread
-	if err := c.Find(find).Sort("-id").Limit(sq.Limit).All(&threads); err != nil {
+	if err := sq.Find(ctx, colleThread, queryObj, &threads); err != nil {
 		return nil, nil, err
 	}
 	if len(threads) == 0 {
 		return threads, &SliceInfo{}, nil
 	}
 	return threads, &SliceInfo{
-		FirstCursor: threads[0].ID,
-		LastCursor:  threads[len(threads)-1].ID,
+		FirstCursor: threads[0].ObjectID.Hex(),
+		LastCursor:  threads[len(threads)-1].ObjectID.Hex(),
 	}, nil
 }
 
 // FindThread by id
 func FindThread(ctx context.Context, ID string) (*Thread, error) {
-	c, cs := Colle(colleThread)
-	defer cs()
+	c := mw.GetMongo(ctx).C(colleThread)
 	var th Thread
 	query := c.Find(bson.M{"id": ID})
 	if count, err := query.Count(); err != nil {
@@ -170,9 +162,8 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 	return &th, nil
 }
 
-func isThreadExist(threadID string) (bool, error) {
-	c, cs := Colle(colleThread)
-	defer cs()
+func isThreadExist(ctx context.Context, threadID string) (bool, error) {
+	c := mw.GetMongo(ctx).C(colleThread)
 	count, err := c.Find(bson.M{"id": threadID}).Count()
 	if err != nil {
 		return false, err
@@ -182,18 +173,22 @@ func isThreadExist(threadID string) (bool, error) {
 
 // GetReplies ...
 func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *SliceInfo, error) {
-	c, cs := Colle(collePost)
-	defer cs()
-
-	var posts []*Post
-	find := bson.M{"thread_id": t.ID}
-	if idQry := sq.QueryObject(); idQry != nil {
-		find["id"] = idQry
-	}
-
-	if err := c.Find(find).Sort("id").Limit(sq.Limit).All(&posts); err != nil {
+	queryObj, err := sq.GenQueryByObjectID()
+	if err != nil {
 		return nil, nil, err
 	}
-	si := &SliceInfo{FirstCursor: posts[0].ID, LastCursor: posts[len(posts)-1].ID}
+	queryObj["thread_id"] = t.ID
+
+	var posts []*Post
+	if err := sq.Find(ctx, collePost, queryObj, &posts); err != nil {
+		return nil, nil, err
+	}
+	if len(posts) == 0 {
+		return posts, &SliceInfo{}, nil
+	}
+	si := &SliceInfo{
+		FirstCursor: posts[0].ObjectID.Hex(),
+		LastCursor:  posts[len(posts)-1].ObjectID.Hex(),
+	}
 	return posts, si, nil
 }

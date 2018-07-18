@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
 func TestNewThread(t *testing.T) {
@@ -20,18 +21,18 @@ func TestNewThread(t *testing.T) {
 		wantErr bool
 	}{
 		{"normal, signed, titled", &ThreadInput{
-			false, "thread1", pkg.mainTags[0],
+			false, "thread1", mgmt.Config.MainTags[0],
 			&[]string{"tag1", "tag2"}, &titles[0],
 		}, true, false},
 		{"normal, anonymous, non-title", &ThreadInput{
-			true, "thread2", pkg.mainTags[0],
+			true, "thread2", mgmt.Config.MainTags[0],
 			&[]string{"tag1", "tag2"}, nil,
 		}, true, false},
 		{"error, no-main-tag", &ThreadInput{
 			true, "thread3", "em..", nil, nil,
 		}, false, true},
 		{"error, multi-main-tag", &ThreadInput{
-			true, "thread3", pkg.mainTags[0], &[]string{pkg.mainTags[1]}, nil,
+			true, "thread3", mgmt.Config.MainTags[0], &[]string{mgmt.Config.MainTags[1]}, nil,
 		}, false, true},
 	}
 	for _, tt := range tests {
@@ -88,7 +89,7 @@ func TestGetThreadsByTags(t *testing.T) {
 		input := &ThreadInput{
 			Anonymous: true,
 			Content:   "content",
-			MainTag:   pkg.mainTags[0],
+			MainTag:   mgmt.Config.MainTags[0],
 			SubTags:   &subTags,
 		}
 		thread, err := NewThread(ctx, input)
@@ -110,30 +111,30 @@ func TestGetThreadsByTags(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"find tag 1", args{[]string{pkg.mainTags[0], "1"}, &SliceQuery{Limit: 3}},
+			"find tag 1", args{[]string{mgmt.Config.MainTags[0], "1"}, &SliceQuery{Limit: 3}},
 			[]*Thread{}, &SliceInfo{"", ""}, false,
 		},
 		{
-			"find tag 2", args{[]string{pkg.mainTags[0], "2"}, &SliceQuery{Limit: 3}},
+			"find tag 2", args{[]string{mgmt.Config.MainTags[0], "2"}, &SliceQuery{Limit: 3, Desc: true}},
 			[]*Thread{threads[18], threads[16], threads[14]},
-			&SliceInfo{threads[18].ID, threads[14].ID}, false,
+			&SliceInfo{threads[18].ObjectID.Hex(), threads[14].ObjectID.Hex()}, false,
 		},
 		{
-			"find tag 3", args{[]string{pkg.mainTags[0], "3"}, &SliceQuery{Limit: 3}},
+			"find tag 3", args{[]string{mgmt.Config.MainTags[0], "3"}, &SliceQuery{Limit: 3, Desc: true}},
 			[]*Thread{threads[18], threads[15], threads[12]},
-			&SliceInfo{threads[18].ID, threads[12].ID}, false,
+			&SliceInfo{threads[18].ObjectID.Hex(), threads[12].ObjectID.Hex()}, false,
 		},
 		{
-			"find tag 3 before", args{[]string{pkg.mainTags[0], "3"},
-				&SliceQuery{Limit: 3, Before: threads[12].ID}},
+			"find tag 3 before", args{[]string{mgmt.Config.MainTags[0], "3"},
+				&SliceQuery{Limit: 3, Desc: true, Cursor: threads[12].ObjectID.Hex()}},
 			[]*Thread{threads[9], threads[6], threads[3]},
-			&SliceInfo{threads[9].ID, threads[3].ID}, false,
+			&SliceInfo{threads[9].ObjectID.Hex(), threads[3].ObjectID.Hex()}, false,
 		},
 		{
-			"find tag 3 after", args{[]string{pkg.mainTags[0], "3"},
-				&SliceQuery{Limit: 3, After: threads[12].ID}},
-			[]*Thread{threads[18], threads[15]},
-			&SliceInfo{threads[18].ID, threads[15].ID}, false,
+			"find tag 3 after", args{[]string{mgmt.Config.MainTags[0], "3"},
+				&SliceQuery{Limit: 3, Cursor: threads[12].ObjectID.Hex()}},
+			[]*Thread{threads[15], threads[18]},
+			&SliceInfo{threads[15].ObjectID.Hex(), threads[18].ObjectID.Hex()}, false,
 		},
 	}
 	for _, tt := range tests {
@@ -179,7 +180,7 @@ func TestThread_GetReplies(t *testing.T) {
 	input := &ThreadInput{
 		Content:   "content",
 		Anonymous: true,
-		MainTag:   pkg.mainTags[0],
+		MainTag:   mgmt.Config.MainTags[0],
 	}
 	thread, err := NewThread(ctx, input)
 	if err != nil {
@@ -207,13 +208,13 @@ func TestThread_GetReplies(t *testing.T) {
 		wantErr bool
 	}{
 		{"first 3", &SliceQuery{Limit: 3}, []*Post{posts[0], posts[1], posts[2]},
-			&SliceInfo{posts[0].ID, posts[2].ID}, false},
-		{"3 after 3", &SliceQuery{Limit: 3, After: posts[2].ID},
+			&SliceInfo{posts[0].ObjectID.Hex(), posts[2].ObjectID.Hex()}, false},
+		{"3 after 3", &SliceQuery{Limit: 3, Cursor: posts[2].ObjectID.Hex()},
 			[]*Post{posts[3], posts[4], posts[5]},
-			&SliceInfo{posts[3].ID, posts[5].ID}, false},
-		{"3 before 3", &SliceQuery{Limit: 3, Before: posts[3].ID},
-			[]*Post{posts[0], posts[1], posts[2]},
-			&SliceInfo{posts[0].ID, posts[2].ID}, false},
+			&SliceInfo{posts[3].ObjectID.Hex(), posts[5].ObjectID.Hex()}, false},
+		{"3 before 3", &SliceQuery{Limit: 3, Desc: true, Cursor: posts[3].ObjectID.Hex()},
+			[]*Post{posts[2], posts[1], posts[0]},
+			&SliceInfo{posts[2].ObjectID.Hex(), posts[0].ObjectID.Hex()}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

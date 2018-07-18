@@ -5,9 +5,10 @@ import (
 	"log"
 	"net/http"
 
-	"gitlab.com/abyss.club/uexky/api"
+	"github.com/julienschmidt/httprouter"
 	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/model"
+	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/resolver"
 )
 
 var (
@@ -28,14 +29,20 @@ func loadConfig() {
 	mgmt.LoadConfig(configFile)
 }
 
+func newRouter() http.Handler {
+	resolver.Init()
+	handler := httprouter.New()
+	handler.POST(
+		"/graphql/",
+		mw.WithRedis(mw.WithMongo(mw.WithAuth(resolver.GraphQLHandle()))),
+	)
+	handler.GET("/auth/", mw.WithRedis(mw.WithMongo(mw.AuthHandle)))
+	return handler
+}
+
 func main() {
 	loadConfig()
-
-	if err := model.Init(); err != nil {
-		log.Fatal(err)
-	}
-
-	router := api.NewRouter()
+	router := newRouter()
 	log.Print("start to serve")
 	log.Fatal(http.ListenAndServe(serve, router))
 }

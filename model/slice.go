@@ -1,6 +1,13 @@
 package model
 
-import "github.com/globalsign/mgo/bson"
+import (
+	"context"
+	"log"
+
+	"github.com/globalsign/mgo/bson"
+	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mw"
+)
 
 // SliceInfo ...
 type SliceInfo struct {
@@ -11,20 +18,48 @@ type SliceInfo struct {
 // SliceQuery ...
 type SliceQuery struct {
 	Limit  int
-	Before string
-	After  string
+	Desc   bool
+	Cursor string
 }
 
-// QueryObject ...
-func (sq *SliceQuery) QueryObject() bson.M {
-	if sq.After == "" && sq.Before == "" {
-		return nil
+// GenQueryByObjectID ...
+func (sq *SliceQuery) GenQueryByObjectID() (bson.M, error) {
+	if sq.Cursor == "" {
+		return bson.M{}, nil
 	}
-	if sq.After != "" && sq.Before != "" {
-		return bson.M{"$gt": sq.After, "$lt": sq.Before}
+	if !bson.IsObjectIdHex(sq.Cursor) {
+		return nil, errors.New("Invalid cursor")
 	}
-	if sq.After != "" {
-		return bson.M{"$gt": sq.After}
+	id := bson.ObjectIdHex(sq.Cursor)
+	if sq.Desc {
+		return bson.M{"_id": bson.M{"$lt": id}}, nil
 	}
-	return bson.M{"$lt": sq.Before}
+	return bson.M{"_id": bson.M{"$gt": id}}, nil
+}
+
+// Find ...
+func (sq *SliceQuery) Find(
+	ctx context.Context, collection string, extra bson.M, result interface{},
+) error {
+	if sq.Limit <= 0 {
+		return errors.New("limit must greater than 0")
+	}
+
+	queryObj, err := sq.GenQueryByObjectID()
+	if err != nil {
+		return err
+	}
+	for k, v := range extra {
+		queryObj[k] = v
+	}
+
+	log.Printf("slice do query '%+v'", queryObj)
+	query := mw.GetMongo(ctx).C(collection).Find(queryObj).Limit(sq.Limit)
+	if sq.Desc {
+		query = query.Sort("-_id")
+	} else {
+		query = query.Sort("_id")
+	}
+
+	return query.All(result)
 }

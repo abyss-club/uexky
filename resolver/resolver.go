@@ -2,10 +2,9 @@ package resolver
 
 import (
 	"context"
-	"errors"
 
-	"github.com/globalsign/mgo/bson"
 	"gitlab.com/abyss.club/uexky/model"
+	"gitlab.com/abyss.club/uexky/mw"
 )
 
 // Resolver for graphql
@@ -15,28 +14,27 @@ type Resolver struct{}
 
 // Profile resolve query 'profile'
 func (r *Resolver) Profile(ctx context.Context) (*UserResolver, error) {
-	user, err := model.GetUser(ctx)
+	user, err := model.GetUser(ctx) // TODO: not login, return nil
 	return &UserResolver{user}, err
 }
 
 // ThreadSlice ...
 func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
-	Limit int
 	Tags  *[]string
-	After *string
+	Query *SliceQuery
 }) (
 	*ThreadSliceResolver, error,
 ) {
-	after := ""
-	if args.After != nil {
-		after = *args.After
-	}
-	tags := []string{}
-	if args.Tags != nil {
-		tags = *args.Tags
+	sq, err := args.Query.Parse(true)
+	if err != nil {
+		return nil, err
 	}
 
-	sq := &model.SliceQuery{Limit: args.Limit, After: after}
+	var tags []string
+	if args.Tags != nil {
+		tags = *(args.Tags)
+	}
+
 	threads, sliceInfo, err := model.GetThreadsByTags(ctx, tags, sq)
 	if err != nil {
 		return nil, err
@@ -51,7 +49,9 @@ func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
 }
 
 // Thread ...
-func (r *Resolver) Thread(ctx context.Context, args struct{ ID string }) (*ThreadResolver, error) {
+func (r *Resolver) Thread(
+	ctx context.Context, args struct{ ID string },
+) (*ThreadResolver, error) {
 	th, err := model.FindThread(ctx, args.ID)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,9 @@ func (r *Resolver) Thread(ctx context.Context, args struct{ ID string }) (*Threa
 }
 
 // Post ...
-func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostResolver, error) {
+func (r *Resolver) Post(
+	ctx context.Context, args struct{ ID string },
+) (*PostResolver, error) {
 	post, err := model.FindPost(ctx, args.ID)
 	if err != nil {
 		return nil, err
@@ -74,19 +76,25 @@ func (r *Resolver) Post(ctx context.Context, args struct{ ID string }) (*PostRes
 	return &PostResolver{Post: post}, nil
 }
 
+// Tags ...
+func (r *Resolver) Tags(
+	ctx context.Context, args struct{ Query *string },
+) (*TagResolver, error) {
+	return &TagResolver{}, nil // TODO: query
+}
+
 // Mutation:
 
 // Auth ...
-func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool, error) {
-	_, ok := ctx.Value(model.ContextLoggedInUser).(bson.ObjectId)
+func (r *Resolver) Auth(
+	ctx context.Context, args struct{ Email string },
+) (bool, error) {
+	_, ok := ctx.Value(mw.ContextKeyEmail).(string)
 	if ok {
 		return false, nil
 	}
 
-	if !isValidateEmail(args.Email) {
-		return false, errors.New("Invalid Email Address")
-	}
-	authURL, err := authEmail(args.Email)
+	authURL, err := authEmail(ctx, args.Email)
 	if err != nil {
 		return false, nil
 	}
@@ -97,7 +105,9 @@ func (r *Resolver) Auth(ctx context.Context, args struct{ Email string }) (bool,
 }
 
 // SetName ...
-func (r *Resolver) SetName(ctx context.Context, args struct{ Name string }) (*UserResolver, error) {
+func (r *Resolver) SetName(
+	ctx context.Context, args struct{ Name string },
+) (*UserResolver, error) {
 	user, err := model.GetUser(ctx)
 	if err != nil {
 		return nil, err

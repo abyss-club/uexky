@@ -2,37 +2,13 @@ package model
 
 import (
 	"context"
-	"log"
 	"reflect"
 	"testing"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
 )
 
 var mockUsers []*User
-
-func addMockUser() {
-	log.Print("addMockUser!")
-	users := []*User{
-		&User{bson.NewObjectId(), "0@mail.com", "test0", []string{"动画"}},
-		&User{bson.NewObjectId(), "1@mail.com", "", []string{}},
-		&User{bson.NewObjectId(), "2@mail.com", "", []string{}},
-	}
-	c, cs := Colle("users")
-	defer cs()
-	for _, user := range users {
-		if err := c.Insert(user); err != nil {
-			log.Fatal(errors.Wrap(err, "gen mock users"))
-		}
-	}
-	mockUsers = users
-}
-
-func ctxWithUser(a *User) context.Context {
-	ctx := context.Background()
-	return context.WithValue(ctx, ContextLoggedInUser, a.ID)
-}
 
 func TestGetUser(t *testing.T) {
 	type args struct {
@@ -45,8 +21,6 @@ func TestGetUser(t *testing.T) {
 		wantErr bool
 	}{
 		{"normal", args{ctxWithUser(mockUsers[0])}, mockUsers[0], false},
-		{"test invalid token", args{ctxWithUser(&User{ID: "?"})}, nil, true},
-		{"test unexist token", args{ctxWithUser(&User{ID: bson.NewObjectId()})}, nil, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -88,9 +62,7 @@ func TestGetUserByEmail(t *testing.T) {
 		{"exist user", args{
 			ctxWithUser(mockUsers[0]), mockUsers[0].Email,
 		}, mockUsers[0].Email, false},
-		{"new user", args{
-			context.Background(), "3@mail.com",
-		}, "3@mail.com", false},
+		{"new user", args{testCtx, "3@mail.com"}, "3@mail.com", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -197,7 +169,7 @@ func TestUser_AnonymousID(t *testing.T) {
 	last := ""
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.args.user.AnonymousID(tt.args.threadID, tt.args.new)
+			got, err := tt.args.user.AnonymousID(testCtx, tt.args.threadID, tt.args.new)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("User.AnonymousID() error = %v, wantErr %v", err, tt.wantErr)
 				return
