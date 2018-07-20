@@ -118,8 +118,7 @@ type ThreadSlice {
 }
 ```
 
-`threads` 即为查询所得的 thread 列表，注意，如果指定的参数为 `before`，
-`threads` 的顺序为 **逆序**。注意，基于此分页的查询将会附加返回类型为 `SliceInfo` 的参数：
+`threads` 即为查询所得的 thread 列表。注意，分页的查询将会附加返回类型为 `SliceInfo` 的参数：
 
 ```
 type SliceInfo {

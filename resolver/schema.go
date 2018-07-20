@@ -12,7 +12,7 @@ type Query {
     threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
     thread(id: String!): Thread!
     post(id: String!): Post!
-    tags(query: String): Tags!
+    tags(): Tags!
 }
 
 type Mutation {
@@ -94,7 +94,7 @@ type PostSlice {
 type Tags {
     mainTags: [String!]!
     recommend: [String!]!
-    tree: [TagTreeNode!]
+    tree(query: String): [TagTreeNode!]
 }
 
 type TagTreeNode {
