@@ -46,6 +46,12 @@ func ReplaceConfigByEnv() {
 	if found {
 		Config.Mongo.URI = dbURI
 	}
+
+	redisURI, found := os.LookupEnv("REDIS_URI")
+	if found {
+		Config.RedisURI = redisURI
+	}
+
 	log.Printf("replaced config: %v", Config)
 }
 
@@ -72,6 +78,7 @@ func LoadConfig(filename string) {
 			log.Fatal(errors.Wrap(err, "Read config error"))
 		}
 	}
+	ReplaceConfigByEnv()
 
 	log.Printf("load config: %v", Config)
 }
