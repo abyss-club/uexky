@@ -77,10 +77,8 @@ func (r *Resolver) Post(
 }
 
 // Tags ...
-func (r *Resolver) Tags(
-	ctx context.Context, args struct{ Query *string },
-) (*TagResolver, error) {
-	return &TagResolver{}, nil // TODO: query
+func (r *Resolver) Tags(ctx context.Context) (*TagResolver, error) {
+	return &TagResolver{}, nil
 }
 
 // Mutation:

@@ -35,7 +35,7 @@ func TestUpsertTags(t *testing.T) {
 	}
 	c := mw.GetMongo(testCtx).C(colleTag)
 	var tags []*Tag
-	if err := c.Find(bson.M{"parent": "MainB"}).All(&tags); err != nil {
+	if err := c.Find(bson.M{"main_tags": "MainB"}).All(&tags); err != nil {
 		t.Fatalf("UpsertTags(), find tag error = %v", err)
 	}
 	if len(tags) != 2 {
@@ -61,11 +61,7 @@ func TestGetTagTree(t *testing.T) {
 		[]string{"Sub8"},
 		[]string{"Sub9"},
 	}
-	wantTags := []string{
-		"Sub9", "Sub8", "Sub7", "Sub6", "Sub5",
-		"Sub1", "Sub0", "Sub4", "Sub2", "Sub3",
-	}
-	log.Println("insert threads")
+	t.Log("insert threads")
 	for _, subTags := range subTagsList {
 		if _, err := NewThread(ctx, &ThreadInput{
 			Anonymous: true,
@@ -76,17 +72,33 @@ func TestGetTagTree(t *testing.T) {
 			t.Fatal(errors.Wrap(err, "create thread"))
 		}
 	}
-	log.Println("GetTagTree")
-	tree, err := GetTagTree(ctx)
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "GetTagTree()"))
+	wantTags := []string{
+		"Sub9", "Sub8", "Sub7", "Sub6", "Sub5",
+		"Sub1", "Sub0", "Sub4", "Sub2", "Sub3",
 	}
-	if len(tree.Nodes) != len(mgmt.Config.MainTags) {
-		t.Fatalf("GetTagTree() should have %v node, got %v",
-			len(mgmt.Config.MainTags), len(tree.Nodes))
+	tests := []struct {
+		name     string
+		query    string
+		wantTags []string
+	}{
+		{"no query", "", wantTags},
+		{"query 'ub'", "ub", wantTags},
+		{"query '2'", "2", []string{"Sub2"}},
 	}
-	if !reflect.DeepEqual(tree.Nodes[2].SubTags, wantTags) {
-		t.Fatalf("GetTagTree().Nodes[2] = %q, want: %q",
-			tree.Nodes[2].SubTags, wantTags)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tree, err := GetTagTree(ctx, tt.query)
+			if err != nil {
+				t.Fatal(errors.Wrap(err, "GetTagTree()"))
+			}
+			if len(tree.Nodes) != len(mgmt.Config.MainTags) {
+				t.Fatalf("GetTagTree() should have %v node, got %v",
+					len(mgmt.Config.MainTags), len(tree.Nodes))
+			}
+			if !reflect.DeepEqual(tree.Nodes[2].SubTags, tt.wantTags) {
+				t.Fatalf("GetTagTree().Nodes[2] = %q, want: %q",
+					tree.Nodes[2].SubTags, wantTags)
+			}
+		})
 	}
 }

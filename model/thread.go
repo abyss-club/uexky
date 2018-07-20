@@ -140,6 +140,9 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 	if len(threads) == 0 {
 		return threads, &SliceInfo{}, nil
 	}
+	if !sq.Desc {
+		reverseThreads(threads)
+	}
 	return threads, &SliceInfo{
 		FirstCursor: threads[0].ObjectID.Hex(),
 		LastCursor:  threads[len(threads)-1].ObjectID.Hex(),
@@ -186,9 +189,26 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 	if len(posts) == 0 {
 		return posts, &SliceInfo{}, nil
 	}
+	if sq.Desc {
+		reversePosts(posts)
+	}
 	si := &SliceInfo{
 		FirstCursor: posts[0].ObjectID.Hex(),
 		LastCursor:  posts[len(posts)-1].ObjectID.Hex(),
 	}
 	return posts, si, nil
+}
+
+func reverseThreads(threads []*Thread) {
+	l := len(threads)
+	for i := 0; i != l/2; i++ {
+		threads[i], threads[l-i-1] = threads[l-i-1], threads[i]
+	}
+}
+
+func reversePosts(posts []*Post) {
+	l := len(posts)
+	for i := 0; i != l/2; i++ {
+		posts[i], posts[l-i-1] = posts[l-i-1], posts[i]
+	}
 }

@@ -125,16 +125,16 @@ func TestGetThreadsByTags(t *testing.T) {
 			&SliceInfo{threads[18].ObjectID.Hex(), threads[12].ObjectID.Hex()}, false,
 		},
 		{
-			"find tag 3 before", args{[]string{mgmt.Config.MainTags[0], "3"},
+			"find tag 3 desc", args{[]string{mgmt.Config.MainTags[0], "3"},
 				&SliceQuery{Limit: 3, Desc: true, Cursor: threads[12].ObjectID.Hex()}},
 			[]*Thread{threads[9], threads[6], threads[3]},
 			&SliceInfo{threads[9].ObjectID.Hex(), threads[3].ObjectID.Hex()}, false,
 		},
 		{
-			"find tag 3 after", args{[]string{mgmt.Config.MainTags[0], "3"},
-				&SliceQuery{Limit: 3, Cursor: threads[12].ObjectID.Hex()}},
-			[]*Thread{threads[15], threads[18]},
-			&SliceInfo{threads[15].ObjectID.Hex(), threads[18].ObjectID.Hex()}, false,
+			"find tag 3 asc", args{[]string{mgmt.Config.MainTags[0], "3"},
+				&SliceQuery{Limit: 3, Cursor: threads[9].ObjectID.Hex()}},
+			[]*Thread{threads[18], threads[15], threads[12]},
+			&SliceInfo{threads[18].ObjectID.Hex(), threads[12].ObjectID.Hex()}, false,
 		},
 	}
 	for _, tt := range tests {
@@ -213,8 +213,8 @@ func TestThread_GetReplies(t *testing.T) {
 			[]*Post{posts[3], posts[4], posts[5]},
 			&SliceInfo{posts[3].ObjectID.Hex(), posts[5].ObjectID.Hex()}, false},
 		{"3 before 3", &SliceQuery{Limit: 3, Desc: true, Cursor: posts[3].ObjectID.Hex()},
-			[]*Post{posts[2], posts[1], posts[0]},
-			&SliceInfo{posts[2].ObjectID.Hex(), posts[0].ObjectID.Hex()}, false},
+			[]*Post{posts[0], posts[1], posts[2]},
+			&SliceInfo{posts[0].ObjectID.Hex(), posts[2].ObjectID.Hex()}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -17,7 +17,7 @@ type Query {
     # A post
     post(id: String!): Post!
     # Tags
-    tags(query: String): Tags!
+    tags(): Tags!
 }
 
 type Mutation {
@@ -125,7 +125,7 @@ type Tags {
     mainTags: [String!]!
     # Recommended tags are picked by manually.
     recommend: [String!]!
-    tree: [TagTreeNode!]
+    tree(query: String): [TagTreeNode!]
 }
 
 type TagTreeNode {
