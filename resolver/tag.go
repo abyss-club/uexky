@@ -21,8 +21,15 @@ func (tr *TagResolver) Recommend(ctx context.Context) ([]string, error) {
 }
 
 // Tree ...
-func (tr *TagResolver) Tree(ctx context.Context) (*[]*TagTreeNodeResolver, error) {
-	tree, err := model.GetTagTree(ctx)
+func (tr *TagResolver) Tree(
+	ctx context.Context,
+	args struct{ Query *string },
+) (*[]*TagTreeNodeResolver, error) {
+	query := ""
+	if args.Query != nil {
+		query = *args.Query
+	}
+	tree, err := model.GetTagTree(ctx, query)
 	if err != nil {
 		return nil, err
 	}
