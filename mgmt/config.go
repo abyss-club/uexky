@@ -43,9 +43,10 @@ func setDefaultConfig() {
 // ReplaceConfigByEnv ...
 func ReplaceConfigByEnv() {
 	dbURI, found := os.LookupEnv("MONGO_URI")
-	if !found {
+	if found {
 		Config.Mongo.URI = dbURI
 	}
+	log.Printf("replaced config: %v", Config)
 }
 
 // WebURLPrefix ...
