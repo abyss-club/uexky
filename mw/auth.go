@@ -22,6 +22,23 @@ var tokenGenerator = uuid64.Generator{Sections: []uuid64.Section{
 	&uuid64.RandomSection{Length: 5},
 }}
 
+const tokenCookieAge = 7 * 86400
+
+func newTokenCookie(token string) *http.Cookie {
+	cookie := &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		Domain:   mgmt.Config.Domain.WEB,
+		MaxAge:   tokenCookieAge,
+		HttpOnly: true,
+	}
+	if mgmt.Config.Proto == "https" {
+		cookie.Secure = true
+	}
+	return cookie
+}
+
 // User         Uexky
 //  |--- code --->|
 //  |<-- token ---|
@@ -61,17 +78,7 @@ func AuthHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	}
 
 	GetRedis(req.Context()).Do("DEL", code) // delete after use
-	cookie := &http.Cookie{
-		Name:     "token",
-		Value:    token,
-		Path:     "/",
-		Domain:   mgmt.Config.Domain.WEB,
-		MaxAge:   86400,
-		HttpOnly: true,
-	}
-	if mgmt.Config.Proto == "https" {
-		cookie.Secure = true
-	}
+	cookie := newTokenCookie(token)
 	http.SetCookie(w, cookie)
 	w.Header().Set("Location", mgmt.WebURLPrefix())
 	w.Header().Set("Cache-Control", "no-cache, no-store")
@@ -96,10 +103,12 @@ func WithAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		tokenCookie, err := req.Cookie("token")
 		log.Printf("find token cookie %v", tokenCookie)
-		if err != nil { // err must be ErrNoCookie,  non-login user, do noting
+		if err != nil { // err must be ErrNoCookie,  non-login user, do nothing
 			handle(w, req, p)
 			return
 		}
+		cookie := newTokenCookie(tokenCookie.Value)
+		http.SetCookie(w, cookie)
 
 		email, err := authToken(req.Context(), tokenCookie.Value)
 		if err != nil {
@@ -111,6 +120,7 @@ func WithAuth(handle httprouter.Handle) httprouter.Handle {
 			ctx := context.WithValue(req.Context(), ContextKeyEmail, email)
 			req = req.WithContext(ctx)
 		}
+
 		handle(w, req, p)
 	}
 }
