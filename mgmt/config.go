@@ -13,10 +13,10 @@ import (
 // Config for uexky
 var Config struct {
 	Mongo struct {
-		URI string `json:"mongo_uri"`
+		URL string `json:"url"`
 		DB  string `json:"db"`
 	} `json:"mongo"`
-	RedisURI string   `json:"redis_url"`
+	RedisURL string   `json:"redis_url"`
 	MainTags []string `json:"main_tags"`
 	Proto    string   `json:"proto"`
 	Domain   struct {
@@ -31,9 +31,9 @@ var Config struct {
 }
 
 func setDefaultConfig() {
-	Config.Mongo.URI = "localhost:27017"
+	Config.Mongo.URL = "localhost:27017"
 	Config.Mongo.DB = "develop"
-	Config.RedisURI = "redis://localhost:6379/0"
+	Config.RedisURL = "redis://localhost:6379/0"
 	Config.Proto = "https"
 	Config.Domain.WEB = "abyss.club"
 	Config.Domain.API = "api.abyss.club"
@@ -42,14 +42,14 @@ func setDefaultConfig() {
 
 // ReplaceConfigByEnv ...
 func ReplaceConfigByEnv() {
-	dbURI, found := os.LookupEnv("MONGO_URI")
+	dbURL, found := os.LookupEnv("MONGO_URL")
 	if found {
-		Config.Mongo.URI = dbURI
+		Config.Mongo.URL = dbURL
 	}
 
-	redisURI, found := os.LookupEnv("REDIS_URI")
+	redisURL, found := os.LookupEnv("REDIS_URL")
 	if found {
-		Config.RedisURI = redisURI
+		Config.RedisURL = redisURL
 	}
 
 	log.Printf("replaced config: %v", Config)

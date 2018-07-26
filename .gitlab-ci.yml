@@ -27,8 +27,8 @@ test:
     - mongo
     - redis
   variables:
-    MONGO_URI: "mongodb://mongo"
-    REDIS_URI: "redis://redis/0"
+    MONGO_URL: "mongodb://mongo"
+    REDIS_URL: "redis://redis/0"
   stage: test
   script:
     - go test -v ./... -coverprofile .testCoverage.txt
