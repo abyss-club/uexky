@@ -16,7 +16,7 @@ import (
 // RedisPool ...
 var RedisPool = redis.Pool{
 	Dial: func() (redis.Conn, error) {
-		c, err := redis.DialURL(mgmt.Config.RedisURI)
+		c, err := redis.DialURL(mgmt.Config.RedisURL)
 		if err != nil {
 			log.Fatal(errors.Wrap(err, "Connect to redis"))
 		}

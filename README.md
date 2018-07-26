@@ -22,10 +22,10 @@ Config file use json, structure is:
 ```go
 var Config struct {
         Mongo struct {
-                URI string `json:"mongo_uri"`
+                URL string `json:"url"`
                 DB  string `json:"db"`
         } `json:"mongo"`
-        RedisURI string   `json:"redis_url"`
+        RedisURL string   `json:"redis_url"`
         MainTags []string `json:"main_tags"`
         Proto    string   `json:"proto"`
         Domain   struct {
@@ -45,7 +45,7 @@ Default Value is:
 ```json
 {
     "mongo": {
-        "mongo_url": "localhost:27017",
+        "url": "localhost:27017",
         "db": "develop"
     },
     "redis_url": "redis://localhost:6379/0",

@@ -18,7 +18,7 @@ type Mongo struct {
 
 // ConnectMongodb ...
 func ConnectMongodb() *Mongo {
-	session, err := mgo.Dial(mgmt.Config.Mongo.URI)
+	session, err := mgo.Dial(mgmt.Config.Mongo.URL)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "connect to mongodb"))
 	}
