@@ -2,39 +2,46 @@
 
 
 [[projects]]
-  name = "github.com/garyburd/redigo"
-  packages = [
-    "internal",
-    "redis"
-  ]
-  revision = "a69d19351219b6dd56f274f96d85a7014a2ec34e"
-  version = "v1.6.0"
-
-[[projects]]
+  digest = "1:2f95ebdbaf8e9173a8957b0a3450ae170e7045db73657e7ff5a238074f33ae58"
   name = "github.com/globalsign/mgo"
   packages = [
     ".",
     "bson",
     "internal/json",
     "internal/sasl",
-    "internal/scram"
+    "internal/scram",
   ]
+  pruneopts = ""
   revision = "f76e4f9da92ecd56e3be26f5ba92580af1ef97b4"
   version = "r2018.04.03"
 
 [[projects]]
+  digest = "1:dcf8316121302735c0ac84e05f4686e3b34e284444435e9a206da48d8be18cb1"
+  name = "github.com/gomodule/redigo"
+  packages = [
+    "internal",
+    "redis",
+  ]
+  pruneopts = ""
+  revision = "9c11da706d9b7902c6da69c592f75637793fe121"
+  version = "v2.0.0"
+
+[[projects]]
+  digest = "1:f9f45f75f332e03fc7e9fe9188ea4e1ce4d14779ef34fa1b023da67518e36327"
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
     "cmp/internal/diff",
     "cmp/internal/function",
-    "cmp/internal/value"
+    "cmp/internal/value",
   ]
+  pruneopts = ""
   revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
   version = "v0.2.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:a672610e4997c56dddf23afe8c4fed0b6961725885fec78f36498ea86947bf63"
   name = "github.com/graph-gophers/graphql-go"
   packages = [
     ".",
@@ -49,47 +56,67 @@
     "internal/validation",
     "introspection",
     "log",
-    "trace"
+    "trace",
   ]
+  pruneopts = ""
   revision = "bb9738501bd42a6536227b96068349b814379d6e"
 
 [[projects]]
+  digest = "1:3c818dada3e41bdb0f509f78e6775610f1bb179449ec8c4c86a45fae35460f3f"
   name = "github.com/julienschmidt/httprouter"
   packages = ["."]
+  pruneopts = ""
   revision = "8c199fb6259ffc1af525cc3ad52ee60ba8359669"
   version = "v1.1"
 
 [[projects]]
+  digest = "1:91fea695ea6dfbb356a9cfd888739a702e3d6e779219d4d80aa0d95f23f24074"
   name = "github.com/mailgun/mailgun-go"
   packages = ["."]
+  pruneopts = ""
   revision = "a4002e2df2e8ca2da6a6fbb4a72871b504e49f50"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:78fb99d6011c2ae6c72f3293a83951311147b12b06a5ffa43abf750c4fab6ac5"
   name = "github.com/opentracing/opentracing-go"
   packages = [
     ".",
     "ext",
-    "log"
+    "log",
   ]
+  pruneopts = ""
   revision = "1949ddbfd147afd4d964a9f00b24eb291e0e7c38"
   version = "v1.0.2"
 
 [[projects]]
+  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = ""
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:96d281cfaaa12ac602772da38ac85f00d59b1d3aa7bfe69d8ba334d6ee41e3e6"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "ed29d75add3d7c4bf7ca65aac0c6df3d1420216f"
+  pruneopts = ""
+  revision = "3673e40ba22529d22c3fd7c93e97b0ce50fa7bdd"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0212c9c9eb15a93c0371e7b2e12eaeb80d35db55f16110f3968c05a39c0515e4"
+  input-imports = [
+    "github.com/globalsign/mgo",
+    "github.com/globalsign/mgo/bson",
+    "github.com/gomodule/redigo/redis",
+    "github.com/google/go-cmp/cmp",
+    "github.com/graph-gophers/graphql-go",
+    "github.com/julienschmidt/httprouter",
+    "github.com/mailgun/mailgun-go",
+    "github.com/pkg/errors",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

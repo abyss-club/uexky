@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
