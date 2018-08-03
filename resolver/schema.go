@@ -8,24 +8,24 @@ schema {
 }
 
 type Query {
-    # A user profile
+    # A user profile object.
     profile(): User!
-    # A slice of thread
+    # A slice of thread.
     threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
-    # A thread
+    # A thread object.
     thread(id: String!): Thread!
-    # A post
+    # A post object.
     post(id: String!): Post!
-    # Tags
+    # Containing mainTags and tagTree.
     tags(): Tags!
 }
 
 type Mutation {
-    # Register/Login via email address.
+    # Register/Login via email address. An email containing login info will be sent to the provided email address.
     auth(email: String!): Boolean!
     # Set the Name of user.
     setName(name: String!): User!
-    # Save tags selected by user.
+    # Save tags subscribed by user.
     syncTags(tags: [String]!): User!
     # Publish a new thread.
     pubThread(thread: ThreadInput!): Thread!
@@ -57,7 +57,7 @@ scalar Time
 
 type User {
     email: String!
-    # The Name of user. This is needed when not posting anonymously.
+    # The Name of user. Required when not posting anonymously.
     name: String
     # Tags saved by user.
     tags: [String!]
@@ -70,25 +70,26 @@ input ThreadInput {
     content: String!
     # Required. Only one mainTag is allowed.
     mainTag: String!
-    # Optional, maximum of 4. Belonged to mainTag.
+    # Optional, maximum of 4. 
     subTags: [String!]
-    # Title is Optional as well.
+    # Optional. If not set, the title will be '无题'.
     title: String
 }
 
 type Thread {
     # UUID with 8 chars in length, and will increase to 9 after 30 years.
     id: String!
-    # Thread posted anonymously or not.
+    # Thread was published anonymously or not.
     anonymous: Boolean!
+    # Same format as id if anonymous, name of User otherwise.
     author: String!
     content: String!
     createTime: Time!
-
+    # Only one mainTag is allowed.
     mainTag: String!
-
-    # Optional, maximum of 4. Related to mainTag.
+    # Optional, maximum of 4.
     subTags: [String!]
+    # Default to '无题'.
     title: String
     replies(query: SliceQuery!): PostSlice!
 }
@@ -122,8 +123,9 @@ type PostSlice {
 }
 
 type Tags {
+    # Main tags are predefined manually.
     mainTags: [String!]!
-    # Recommended tags are picked by manually.
+    # Recommended tags are picked manually.
     recommend: [String!]!
     tree(query: String): [TagTreeNode!]
 }
