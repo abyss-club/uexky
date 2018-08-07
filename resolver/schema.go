@@ -126,7 +126,7 @@ type Tags {
     # Main tags are predefined manually.
     mainTags: [String!]!
     # Recommended tags are picked manually.
-    recommend: [String!]!
+    recommended: [String!]!
     tree(query: String): [TagTreeNode!]
 }
 

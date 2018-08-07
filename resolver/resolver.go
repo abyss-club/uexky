@@ -14,8 +14,11 @@ type Resolver struct{}
 
 // Profile resolve query 'profile'
 func (r *Resolver) Profile(ctx context.Context) (*UserResolver, error) {
-	user, err := model.GetUser(ctx) // TODO: not login, return nil
-	return &UserResolver{user}, err
+	user, err := model.GetUser(ctx)
+	if err != nil { // not login, return null user
+		return &UserResolver{&model.User{}}, nil
+	}
+	return &UserResolver{user}, nil
 }
 
 // ThreadSlice ...

@@ -15,8 +15,8 @@ func (tr *TagResolver) MainTags(ctx context.Context) ([]string, error) {
 	return mgmt.Config.MainTags, nil
 }
 
-// Recommend ...
-func (tr *TagResolver) Recommend(ctx context.Context) ([]string, error) {
+// Recommended ...
+func (tr *TagResolver) Recommended(ctx context.Context) ([]string, error) {
 	return mgmt.Config.MainTags, nil // TODO
 }
 
