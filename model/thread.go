@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
@@ -24,6 +25,7 @@ type Thread struct {
 	Author     string        `bson:"author"`
 	UserID     bson.ObjectId `bson:"user_id"` // not display in front
 	CreateTime time.Time     `bson:"created_time"`
+	UpdateTime time.Time     `bson:"update_time"`
 
 	MainTag string   `bson:"main_tag"`
 	SubTags []string `bson:"sub_tags"`
@@ -122,19 +124,23 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		}
 	}
 
-	queryObj, err := sq.GenQueryByObjectID()
+	queryObj, err := sq.GenQueryByTime("update_time")
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(mainTags) != 0 {
+	if len(mainTags) != 0 && len(subTags) != 0 {
+		queryObj["$or"] = []bson.M{
+			bson.M{"main_tag": bson.M{"$in": mainTags}},
+			bson.M{"sub_tags": bson.M{"$in": subTags}},
+		}
+	} else if len(mainTags) != 0 {
 		queryObj["main_tag"] = bson.M{"$in": mainTags}
-	}
-	if len(subTags) != 0 {
+	} else if len(subTags) != 0 {
 		queryObj["sub_tags"] = bson.M{"$in": subTags}
 	}
 
 	var threads []*Thread
-	if err := sq.Find(ctx, colleThread, queryObj, &threads); err != nil {
+	if err := sq.Find(ctx, colleThread, "update_time", queryObj, &threads); err != nil {
 		return nil, nil, err
 	}
 	if len(threads) == 0 {
@@ -144,8 +150,8 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		reverseThreads(threads)
 	}
 	return threads, &SliceInfo{
-		FirstCursor: threads[0].ObjectID.Hex(),
-		LastCursor:  threads[len(threads)-1].ObjectID.Hex(),
+		FirstCursor: fmt.Sprint(threads[0].UpdateTime.UnixNano()),
+		LastCursor:  fmt.Sprint(threads[len(threads)-1].UpdateTime.UnixNano()),
 	}, nil
 }
 
@@ -183,7 +189,7 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 	queryObj["thread_id"] = t.ID
 
 	var posts []*Post
-	if err := sq.Find(ctx, collePost, queryObj, &posts); err != nil {
+	if err := sq.Find(ctx, collePost, "_id", queryObj, &posts); err != nil {
 		return nil, nil, err
 	}
 	if len(posts) == 0 {

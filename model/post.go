@@ -93,8 +93,14 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		post.Refers = refers
 	}
 
-	c := mw.GetMongo(ctx).C(collePost)
-	if err := c.Insert(post); err != nil {
+	m := mw.GetMongo(ctx)
+	if err := m.C(collePost).Insert(post); err != nil {
+		return nil, err
+	}
+	if err := m.C(colleThread).Update(
+		bson.M{"thread_id": post.ThreadID},
+		bson.M{"$set": bson.M{"update_time": post.CreateTime}},
+	); err != nil {
 		return nil, err
 	}
 	return post, nil
