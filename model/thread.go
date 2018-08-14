@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
@@ -42,37 +41,35 @@ type ThreadInput struct {
 	Title     *string
 }
 
-// NewThread init new thread and insert to db
-func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
-	user, err := requireSignIn(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if !isMainTag(input.MainTag) {
-		return nil, errors.Errorf("Can't set main tag '%s'", input.MainTag)
+// ParseThead ...
+func (ti *ThreadInput) ParseThead(ctx context.Context, user *User) (*Thread, error) {
+	if !isMainTag(ti.MainTag) {
+		return nil, errors.Errorf("Can't set main tag '%s'", ti.MainTag)
 	}
 	subTags := []string{}
-	if input.SubTags != nil && len(*input.SubTags) != 0 {
-		subTags = *input.SubTags
+	if ti.SubTags != nil && len(*ti.SubTags) != 0 {
+		subTags = *ti.SubTags
 	}
 	for _, tag := range subTags {
 		if isMainTag(tag) {
 			return nil, errors.Errorf("Can't set main tag to sub tags '%s'", tag)
 		}
 	}
-	if input.Content == "" {
+	if ti.Content == "" {
 		return nil, errors.New("Can't post an empty thread")
 	}
 
+	now := time.Now()
 	thread := &Thread{
 		ObjectID:   bson.NewObjectId(),
-		Anonymous:  input.Anonymous,
+		Anonymous:  ti.Anonymous,
 		UserID:     user.ID,
-		CreateTime: time.Now(),
+		CreateTime: now,
+		UpdateTime: now,
 
-		MainTag: input.MainTag,
+		MainTag: ti.MainTag,
 		SubTags: subTags,
-		Content: input.Content,
+		Content: ti.Content,
 	}
 
 	threadID, err := postIDGenerator.New()
@@ -81,7 +78,7 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 	}
 	thread.ID = threadID
 
-	if input.Anonymous {
+	if ti.Anonymous {
 		author, err := user.AnonymousID(ctx, thread.ID, true)
 		if err != nil {
 			return nil, err
@@ -94,8 +91,22 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 		thread.Author = user.Name
 	}
 
-	if input.Title != nil && *input.Title != "" {
-		thread.Title = *input.Title
+	if ti.Title != nil && *ti.Title != "" {
+		thread.Title = *ti.Title
+	}
+	return thread, nil
+}
+
+// NewThread init new thread and insert to db
+func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
+	user, err := requireSignIn(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	thread, err := input.ParseThead(ctx, user)
+	if err != nil {
+		return nil, err
 	}
 
 	c := mw.GetMongo(ctx).C(colleThread)
@@ -139,6 +150,11 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		queryObj["sub_tags"] = bson.M{"$in": subTags}
 	}
 
+	c := mw.GetMongo(ctx).C(colleThread)
+	c.EnsureIndexKey("main_tag")
+	c.EnsureIndexKey("sub_tags")
+	c.EnsureIndexKey("update_time")
+
 	var threads []*Thread
 	if err := sq.Find(ctx, colleThread, "update_time", queryObj, &threads); err != nil {
 		return nil, nil, err
@@ -150,14 +166,16 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		reverseThreads(threads)
 	}
 	return threads, &SliceInfo{
-		FirstCursor: fmt.Sprint(threads[0].UpdateTime.UnixNano()),
-		LastCursor:  fmt.Sprint(threads[len(threads)-1].UpdateTime.UnixNano()),
+		FirstCursor: threads[0].genCursor(),
+		LastCursor:  threads[len(threads)-1].genCursor(),
 	}, nil
 }
 
 // FindThread by id
 func FindThread(ctx context.Context, ID string) (*Thread, error) {
 	c := mw.GetMongo(ctx).C(colleThread)
+	c.EnsureIndexKey("id")
+
 	var th Thread
 	query := c.Find(bson.M{"id": ID})
 	if count, err := query.Count(); err != nil {
@@ -173,6 +191,8 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 
 func isThreadExist(ctx context.Context, threadID string) (bool, error) {
 	c := mw.GetMongo(ctx).C(colleThread)
+	c.EnsureIndexKey("id")
+
 	count, err := c.Find(bson.M{"id": threadID}).Count()
 	if err != nil {
 		return false, err
@@ -182,6 +202,9 @@ func isThreadExist(ctx context.Context, threadID string) (bool, error) {
 
 // GetReplies ...
 func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *SliceInfo, error) {
+	c := mw.GetMongo(ctx).C(collePost)
+	c.EnsureIndexKey("thread_id")
+
 	queryObj, err := sq.GenQueryByObjectID()
 	if err != nil {
 		return nil, nil, err
@@ -203,6 +226,11 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 		LastCursor:  posts[len(posts)-1].ObjectID.Hex(),
 	}
 	return posts, si, nil
+}
+
+// return unix time of update time in millisecond(ms)
+func (t *Thread) genCursor() string {
+	return genTimeCursor(t.UpdateTime)
 }
 
 func reverseThreads(threads []*Thread) {
