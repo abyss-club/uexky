@@ -53,7 +53,6 @@ func UpsertTags(ctx context.Context, mainTag string, tagStrings []string) error 
 		Background: true,
 	})
 	for _, tag := range tagStrings {
-		log.Printf("insert tag '%s'", tag)
 		if _, err := c.Upsert(bson.M{"name": tag}, bson.M{
 			"$set": bson.M{
 				"name":         tag,
@@ -100,6 +99,7 @@ func GetTagTree(ctx context.Context, query string) (*TagTree, error) {
 func getNewestSubTags(ctx context.Context, mainTag string, query string) ([]string, error) {
 	c := mw.GetMongo(ctx).C(colleTag)
 	c.EnsureIndexKey("main_tags")
+	c.EnsureIndexKey("-updated_time", "-_id")
 
 	var tags []*Tag
 	find := bson.M{"main_tags": mainTag}

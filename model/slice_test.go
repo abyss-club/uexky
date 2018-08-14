@@ -3,6 +3,7 @@ package model
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"gitlab.com/abyss.club/uexky/mw"
@@ -31,7 +32,7 @@ func TestSliceQuery_GenQueryByObjectID(t *testing.T) {
 			false,
 		},
 		{
-			"normal desk",
+			"normal desc",
 			fields{10, true, cursors[1].Hex()},
 			bson.M{"_id": bson.M{"$lt": cursors[1]}},
 			false,
@@ -53,6 +54,66 @@ func TestSliceQuery_GenQueryByObjectID(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("SliceQuery.GenQueryByObjectID() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSliceQuery_GenQueryByTime(t *testing.T) {
+	cursor0, _ := parseTimeCursor(genTimeCursor(time.Now()))
+	cursor1, _ := parseTimeCursor(genTimeCursor(time.Now().Add(time.Hour)))
+	type fields struct {
+		Limit  int
+		Desc   bool
+		Cursor string
+	}
+	type args struct {
+		field string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    bson.M
+		wantErr bool
+	}{
+		{
+			"normal",
+			fields{10, false, genTimeCursor(cursor0)},
+			args{"time"},
+			bson.M{"time": bson.M{"$gt": cursor0}},
+			false,
+		},
+		{
+			"normal desc",
+			fields{10, true, genTimeCursor(cursor1)},
+			args{"time"},
+			bson.M{"time": bson.M{"$lt": cursor1}},
+			false,
+		},
+	}
+	getTime := func(b bson.M, desc bool) time.Time {
+		dotTime := b["time"].(bson.M)
+		key := "$gt"
+		if desc {
+			key = "$lt"
+		}
+		return dotTime[key].(time.Time)
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sq := &SliceQuery{
+				Limit:  tt.fields.Limit,
+				Desc:   tt.fields.Desc,
+				Cursor: tt.fields.Cursor,
+			}
+			got, err := sq.GenQueryByTime(tt.args.field)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("SliceQuery.GenQueryByTime() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !getTime(got, sq.Desc).Equal(getTime(tt.want, sq.Desc)) {
+				t.Errorf("SliceQuery.GenQueryByTime() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -97,8 +158,14 @@ func TestSliceQuery_Find(t *testing.T) {
 				Desc:   tt.fields.Desc,
 				Cursor: tt.fields.Cursor,
 			}
+			queryObj, err := sq.GenQueryByObjectID()
+			if err != nil {
+				t.Errorf("sq.GenQueryByObjectID error = %v", err)
+				return
+			}
+			queryObj["text"] = "aha"
 			results := []*sample{}
-			err := sq.Find(testCtx, colle, bson.M{"text": "aha"}, &results)
+			err = sq.Find(testCtx, colle, "_id", queryObj, &results)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("SliceQuery.Find() error = %v, wantErr %v", err, tt.wantErr)
 				return

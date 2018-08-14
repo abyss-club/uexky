@@ -98,7 +98,6 @@ func TestGetThreadsByTags(t *testing.T) {
 		}
 		threads = append(threads, thread)
 	}
-	t.Log("test for count")
 	type args struct {
 		tags []string
 		sq   *SliceQuery
@@ -111,30 +110,30 @@ func TestGetThreadsByTags(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			"find tag 1", args{[]string{mgmt.Config.MainTags[0], "1"}, &SliceQuery{Limit: 3}},
+			"find tag 1", args{[]string{"1"}, &SliceQuery{Limit: 3}},
 			[]*Thread{}, &SliceInfo{"", ""}, false,
 		},
 		{
-			"find tag 2", args{[]string{mgmt.Config.MainTags[0], "2"}, &SliceQuery{Limit: 3, Desc: true}},
+			"find tag 2", args{[]string{"2"}, &SliceQuery{Limit: 3, Desc: true}},
 			[]*Thread{threads[18], threads[16], threads[14]},
-			&SliceInfo{threads[18].ObjectID.Hex(), threads[14].ObjectID.Hex()}, false,
+			&SliceInfo{threads[18].genCursor(), threads[14].genCursor()}, false,
 		},
 		{
-			"find tag 3", args{[]string{mgmt.Config.MainTags[0], "3"}, &SliceQuery{Limit: 3, Desc: true}},
+			"find tag 3", args{[]string{"3"}, &SliceQuery{Limit: 3, Desc: true}},
 			[]*Thread{threads[18], threads[15], threads[12]},
-			&SliceInfo{threads[18].ObjectID.Hex(), threads[12].ObjectID.Hex()}, false,
+			&SliceInfo{threads[18].genCursor(), threads[12].genCursor()}, false,
 		},
 		{
-			"find tag 3 desc", args{[]string{mgmt.Config.MainTags[0], "3"},
-				&SliceQuery{Limit: 3, Desc: true, Cursor: threads[12].ObjectID.Hex()}},
+			"find tag 3 desc", args{[]string{"3"},
+				&SliceQuery{Limit: 3, Desc: true, Cursor: threads[12].genCursor()}},
 			[]*Thread{threads[9], threads[6], threads[3]},
-			&SliceInfo{threads[9].ObjectID.Hex(), threads[3].ObjectID.Hex()}, false,
+			&SliceInfo{threads[9].genCursor(), threads[3].genCursor()}, false,
 		},
 		{
-			"find tag 3 asc", args{[]string{mgmt.Config.MainTags[0], "3"},
-				&SliceQuery{Limit: 3, Cursor: threads[9].ObjectID.Hex()}},
+			"find tag 3 asc", args{[]string{"3"},
+				&SliceQuery{Limit: 3, Cursor: threads[9].genCursor()}},
 			[]*Thread{threads[18], threads[15], threads[12]},
-			&SliceInfo{threads[18].ObjectID.Hex(), threads[12].ObjectID.Hex()}, false,
+			&SliceInfo{threads[18].genCursor(), threads[12].genCursor()}, false,
 		},
 	}
 	for _, tt := range tests {
@@ -146,10 +145,12 @@ func TestGetThreadsByTags(t *testing.T) {
 			}
 			if len(got) != len(tt.want) {
 				t.Errorf("GetThreadsByTags() got = %v, want %v", got, tt.want)
+				return
 			}
 			for i := 0; i < len(got); i++ {
 				if got[i].ID != tt.want[i].ID {
 					t.Errorf("GetThreadsByTags() got = %v, want %v", got[i].ID, tt.want[i].ID)
+					return
 				}
 			}
 			if !reflect.DeepEqual(got1, tt.want1) {

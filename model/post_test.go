@@ -84,11 +84,21 @@ func TestPost(t *testing.T) {
 	}
 
 	t.Log("Find post")
-	post4, err := FindPost(ctx, post1.ID)
+	post4, err := FindPost(ctx, post3.ID)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "find post"))
 	}
-	if cmp.Equal(post1, post4, strSliceCmp) {
-		t.Fatalf("FindPost() = %v, want %v", post4, post1)
+	if cmp.Equal(post3, post4, strSliceCmp) {
+		t.Fatalf("FindPost() = %v, want %v", post4, post3)
+	}
+
+	t.Log("checkout thread update time")
+	nThread, err := FindThread(ctx, thread.ID)
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "find thread"))
+	}
+	if nThread.UpdateTime != post4.CreateTime {
+		t.Fatalf("Checkout Thread UpdateTime = %v, want %v",
+			nThread.UpdateTime, post4.CreateTime)
 	}
 }
