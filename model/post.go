@@ -10,7 +10,7 @@ import (
 	"gitlab.com/abyss.club/uexky/mw"
 )
 
-const referLimit = 5
+const referLimit = 3
 
 // Post ...
 type Post struct {
