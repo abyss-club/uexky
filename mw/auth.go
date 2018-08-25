@@ -55,11 +55,16 @@ func authCode(ctx context.Context, code string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "gen token")
 	}
-	// expire after one day
-	if _, err := rd.Do("SET", token, email, "EX", 86400); err != nil {
+	if _, err := rd.Do("SET", token, email, "EX", tokenCookieAge); err != nil {
 		return "", errors.Wrap(err, "set token to redis")
 	}
 	return token, nil
+}
+
+func refreshToken(ctx context.Context, token string) error {
+	rd := GetRedis(ctx)
+	_, err := rd.Do("EXPIRE", token, tokenCookieAge)
+	return err
 }
 
 // AuthHandle ...
@@ -107,6 +112,8 @@ func WithAuth(handle httprouter.Handle) httprouter.Handle {
 			handle(w, req, p)
 			return
 		}
+		// refresh expire
+		refreshToken(req.Context(), tokenCookie.Value)
 		cookie := newTokenCookie(tokenCookie.Value)
 		http.SetCookie(w, cookie)
 
