@@ -133,7 +133,7 @@ type userAID struct {
 
 // AnonymousID ...
 func (a *User) AnonymousID(ctx context.Context, threadID string, new bool) (string, error) {
-	c := mw.GetMongo(ctx).C(colleUser)
+	c := mw.GetMongo(ctx).C(colleAID)
 	c.EnsureIndexKey("thread_id", "user_id")
 
 	newAID := func() (string, error) {
