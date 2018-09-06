@@ -139,6 +139,34 @@ func (r *Resolver) SyncTags(
 	return &UserResolver{User: user}, nil
 }
 
+// AddSubbedTags ...
+func (r *Resolver) AddSubbedTags(
+	ctx context.Context, args struct{ Tags []string },
+) (*UserResolver, error) {
+	user, err := model.GetUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := user.AddSubbedTags(ctx, args.Tags); err != nil {
+		return nil, err
+	}
+	return &UserResolver{User: user}, nil
+}
+
+// DelSubbedTags ...
+func (r *Resolver) DelSubbedTags(
+	ctx context.Context, args struct{ Tags []string },
+) (*UserResolver, error) {
+	user, err := model.GetUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := user.DelSubbedTags(ctx, args.Tags); err != nil {
+		return nil, err
+	}
+	return &UserResolver{User: user}, nil
+}
+
 // PubThread ...
 func (r *Resolver) PubThread(
 	ctx context.Context,

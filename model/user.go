@@ -124,6 +124,38 @@ func (a *User) SyncTags(ctx context.Context, tags []string) error {
 	return nil
 }
 
+// AddSubbedTags ...
+func (a *User) AddSubbedTags(ctx context.Context, tags []string) error {
+	c := mw.GetMongo(ctx).C(colleUser)
+	if err := c.Update(bson.M{"_id": a.ID}, bson.M{"$addToSet": bson.M{
+		"tags": bson.M{"$each": tags},
+	}}); err != nil {
+		return err
+	}
+	var user *User
+	if err := c.FindId(a.ID).One(&user); err != nil {
+		return err
+	}
+	a.Tags = user.Tags
+	return nil
+}
+
+// DelSubbedTags ...
+func (a *User) DelSubbedTags(ctx context.Context, tags []string) error {
+	c := mw.GetMongo(ctx).C(colleUser)
+	if err := c.Update(bson.M{"_id": a.ID}, bson.M{"$pull": bson.M{
+		"tags": bson.M{"$in": tags},
+	}}); err != nil {
+		return err
+	}
+	var user *User
+	if err := c.FindId(a.ID).One(&user); err != nil {
+		return err
+	}
+	a.Tags = user.Tags
+	return nil
+}
+
 type userAID struct {
 	ObjectID    bson.ObjectId `bson:"_id"`
 	UserID      bson.ObjectId `bson:"user_id"`
