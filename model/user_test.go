@@ -114,8 +114,35 @@ func TestUser_SetName(t *testing.T) {
 	}
 }
 
+func parseToStringSet(sList []string) map[string]bool {
+	set := map[string]bool{}
+	for _, s := range sList {
+		set[s] = true
+	}
+	return set
+}
+
+func isSet(s []string) bool {
+	set := parseToStringSet(s)
+	return len(set) == len(s)
+}
+
+func cmpTags(lTags []string, rTags []string) bool {
+	lt := parseToStringSet(lTags)
+	rt := parseToStringSet(rTags)
+	if len(lt) != len(rt) {
+		return false
+	}
+	for s := range lt {
+		_, exists := rt[s]
+		if !exists {
+			return false
+		}
+	}
+	return true
+}
+
 func TestUser_SyncTags(t *testing.T) {
-	t.Skip("skip due to inconsistency")
 	type args struct {
 		user *User
 		tags []string
@@ -133,7 +160,7 @@ func TestUser_SyncTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := ctxWithUser(tt.args.user)
 			if err := tt.args.user.SyncTags(ctx, tt.args.tags); (err != nil) != tt.wantErr {
 				t.Errorf("User.SyncTags() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -142,11 +169,58 @@ func TestUser_SyncTags(t *testing.T) {
 			if err != nil {
 				t.Error(errors.Wrap(err, "User.AddName() get user error"))
 			}
-			if !reflect.DeepEqual(a.Tags, tt.want) || !reflect.DeepEqual(tt.args.user.Tags, tt.want) {
+			if !isSet(a.Tags) {
+				t.Errorf("User.SyncTags() error, repeated tag, %q", a.Tags)
+			}
+			if !cmpTags(a.Tags, tt.want) || !cmpTags(tt.args.user.Tags, tt.want) {
 				t.Errorf("User.AddName() want = %v, in memory = %v, in db = %v",
 					tt.want, tt.args.user.Tags, a.Tags)
 			}
 		})
+	}
+}
+
+func TestUser_AddSubbedTags(t *testing.T) {
+	user := mockUsers[2]
+	ctx := ctxWithUser(user)
+
+	t.Log("reset tags subscribed")
+	{
+		if err := user.SyncTags(ctx, []string{"A", "B", "C"}); err != nil {
+			t.Fatalf("reset tags error: %v", err)
+		}
+	}
+	// Tags: A, B, C
+	t.Log("test add tags")
+	{
+		want := []string{"A", "B", "C", "D", "E"}
+		if err := user.AddSubbedTags(ctx, []string{"B", "B", "D", "E"}); err != nil {
+			t.Fatalf("AddSubbedTags() error: %v", err)
+		}
+		u, err := GetUser(ctx)
+		if err != nil {
+			t.Fatalf("GetUser() error: %v", err)
+		}
+		if !cmpTags(u.Tags, user.Tags) || !cmpTags(u.Tags, want) {
+			t.Fatalf("AddSubbedTags() want %q, in memory = %q, in db = %q",
+				want, user.Tags, u.Tags)
+		}
+	}
+	// Tags: A, B, C, D, E
+	t.Log("test add tags")
+	{
+		want := []string{"A", "C"}
+		if err := user.DelSubbedTags(ctx, []string{"B", "B", "D", "E"}); err != nil {
+			t.Fatalf("AddSubbedTags() error: %v", err)
+		}
+		u, err := GetUser(ctx)
+		if err != nil {
+			t.Fatalf("GetUser() error: %v", err)
+		}
+		if !cmpTags(u.Tags, user.Tags) || !cmpTags(u.Tags, want) {
+			t.Fatalf("AddSubbedTags() want %q, in memory = %q, in db = %q",
+				want, user.Tags, u.Tags)
+		}
 	}
 }
 
