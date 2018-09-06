@@ -188,7 +188,8 @@ func TestThread_GetReplies(t *testing.T) {
 		t.Errorf("FindThread(%v) should be error, found %v", err, thread)
 	}
 	posts := []*Post{}
-	for i := 0; i < 6; i++ {
+	postCount := 6
+	for i := 0; i < postCount; i++ {
 		pInput := &PostInput{
 			ThreadID:  thread.ID,
 			Anonymous: true,
@@ -236,5 +237,14 @@ func TestThread_GetReplies(t *testing.T) {
 				t.Errorf("Thread.GetReplies() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
+	}
+	{
+		c, err := thread.CountOfReplies(ctx)
+		if err != nil {
+			t.Fatalf("Thread.CountOfReplies() error = %v", err)
+		}
+		if c != postCount {
+			t.Fatalf("Thread.CountOfReplies() = %v, want %v", c, postCount)
+		}
 	}
 }
