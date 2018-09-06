@@ -27,8 +27,8 @@ type Mutation {
     setName(name: String!): User!
     # Save/Add/Del tags subscribed by user.
     syncTags(tags: [String]!): User!
-	addSubbedTags(tags: [String!]!): User!
-	delSubbedTags(tags: [String!]!): User!
+    addSubbedTags(tags: [String!]!): User!
+    delSubbedTags(tags: [String!]!): User!
     # Publish a new thread.
     pubThread(thread: ThreadInput!): Thread!
     # Publish a new post.
@@ -94,7 +94,7 @@ type Thread {
     # Default to '无题'.
     title: String
     replies(query: SliceQuery!): PostSlice!
-	countOfReplies: Int!
+    countOfReplies: Int!
 }
 
 type ThreadSlice {
@@ -118,7 +118,7 @@ type Post {
     content: String!
     createTime: Time!
     refers: [Post!]
-	countOfRefered: Int!
+    countOfRefered: Int!
 }
 
 type PostSlice {
