@@ -228,6 +228,14 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 	return posts, si, nil
 }
 
+// CountOfReplies ...
+func (t *Thread) CountOfReplies(ctx context.Context) (int, error) {
+	c := mw.GetMongo(ctx).C(collePost)
+	c.EnsureIndexKey("thread_id")
+
+	return c.Find(bson.M{"thread_id": t.ID}).Count()
+}
+
 // return unix time of update time in millisecond(ms)
 func (t *Thread) genCursor() string {
 	return genTimeCursor(t.UpdateTime)

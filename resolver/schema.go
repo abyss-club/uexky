@@ -92,6 +92,7 @@ type Thread {
     # Default to '无题'.
     title: String
     replies(query: SliceQuery!): PostSlice!
+	countOfReplies: Int!
 }
 
 type ThreadSlice {
@@ -115,6 +116,7 @@ type Post {
     content: String!
     createTime: Time!
     refers: [Post!]
+	countOfRefered: Int!
 }
 
 type PostSlice {

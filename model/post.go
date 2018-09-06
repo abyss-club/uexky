@@ -146,6 +146,13 @@ func (p *Post) ReferPosts(ctx context.Context) ([]*Post, error) {
 	return refers, nil
 }
 
+// CountOfRefered ...
+func (p *Post) CountOfRefered(ctx context.Context) (int, error) {
+	c := mw.GetMongo(ctx).C(collePost)
+	c.EnsureIndexKey("refers")
+	return c.Find(bson.M{"refers": p.ID}).Count()
+}
+
 func isPostExist(ctx context.Context, postID string) (bool, error) {
 	c := mw.GetMongo(ctx).C(collePost)
 
