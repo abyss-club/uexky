@@ -19,3 +19,7 @@ vendor/
 
 # config
 config.json
+
+# python
+*.pyc
+__pycache__/
