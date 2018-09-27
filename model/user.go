@@ -71,7 +71,7 @@ func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	return user, nil
 }
 
-func isNameUesd(ctx context.Context, name string) (bool, error) {
+func isNameUsed(ctx context.Context, name string) (bool, error) {
 	c := mw.GetMongo(ctx).C(colleUser)
 	c.EnsureIndexKey("name")
 
@@ -84,10 +84,10 @@ func (a *User) SetName(ctx context.Context, name string) error {
 	if a.Name != "" {
 		return fmt.Errorf("You already have name '%v'", a.Name)
 	}
-	if used, err := isNameUesd(ctx, name); err != nil {
+	if used, err := isNameUsed(ctx, name); err != nil {
 		return errors.Wrapf(err, "Check name '%s'", name)
 	} else if used {
-		return fmt.Errorf("This name is already in uesd")
+		return fmt.Errorf("This name is already in use.")
 	}
 
 	c := mw.GetMongo(ctx).C(colleUser)
