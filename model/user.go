@@ -27,10 +27,11 @@ const (
 
 // User for uexky
 type User struct {
-	ID    bson.ObjectId `json:"id" bson:"_id"`
-	Email string        `json:"email" bson:"email"`
-	Name  string        `json:"names" bson:"name"`
-	Tags  []string      `json:"tags" bson:"tags"`
+	ID            bson.ObjectId `json:"id" bson:"_id"`
+	Email         string        `json:"email" bson:"email"`
+	Name          string        `json:"names" bson:"name"`
+	Tags          []string      `json:"tags" bson:"tags"`
+	ReadNotifTime time.Time     `json:"read_notif_time" bson:"read_notif_time"`
 }
 
 // GetUser by id (in context)

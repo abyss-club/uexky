@@ -21,6 +21,13 @@ func (r *Resolver) Profile(ctx context.Context) (*UserResolver, error) {
 	return &UserResolver{user}, nil
 }
 
+// Notification resolve query 'notification'
+func (r *Resolver) Notification(ctx context.Context) (
+	*NotificationSliceResolver, error,
+) {
+
+}
+
 // ThreadSlice ...
 func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
 	Tags  *[]string

@@ -2,9 +2,10 @@ package model
 
 // collection name for model
 const (
-	colleUser   = "users"
-	colleAID    = "anonymous_ids"
-	collePost   = "posts"
-	colleThread = "threads"
-	colleTag    = "tags"
+	colleUser         = "users"
+	colleAID          = "anonymous_ids"
+	collePost         = "posts"
+	colleThread       = "threads"
+	colleTag          = "tags"
+	colleNotification = "notification"
 )
