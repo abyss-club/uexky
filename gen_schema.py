@@ -48,11 +48,14 @@ def gen_schema():
     for filename in os.listdir("./schema"):
         if filename.endswith('.py') and filename != '__init__.py':
             query, mutation, type_def = extract_define(filename)
-            querys.append(query)
-            mutations.append(mutation)
-            types.append(type_def)
+            if query != '':
+                querys.append(query)
+            if mutation != '':
+                mutations.append(mutation)
+            if types != '':
+                types.append(type_def)
     schema_go_file = gen_go_files(querys, mutations, types)
-    with open('schema.go', 'w') as f:
+    with open('resolver/schema.go', 'w') as f:
         f.write(schema_go_file)
 
 

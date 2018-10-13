@@ -7,6 +7,40 @@ import (
 	"gitlab.com/abyss.club/uexky/model"
 )
 
+// queries:
+
+// Post ...
+func (r *Resolver) Post(
+	ctx context.Context, args struct{ ID string },
+) (*PostResolver, error) {
+	post, err := model.FindPost(ctx, args.ID)
+	if err != nil {
+		return nil, err
+	}
+	if post == nil {
+		return nil, nil
+	}
+	return &PostResolver{Post: post}, nil
+}
+
+// mutations:
+
+// PubPost ...
+func (r *Resolver) PubPost(
+	ctx context.Context,
+	args struct{ Post *model.PostInput },
+) (
+	*PostResolver, error,
+) {
+	post, err := model.NewPost(ctx, args.Post)
+	if err != nil {
+		return nil, err
+	}
+	return &PostResolver{Post: post}, nil
+}
+
+// types:
+
 // PostSliceResolver ...
 type PostSliceResolver struct {
 	posts     []*PostResolver

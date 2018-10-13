@@ -1,8 +1,6 @@
 queries = '''
     # A user profile object.
     profile(): User!
-    # query notification for user
-    notification(): NotificationSlice!
 '''
 
 mutations = '''
@@ -23,18 +21,5 @@ type User {
     name: String
     # Tags saved by user.
     tags: [String!]
-}
-
-type Notification {
-    releaseTime Time!
-    type String!
-    hasRead Boolean!
-    content String!
-}
-
-type NotificationSlice {
-    unreadCount Int!
-    notification [Notification]!
-    sliceInfo SliceInfo!
 }
 '''
