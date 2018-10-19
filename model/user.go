@@ -27,15 +27,20 @@ const (
 
 // User for uexky
 type User struct {
-	ID            bson.ObjectId `json:"id" bson:"_id"`
-	Email         string        `json:"email" bson:"email"`
-	Name          string        `json:"names" bson:"name"`
-	Tags          []string      `json:"tags" bson:"tags"`
-	ReadNotifTime time.Time     `json:"read_notif_time" bson:"read_notif_time"`
+	ID           bson.ObjectId `bson:"_id"`
+	Email        string        `bson:"email"`
+	Name         string        `bson:"name"`
+	Tags         []string      `bson:"tags"`
+	ReadNotiTime struct {
+		System  time.Time `bson:"system"`
+		Replied time.Time `bson:"replied"`
+		Refered time.Time `bson:"refered"`
+	} `bson:"read_noti_time"`
 }
 
 // GetUser by id (in context)
 func GetUser(ctx context.Context) (*User, error) {
+	// TODO: duplicate
 	user, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, err
@@ -200,6 +205,40 @@ func (a *User) AnonymousID(ctx context.Context, threadID string, new bool) (stri
 		return "", err
 	}
 	return aaid.AnonymousID, nil
+}
+
+func (a *User) getReadNotiTime(t NotiType) time.Time {
+	switch t {
+	case NotiTypeSystem:
+		return a.ReadNotiTime.System
+	case NotiTypeReplied:
+		return a.ReadNotiTime.Replied
+	case NotiTypeRefered:
+		return a.ReadNotiTime.Refered
+	default:
+		return time.Unix(0, 0)
+	}
+}
+
+func (a *User) setReadNotiTime(ctx context.Context, t NotiType, time time.Time) error {
+	c := mw.GetMongo(ctx).C(colleUser)
+	if err := c.Update(bson.M{"_id": a.ID}, bson.M{"$set": bson.M{
+		fmt.Sprintf("read_noti_time.%v", t): time,
+	}}); err != nil {
+		return err
+	}
+
+	switch t {
+	case NotiTypeSystem:
+		a.ReadNotiTime.System = time
+	case NotiTypeReplied:
+		a.ReadNotiTime.Replied = time
+	case NotiTypeRefered:
+		a.ReadNotiTime.Refered = time
+	default:
+		panic("Invalidate Notification Type")
+	}
+	return nil
 }
 
 func requireSignIn(ctx context.Context) (*User, error) {

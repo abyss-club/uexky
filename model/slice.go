@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -84,4 +85,14 @@ func (sq *SliceQuery) Find(
 		query = query.Sort(field)
 	}
 	return query.All(result)
+}
+
+// ReverseSlice ...
+func ReverseSlice(slice interface{}) {
+	swapper := reflect.Swapper(slice)
+	length := reflect.ValueOf(slice).Len()
+	for i := 0; i < length/2; i++ {
+		j := length - i - 1
+		swapper(i, j)
+	}
 }

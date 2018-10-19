@@ -36,11 +36,6 @@ type PostInput struct {
 
 // ParsePost ...
 func (pi *PostInput) ParsePost(ctx context.Context, user *User) (*Post, error) {
-	if exist, err := isThreadExist(ctx, pi.ThreadID); err != nil {
-		return nil, errors.Wrap(err, "find thread id")
-	} else if !exist {
-		return nil, errors.Errorf("Thread %s is not exist", pi.ThreadID)
-	}
 	if pi.Content == "" {
 		return nil, errors.New("required params missed")
 	}
@@ -98,6 +93,11 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		return nil, errors.Wrap(err, "find sign info")
 	}
 
+	thread, err := FindThread(ctx, input.ThreadID)
+	if err != nil {
+		return nil, err
+	}
+
 	post, err := input.ParsePost(ctx, user)
 	if err != nil {
 		return nil, err
@@ -112,6 +112,10 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		bson.M{"$set": bson.M{"update_time": post.CreateTime}},
 	); err != nil {
 		return nil, errors.Wrapf(err, "update thread %s", post.ThreadID)
+	}
+
+	if err := TriggerNotifForPost(ctx, thread, post); err != nil {
+		return nil, err
 	}
 	return post, nil
 }

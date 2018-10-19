@@ -2,23 +2,29 @@ package model
 
 import (
 	"context"
-	"encoding/json"
-	"log"
+	"fmt"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
+	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mw"
 )
 
-// NotifType ...
-type NotifType string
+// NotiType ...
+type NotiType string
 
 // NotifTypes
 const (
-	NotifTypeSystem  NotifType = "system"
-	NotifTypeReplied NotifType = "replied"
-	NotifTypeRefered NotifType = "refered"
+	NotiTypeSystem  NotiType = "system"
+	NotiTypeReplied NotiType = "replied"
+	NotiTypeRefered NotiType = "refered"
 )
+
+var allNotiTypes = map[NotiType]bool{
+	NotiTypeSystem:  true,
+	NotiTypeReplied: true,
+	NotiTypeRefered: true,
+}
 
 // UserGroup ...
 type UserGroup string
@@ -28,85 +34,122 @@ const (
 	AllUser UserGroup = "all"
 )
 
-// Notification ...
-type Notification struct {
-	SendTo       bson.ObjectId `bson:"send_to"`
-	SendToGroup  UserGroup     `bson:"send_to_group"`
-	ReleaseTime  time.Time     `bson:"release_time"`
-	Type         NotifType     `bson:"type"`
-	SystemNotif  *systemNotif  `bson:"system_notif"`
-	RepliedNotif *repliedNotif `bson:"replied_notif"`
-	ReferedNotif *referedNotif `bson:"refered_notif"`
+// BaseNoti ...
+type BaseNoti struct {
+	ID          string        `bson:"id"`
+	Type        NotiType      `bson:"type"`
+	SendTo      bson.ObjectId `bson:"send_to"`
+	SendToGroup UserGroup     `bson:"send_to_group"`
+	EventTime   time.Time     `bson:"event_time"`
+	HasRead     bool          `bson:"-"`
 }
 
-type systemNotif struct {
-	Content string `json:"content" bson:"content"`
+// SystemNotiContent ...
+type SystemNotiContent struct {
+	Title   string `bson:"title"`
+	Content string `bson:"content"`
 }
 
-type repliedNotif struct {
-	ThreadID    string   `json:"thread_id" bson:"thread_id"`
-	ThreadTitle string   `json:"thread_title" bson:"thread_title"`
-	Tags        []string `json:"tags" bson:"tags"`
-	Repliers    []string `json:"repliers" bson:"repliers"`
+// SystemNoti ...
+type SystemNoti struct {
+	*BaseNoti
+	*SystemNotiContent
 }
 
-type referedNotif struct {
-	ThreadID    string   `json:"thread_id" bson:"thread_id"`
-	ThreadTitle string   `json:"thread_title" bson:"thread_title"`
-	Tags        []string `json:"tags" bson:"tags"`
-	Content     string   `json:"content" bson:"content"`
-	Referers    []string `json:"referers" bson:"referers"`
+// RepliedNotiContent ...
+type RepliedNotiContent struct {
+	ThreadID   string          `bson:"thread_id"`
+	Repliers   []string        `bson:"repliers"`
+	ReplierIDs []bson.ObjectId `bson:"replier_ids"`
 }
 
-// GetContent ...
-func (n *Notification) GetContent() string {
-	var content []byte
-	switch n.Type {
-	case "system":
-		content, _ = json.Marshal(n.SystemNotif)
-	case "replied":
-		content, _ = json.Marshal(n.RepliedNotif)
-	case "refered":
-		content, _ = json.Marshal(n.ReferedNotif)
-	default:
-		log.Fatal("Unknown Notification Type")
+// RepliedNoti ...
+type RepliedNoti struct {
+	*BaseNoti
+	*RepliedNotiContent
+}
+
+// ReferedNotiContent ...
+type ReferedNotiContent struct {
+	ThreadID   string          `bson:"thread_id"`
+	PostID     string          `bson:"post_id"`
+	Referers   []string        `bson:"repliers"`
+	RefererIDs []bson.ObjectId `bson:"replier_ids"`
+}
+
+// ReferedNoti ...
+type ReferedNoti struct {
+	*BaseNoti
+	*ReferedNotiContent
+}
+
+// NotiStore for save notification in DB
+type NotiStore struct {
+	BaseNoti
+
+	System  *SystemNotiContent  `bson:"system"`
+	Replied *RepliedNotiContent `bson:"replied"`
+	Refered *ReferedNotiContent `bson:"refered"`
+}
+
+func (ns *NotiStore) genCursor() string {
+	return genTimeCursor(ns.EventTime)
+}
+
+func (ns *NotiStore) checkIfRead(user *User, t NotiType) {
+	switch t {
+	case NotiTypeSystem:
+		ns.HasRead = user.ReadNotiTime.System.Before(ns.EventTime)
+	case NotiTypeReplied:
+		ns.HasRead = user.ReadNotiTime.Replied.Before(ns.EventTime)
+	case NotiTypeRefered:
+		ns.HasRead = user.ReadNotiTime.Refered.Before(ns.EventTime)
 	}
-	return string(content)
 }
 
-func (n *Notification) genCursor() string {
-	return genTimeCursor(n.ReleaseTime)
-}
-
-func reverseNotification(notif []*Notification) {
-	l := len(notif)
-	for i := 0; i != l/2; i++ {
-		notif[i], notif[l-i-1] = notif[l-i-1], notif[i]
+// GetSystemNoti ...
+func (ns *NotiStore) GetSystemNoti() *SystemNoti {
+	if ns.System == nil {
+		return nil
 	}
+	return &SystemNoti{&ns.BaseNoti, ns.System}
+}
+
+// GetRepliedNoti ...
+func (ns *NotiStore) GetRepliedNoti() *RepliedNoti {
+	if ns.Replied == nil {
+		return nil
+	}
+	return &RepliedNoti{&ns.BaseNoti, ns.Replied}
+}
+
+// GetReferedNoti ...
+func (ns *NotiStore) GetReferedNoti() *ReferedNoti {
+	if ns.Refered == nil {
+		return nil
+	}
+	return &ReferedNoti{&ns.BaseNoti, ns.Refered}
 }
 
 // GetUnreadNotificationCount ...
-func GetUnreadNotificationCount(ctx context.Context, notifType NotifType) (
-	int, error,
-) {
+func GetUnreadNotificationCount(ctx context.Context, t NotiType) (int, error) {
+	if !allNotiTypes[t] {
+		return 0, errors.Errorf("Invalidate notification type: %v", t)
+	}
 	user, err := requireSignIn(ctx)
 	if err != nil {
 		return 0, err
 	}
 	c := mw.GetMongo(ctx).C(colleNotification)
-	c.EnsureIndexKey("release_time", "send_to")
-	c.EnsureIndexKey("release_time", "send_to_group")
-	c.EnsureIndexKey("release_time", "type", "send_to")
-	c.EnsureIndexKey("release_time", "type", "send_to_group")
+	c.EnsureIndexKey("send_to", "type", "release_time")
+	c.EnsureIndexKey("send_to_group", "type", "release_time")
 	query := bson.M{
-		"release_time": bson.M{"$lt": user.ReadNotifTime},
 		"$or": []bson.M{
 			bson.M{"send_to": user.ID},
 			bson.M{"send_to_group": AllUser},
 		},
-	}
-	if notifType != "" {
-		query["type"] = notifType
+		"type":       t,
+		"event_time": bson.M{"$lt": user.getReadNotiTime(t)},
 	}
 	count, err := c.Find(query).Count()
 	if err != nil {
@@ -115,16 +158,18 @@ func GetUnreadNotificationCount(ctx context.Context, notifType NotifType) (
 	return count, nil
 }
 
-// GetNotificationByUser ...
-func GetNotificationByUser(
-	ctx context.Context, notifType NotifType, sq *SliceQuery,
-) ([]*Notification, *SliceInfo, error) {
+// GetNotification ...
+func GetNotification(
+	ctx context.Context, t NotiType, sq *SliceQuery,
+) ([]*NotiStore, *SliceInfo, error) {
+	if !allNotiTypes[t] {
+		return nil, nil, errors.Errorf("Invalidate notification type: %v", t)
+	}
 	user, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	query, err := sq.GenQueryByTime("release_time")
+	query, err := sq.GenQueryByTime("event_time")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -132,27 +177,84 @@ func GetNotificationByUser(
 		bson.M{"send_to": user.ID},
 		bson.M{"send_to_group": AllUser},
 	}
-	query["type"] = notifType
+	query["type"] = t
 
-	var notifs []*Notification
-	err = sq.Find(ctx, colleNotification, "release_time", query, notifs)
+	var noti []*NotiStore
+	now := time.Now()
+	err = sq.Find(ctx, colleNotification, "event_time", query, noti)
 	if err != nil {
 		return nil, nil, err
 	}
-	now := time.Now()
-	c := mw.GetMongo(ctx).C(colleUser)
-	if err := c.Update(bson.M{"_id": user.ID}, bson.M{"read_notif_time": now}); err != nil {
-		return nil, nil, err
+	for _, n := range noti {
+		n.checkIfRead(user, t)
 	}
-	user.ReadNotifTime = now
+	user.setReadNotiTime(ctx, t, now)
 
-	if len(notifs) == 0 {
-		return notifs, &SliceInfo{}, nil
+	if len(noti) == 0 {
+		return noti, &SliceInfo{}, nil
 	}
 
-	reverseNotification(notifs)
-	return notifs, &SliceInfo{
-		FirstCursor: notifs[0].genCursor(),
-		LastCursor:  notifs[len(notifs)-1].genCursor(),
+	ReverseSlice(noti)
+	return noti, &SliceInfo{
+		FirstCursor: noti[0].genCursor(),
+		LastCursor:  noti[len(noti)-1].genCursor(),
 	}, nil
+}
+
+// trigger notifications by event:
+
+// TriggerNotifForPost ...
+func TriggerNotifForPost(ctx context.Context, thread *Thread, post *Post) error {
+	c := mw.GetMongo(ctx).C(colleNotification)
+	c.EnsureIndexKey("id")
+	id := fmt.Sprintf("replied:%v", thread.ID)
+	if post.UserID != thread.UserID {
+		if _, err := c.Upsert(bson.M{"id": id}, bson.M{
+			"$set": bson.M{
+				"id":         id,
+				"type":       NotiTypeReplied,
+				"send_to":    thread.UserID,
+				"event_time": post.CreateTime,
+				"replied": bson.M{
+					"thread_id": thread.ID,
+				},
+			},
+			"$addToSet": bson.M{
+				"replied.repliers":    post.Author,
+				"replied.replier_ids": post.UserID,
+			},
+		}); err != nil {
+			return err
+		}
+	}
+
+	referPosts, err := post.ReferPosts(ctx)
+	if err != nil {
+		return err
+	}
+	for _, rp := range referPosts {
+		if post.UserID == rp.UserID {
+			continue
+		}
+		id := fmt.Sprintf("refered:%v", rp.ID)
+		if _, err := c.Upsert(bson.M{"id": id}, bson.M{
+			"$set": bson.M{
+				"id":         id,
+				"type":       NotiTypeRefered,
+				"send_to":    rp.UserID,
+				"event_time": post.CreateTime,
+				"refered": bson.M{
+					"thread_id": thread.ID,
+					"post_id":   rp.ID,
+				},
+			},
+			"$addToSet": bson.M{
+				"refered.repliers":    post.Author,
+				"refered.replier_ids": post.UserID,
+			},
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

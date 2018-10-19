@@ -63,9 +63,24 @@ var threadSliceCmp = cmp.Comparer(func(l, r []*Thread) bool {
 func addMockUser(ctx context.Context) {
 	log.Print("addMockUser!")
 	users := []*User{
-		&User{bson.NewObjectId(), "0@mail.com", "test0", []string{"动画"}},
-		&User{bson.NewObjectId(), "1@mail.com", "", []string{}},
-		&User{bson.NewObjectId(), "2@mail.com", "", []string{}},
+		&User{
+			ID:    bson.NewObjectId(),
+			Email: "0@mail.com",
+			Name:  "test0",
+			Tags:  []string{"动画"},
+		},
+		&User{
+			ID:    bson.NewObjectId(),
+			Email: "1@mail.com",
+			Name:  "",
+			Tags:  []string{},
+		},
+		&User{
+			ID:    bson.NewObjectId(),
+			Email: "2@mail.com",
+			Name:  "",
+			Tags:  []string{},
+		},
 	}
 
 	c := mw.GetMongo(ctx).C(colleUser)
