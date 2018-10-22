@@ -35,10 +35,17 @@ type PostInput struct {
 }
 
 // ParsePost ...
-func (pi *PostInput) ParsePost(ctx context.Context, user *User) (*Post, error) {
+func (pi *PostInput) ParsePost(ctx context.Context, user *User) (
+	*Post, *Thread, []*Post, error,
+) {
 	if pi.Content == "" {
-		return nil, errors.New("required params missed")
+		return nil, nil, nil, errors.New("required params missed")
 	}
+	thread, err := FindThread(ctx, pi.ThreadID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
 	post := &Post{
 		ObjectID:   bson.NewObjectId(),
 		Anonymous:  pi.Anonymous,
@@ -51,39 +58,39 @@ func (pi *PostInput) ParsePost(ctx context.Context, user *User) (*Post, error) {
 
 	postID, err := postIDGenerator.New()
 	if err != nil {
-		return nil, errors.Wrap(err, "gen post id")
+		return nil, nil, nil, errors.Wrap(err, "gen post id")
 	}
 	post.ID = postID
 
 	if pi.Anonymous {
 		author, err := user.AnonymousID(ctx, pi.ThreadID, false)
 		if err != nil {
-			return nil, errors.Wrap(err, "get AnonymousID")
+			return nil, nil, nil, errors.Wrap(err, "get AnonymousID")
 		}
 		post.Author = author
 	} else {
 		if user.Name == "" {
-			return nil, fmt.Errorf("Can't find name for user")
+			return nil, nil, nil, fmt.Errorf("Can't find name for user")
 		}
 		post.Author = user.Name
 	}
 
+	referPosts := []*Post{}
 	if pi.Refers != nil {
 		refers := *(pi.Refers)
 		if len(refers) > referLimit {
-			return nil, fmt.Errorf("Count of Refers can't greater than 5")
+			return nil, nil, nil, fmt.Errorf("Count of Refers can't greater than 5")
 		}
 		for _, r := range refers {
-			ok, err := isPostExist(ctx, r)
+			p, err := FindPost(ctx, r)
 			if err != nil {
-				return nil, errors.Wrap(err, "find refer post")
-			} else if !ok {
-				return nil, fmt.Errorf("Can't find post '%s'", r)
+				return nil, nil, nil, errors.Wrap(err, "find refer post")
 			}
+			referPosts = append(referPosts, p)
 		}
 		post.Refers = refers
 	}
-	return post, nil
+	return post, thread, referPosts, nil
 }
 
 // NewPost ...
@@ -93,12 +100,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		return nil, errors.Wrap(err, "find sign info")
 	}
 
-	thread, err := FindThread(ctx, input.ThreadID)
-	if err != nil {
-		return nil, err
-	}
-
-	post, err := input.ParsePost(ctx, user)
+	post, thread, refers, err := input.ParsePost(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +116,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		return nil, errors.Wrapf(err, "update thread %s", post.ThreadID)
 	}
 
-	if err := TriggerNotifForPost(ctx, thread, post); err != nil {
+	if err := TriggerNotifForPost(ctx, thread, post, refers); err != nil {
 		return nil, err
 	}
 	return post, nil

@@ -72,7 +72,8 @@ func parseTimeCursor(s string) (time.Time, error) {
 
 // Find ...
 func (sq *SliceQuery) Find(
-	ctx context.Context, collection, field string, queryObj bson.M, result interface{},
+	ctx context.Context, collection, field string,
+	queryObj bson.M, result interface{},
 ) error {
 	if sq.Limit <= 0 {
 		return errors.New("limit must greater than 0")

@@ -85,7 +85,13 @@ type ReferedNoti struct {
 
 // NotiStore for save notification in DB
 type NotiStore struct {
-	BaseNoti
+	// BaseNoti...
+	ID          string        `bson:"id"`
+	Type        NotiType      `bson:"type"`
+	SendTo      bson.ObjectId `bson:"send_to"`
+	SendToGroup UserGroup     `bson:"send_to_group"`
+	EventTime   time.Time     `bson:"event_time"`
+	HasRead     bool          `bson:"-"`
 
 	System  *SystemNotiContent  `bson:"system"`
 	Replied *RepliedNotiContent `bson:"replied"`
@@ -99,12 +105,17 @@ func (ns *NotiStore) genCursor() string {
 func (ns *NotiStore) checkIfRead(user *User, t NotiType) {
 	switch t {
 	case NotiTypeSystem:
-		ns.HasRead = user.ReadNotiTime.System.Before(ns.EventTime)
+		ns.HasRead = user.ReadNotiTime.System.After(ns.EventTime)
 	case NotiTypeReplied:
-		ns.HasRead = user.ReadNotiTime.Replied.Before(ns.EventTime)
+		ns.HasRead = user.ReadNotiTime.Replied.After(ns.EventTime)
 	case NotiTypeRefered:
-		ns.HasRead = user.ReadNotiTime.Refered.Before(ns.EventTime)
+		ns.HasRead = user.ReadNotiTime.Refered.After(ns.EventTime)
 	}
+}
+
+func (ns *NotiStore) baseNoti() *BaseNoti {
+	return &BaseNoti{ns.ID, ns.Type, ns.SendTo, ns.SendToGroup,
+		ns.EventTime, ns.HasRead}
 }
 
 // GetSystemNoti ...
@@ -112,7 +123,7 @@ func (ns *NotiStore) GetSystemNoti() *SystemNoti {
 	if ns.System == nil {
 		return nil
 	}
-	return &SystemNoti{&ns.BaseNoti, ns.System}
+	return &SystemNoti{ns.baseNoti(), ns.System}
 }
 
 // GetRepliedNoti ...
@@ -120,7 +131,7 @@ func (ns *NotiStore) GetRepliedNoti() *RepliedNoti {
 	if ns.Replied == nil {
 		return nil
 	}
-	return &RepliedNoti{&ns.BaseNoti, ns.Replied}
+	return &RepliedNoti{ns.baseNoti(), ns.Replied}
 }
 
 // GetReferedNoti ...
@@ -128,7 +139,7 @@ func (ns *NotiStore) GetReferedNoti() *ReferedNoti {
 	if ns.Refered == nil {
 		return nil
 	}
-	return &ReferedNoti{&ns.BaseNoti, ns.Refered}
+	return &ReferedNoti{ns.baseNoti(), ns.Refered}
 }
 
 // GetUnreadNotificationCount ...
@@ -181,7 +192,7 @@ func GetNotification(
 
 	var noti []*NotiStore
 	now := time.Now()
-	err = sq.Find(ctx, colleNotification, "event_time", query, noti)
+	err = sq.Find(ctx, colleNotification, "event_time", query, &noti)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -204,20 +215,20 @@ func GetNotification(
 // trigger notifications by event:
 
 // TriggerNotifForPost ...
-func TriggerNotifForPost(ctx context.Context, thread *Thread, post *Post) error {
+func TriggerNotifForPost(
+	ctx context.Context, thread *Thread, post *Post, refers []*Post,
+) error {
 	c := mw.GetMongo(ctx).C(colleNotification)
 	c.EnsureIndexKey("id")
 	id := fmt.Sprintf("replied:%v", thread.ID)
 	if post.UserID != thread.UserID {
 		if _, err := c.Upsert(bson.M{"id": id}, bson.M{
 			"$set": bson.M{
-				"id":         id,
-				"type":       NotiTypeReplied,
-				"send_to":    thread.UserID,
-				"event_time": post.CreateTime,
-				"replied": bson.M{
-					"thread_id": thread.ID,
-				},
+				"id":                id,
+				"type":              NotiTypeReplied,
+				"send_to":           thread.UserID,
+				"event_time":        post.CreateTime,
+				"replied.thread_id": thread.ID,
 			},
 			"$addToSet": bson.M{
 				"replied.repliers":    post.Author,
@@ -228,25 +239,19 @@ func TriggerNotifForPost(ctx context.Context, thread *Thread, post *Post) error 
 		}
 	}
 
-	referPosts, err := post.ReferPosts(ctx)
-	if err != nil {
-		return err
-	}
-	for _, rp := range referPosts {
+	for _, rp := range refers {
 		if post.UserID == rp.UserID {
 			continue
 		}
 		id := fmt.Sprintf("refered:%v", rp.ID)
 		if _, err := c.Upsert(bson.M{"id": id}, bson.M{
 			"$set": bson.M{
-				"id":         id,
-				"type":       NotiTypeRefered,
-				"send_to":    rp.UserID,
-				"event_time": post.CreateTime,
-				"refered": bson.M{
-					"thread_id": thread.ID,
-					"post_id":   rp.ID,
-				},
+				"id":                id,
+				"type":              NotiTypeRefered,
+				"send_to":           rp.UserID,
+				"event_time":        post.CreateTime,
+				"refered.thread_id": thread.ID,
+				"refered.post_id":   rp.ID,
 			},
 			"$addToSet": bson.M{
 				"refered.repliers":    post.Author,
