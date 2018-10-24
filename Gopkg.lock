@@ -31,6 +31,7 @@
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
+    "cmp/cmpopts",
     "cmp/internal/diff",
     "cmp/internal/function",
     "cmp/internal/value",
@@ -41,7 +42,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a672610e4997c56dddf23afe8c4fed0b6961725885fec78f36498ea86947bf63"
+  digest = "1:2f86c310d92e9fe11a7139164e216a675280fbd490578e806e95f64dfff94216"
   name = "github.com/graph-gophers/graphql-go"
   packages = [
     ".",
@@ -59,23 +60,23 @@
     "trace",
   ]
   pruneopts = ""
-  revision = "bb9738501bd42a6536227b96068349b814379d6e"
+  revision = "b174f9eaf0506f70d2e2cffcec1938175b1f3903"
 
 [[projects]]
-  digest = "1:3c818dada3e41bdb0f509f78e6775610f1bb179449ec8c4c86a45fae35460f3f"
+  digest = "1:deeb6536ebbcb66ab11213ecfaac9daadfcd004dd057446a4980ffd6c15c36e2"
   name = "github.com/julienschmidt/httprouter"
   packages = ["."]
   pruneopts = ""
-  revision = "8c199fb6259ffc1af525cc3ad52ee60ba8359669"
-  version = "v1.1"
+  revision = "348b672cd90d8190f8240323e372ecd1e66b59dc"
+  version = "v1.2.0"
 
 [[projects]]
-  digest = "1:91fea695ea6dfbb356a9cfd888739a702e3d6e779219d4d80aa0d95f23f24074"
+  digest = "1:d2eb436da33c2337493d5b9dc8d82803442c24a8f913694ff21e72ac29a02e4d"
   name = "github.com/mailgun/mailgun-go"
   packages = ["."]
   pruneopts = ""
-  revision = "a4002e2df2e8ca2da6a6fbb4a72871b504e49f50"
-  version = "v1.1.0"
+  revision = "28c45085c063854b83107df6cf37ad8f88462105"
+  version = "v1.1.1"
 
 [[projects]]
   digest = "1:78fb99d6011c2ae6c72f3293a83951311147b12b06a5ffa43abf750c4fab6ac5"
@@ -99,11 +100,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:96d281cfaaa12ac602772da38ac85f00d59b1d3aa7bfe69d8ba334d6ee41e3e6"
+  digest = "1:6543c75ddc1efc0041202dd49378ee2e5711b7cc82c2845c0437eef6276cc984"
   name = "golang.org/x/net"
   packages = ["context"]
   pruneopts = ""
-  revision = "3673e40ba22529d22c3fd7c93e97b0ce50fa7bdd"
+  revision = "04a2e542c03f1d053ab3e4d6e5abcd4b66e2be8e"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -113,6 +114,7 @@
     "github.com/globalsign/mgo/bson",
     "github.com/gomodule/redigo/redis",
     "github.com/google/go-cmp/cmp",
+    "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/graph-gophers/graphql-go",
     "github.com/julienschmidt/httprouter",
     "github.com/mailgun/mailgun-go",

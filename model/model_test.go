@@ -2,13 +2,15 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
-	"reflect"
 	"testing"
+	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
 	"gitlab.com/abyss.club/uexky/mw"
@@ -17,6 +19,13 @@ import (
 const testDB = "testing"
 
 var testCtx context.Context
+
+func TestMain(m *testing.M) {
+	ctx := prepTestDB()
+	addMockUser(ctx)
+	testCtx = ctx
+	os.Exit(m.Run())
+}
 
 // this file only have common test tools
 func prepTestDB() context.Context {
@@ -38,34 +47,27 @@ func prepTestDB() context.Context {
 	return ctx
 }
 
-var strSliceCmp = cmp.Comparer(func(l, r []string) bool {
-	if len(l) == len(r) && len(l) == 0 {
-		return true
-	}
-	return reflect.DeepEqual(l, r)
-})
-
-var threadSliceCmp = cmp.Comparer(func(l, r []*Thread) bool {
-	if len(l) == len(r) && len(l) == 0 {
-		return true
-	}
-	if len(l) != len(r) {
-		return false
-	}
-	for i := 0; i < len(l); i++ {
-		if !reflect.DeepEqual(l[i], r[i]) {
-			return false
-		}
-	}
-	return true
-})
-
 func addMockUser(ctx context.Context) {
 	log.Print("addMockUser!")
 	users := []*User{
-		&User{bson.NewObjectId(), "0@mail.com", "test0", []string{"动画"}},
-		&User{bson.NewObjectId(), "1@mail.com", "", []string{}},
-		&User{bson.NewObjectId(), "2@mail.com", "", []string{}},
+		&User{
+			ID:    bson.NewObjectId(),
+			Email: "0@mail.com",
+			Name:  "test0",
+			Tags:  []string{"动画"},
+		},
+		&User{
+			ID:    bson.NewObjectId(),
+			Email: "1@mail.com",
+			Name:  "",
+			Tags:  []string{},
+		},
+		&User{
+			ID:    bson.NewObjectId(),
+			Email: "2@mail.com",
+			Name:  "",
+			Tags:  []string{},
+		},
 	}
 
 	c := mw.GetMongo(ctx).C(colleUser)
@@ -81,9 +83,18 @@ func ctxWithUser(u *User) context.Context {
 	return context.WithValue(testCtx, mw.ContextKeyEmail, u.Email)
 }
 
-func TestMain(m *testing.M) {
-	ctx := prepTestDB()
-	addMockUser(ctx)
-	testCtx = ctx
-	os.Exit(m.Run())
+// compare functions:
+
+var timeCmp = cmp.Comparer(func(l, r time.Time) bool {
+	dur := l.Sub(r)
+	fmt.Println("during", dur)
+	return dur > -time.Millisecond && dur < time.Millisecond
+})
+
+func equal(x, y interface{}) bool {
+	return cmp.Equal(x, y, cmpopts.EquateEmpty(), timeCmp)
+}
+
+func diff(x, y interface{}) string {
+	return cmp.Diff(x, y, cmpopts.EquateEmpty(), timeCmp)
 }

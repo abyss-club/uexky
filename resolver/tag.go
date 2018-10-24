@@ -7,6 +7,15 @@ import (
 	"gitlab.com/abyss.club/uexky/model"
 )
 
+// queries:
+
+// Tags ...
+func (r *Resolver) Tags(ctx context.Context) (*TagResolver, error) {
+	return &TagResolver{}, nil
+}
+
+// types:
+
 // TagResolver ...
 type TagResolver struct{}
 

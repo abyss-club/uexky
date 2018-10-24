@@ -4,7 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
 )
@@ -76,10 +75,10 @@ func TestPost(t *testing.T) {
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "find refer posts"))
 	}
-	if cmp.Equal(post1, refers[0], strSliceCmp) {
-		t.Fatalf("refers[0] = %v, want %v", refers[0], post1)
+	if !equal(post1, refers[0]) {
+		t.Fatalf("refers[0] = %v, want = %v", refers[0], post1)
 	}
-	if cmp.Equal(post2, refers[1], strSliceCmp) {
+	if !equal(post2, refers[1]) {
 		t.Fatalf("refers[0] = %v, want %v", refers[0], post2)
 	}
 
@@ -97,7 +96,7 @@ func TestPost(t *testing.T) {
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "find post"))
 	}
-	if cmp.Equal(post3, post4, strSliceCmp) {
+	if !equal(post3, post4) {
 		t.Fatalf("FindPost() = %v, want %v", post4, post3)
 	}
 

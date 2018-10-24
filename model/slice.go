@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -71,7 +72,8 @@ func parseTimeCursor(s string) (time.Time, error) {
 
 // Find ...
 func (sq *SliceQuery) Find(
-	ctx context.Context, collection, field string, queryObj bson.M, result interface{},
+	ctx context.Context, collection, field string,
+	queryObj bson.M, result interface{},
 ) error {
 	if sq.Limit <= 0 {
 		return errors.New("limit must greater than 0")
@@ -84,4 +86,14 @@ func (sq *SliceQuery) Find(
 		query = query.Sort(field)
 	}
 	return query.All(result)
+}
+
+// ReverseSlice ...
+func ReverseSlice(slice interface{}) {
+	swapper := reflect.Swapper(slice)
+	length := reflect.ValueOf(slice).Len()
+	for i := 0; i < length/2; i++ {
+		j := length - i - 1
+		swapper(i, j)
+	}
 }

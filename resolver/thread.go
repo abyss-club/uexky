@@ -7,6 +7,70 @@ import (
 	"gitlab.com/abyss.club/uexky/model"
 )
 
+// queries:
+
+// ThreadSlice ...
+func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
+	Tags  *[]string
+	Query *SliceQuery
+}) (
+	*ThreadSliceResolver, error,
+) {
+	sq, err := args.Query.Parse(true)
+	if err != nil {
+		return nil, err
+	}
+
+	var tags []string
+	if args.Tags != nil {
+		tags = *(args.Tags)
+	}
+
+	threads, sliceInfo, err := model.GetThreadsByTags(ctx, tags, sq)
+	if err != nil {
+		return nil, err
+	}
+
+	var trs []*ThreadResolver
+	for _, t := range threads {
+		trs = append(trs, &ThreadResolver{Thread: t})
+	}
+	sir := &SliceInfoResolver{SliceInfo: sliceInfo}
+	return &ThreadSliceResolver{threads: trs, sliceInfo: sir}, nil
+}
+
+// Thread ...
+func (r *Resolver) Thread(
+	ctx context.Context, args struct{ ID string },
+) (*ThreadResolver, error) {
+	th, err := model.FindThread(ctx, args.ID)
+	if err != nil {
+		return nil, err
+	}
+	if th == nil {
+		return nil, nil
+	}
+	return &ThreadResolver{Thread: th}, nil
+}
+
+// mutations:
+
+// PubThread ...
+func (r *Resolver) PubThread(
+	ctx context.Context,
+	args struct{ Thread *model.ThreadInput },
+) (
+	*ThreadResolver, error,
+) {
+	thread, err := model.NewThread(ctx, args.Thread)
+	if err != nil {
+		return nil, err
+	}
+	return &ThreadResolver{Thread: thread}, nil
+}
+
+// types:
+
 // ThreadSliceResolver ...
 type ThreadSliceResolver struct {
 	threads   []*ThreadResolver
