@@ -2,15 +2,15 @@ package resolver
 
 import (
 	"context"
-	"time"
 
+	graphql "github.com/graph-gophers/graphql-go"
 	"gitlab.com/abyss.club/uexky/model"
 )
 
 // queries:
 
-// UnreadNotifCount ...
-func (r *Resolver) UnreadNotifCount(ctx context.Context) (*UnreadResolver, error) {
+// UnreadNotiCount ...
+func (r *Resolver) UnreadNotiCount(ctx context.Context) (*UnreadResolver, error) {
 	return &UnreadResolver{}, nil
 }
 
@@ -64,44 +64,53 @@ type NotiSliceResolver struct {
 
 // System ...
 func (nsr *NotiSliceResolver) System(ctx context.Context) (
-	[]*SystemNotiResolver, error,
+	*[]*SystemNotiResolver, error,
 ) {
 	if nsr.notiType != model.NotiTypeSystem {
 		return nil, nil
 	}
 	snrs := []*SystemNotiResolver{}
 	for _, n := range nsr.notiSlice {
-		snrs = append(snrs, &SystemNotiResolver{n.GetSystemNoti()})
+		snrs = append(snrs, &SystemNotiResolver{notiBaseResolver{
+			notiType: nsr.notiType,
+			noti:     n,
+		}})
 	}
-	return snrs, nil
+	return &snrs, nil
 }
 
 // Replied ...
 func (nsr *NotiSliceResolver) Replied(ctx context.Context) (
-	[]*RepliedNotiResolver, error,
+	*[]*RepliedNotiResolver, error,
 ) {
 	if nsr.notiType != model.NotiTypeReplied {
 		return nil, nil
 	}
 	rnrs := []*RepliedNotiResolver{}
 	for _, n := range nsr.notiSlice {
-		rnrs = append(rnrs, &RepliedNotiResolver{n.GetRepliedNoti()})
+		rnrs = append(rnrs, &RepliedNotiResolver{notiBaseResolver{
+			notiType: nsr.notiType,
+			noti:     n,
+		}})
 	}
-	return rnrs, nil
+	return &rnrs, nil
 }
 
 // Refered ...
 func (nsr *NotiSliceResolver) Refered(ctx context.Context) (
-	[]*ReferedNotiResolver, error,
+	*[]*ReferedNotiResolver, error,
 ) {
 	if nsr.notiType != model.NotiTypeRefered {
 		return nil, nil
 	}
 	rnrs := []*ReferedNotiResolver{}
 	for _, n := range nsr.notiSlice {
-		rnrs = append(rnrs, &ReferedNotiResolver{n.GetReferedNoti()})
+		rnrs = append(rnrs, &ReferedNotiResolver{notiBaseResolver{
+			notiType: nsr.notiType,
+			noti:     n,
+		}})
 	}
-	return rnrs, nil
+	return &rnrs, nil
 }
 
 // SliceInfo ...
@@ -109,69 +118,54 @@ func (nsr *NotiSliceResolver) SliceInfo(ctx context.Context) (*SliceInfoResolver
 	return &SliceInfoResolver{nsr.sliceInfo}, nil
 }
 
-// SystemNotiResolver ...
-type SystemNotiResolver struct {
-	noti *model.SystemNoti
+type notiBaseResolver struct {
+	notiType model.NotiType
+	noti     *model.NotiStore
 }
 
 // ID ...
-func (n *SystemNotiResolver) ID(ctx context.Context) (string, error) {
+func (n *notiBaseResolver) ID(ctx context.Context) (string, error) {
 	return n.noti.ID, nil
 }
 
 // Type ...
-func (n *SystemNotiResolver) Type(ctx context.Context) (string, error) {
+func (n *notiBaseResolver) Type(ctx context.Context) (string, error) {
 	return string(n.noti.Type), nil
 }
 
 // EventTime ...
-func (n *SystemNotiResolver) EventTime(ctx context.Context) (time.Time, error) {
-	return n.noti.EventTime, nil
+func (n *notiBaseResolver) EventTime(ctx context.Context) (graphql.Time, error) {
+	return graphql.Time{Time: n.noti.EventTime}, nil
 }
 
 // HasRead ...
-func (n *SystemNotiResolver) HasRead(ctx context.Context) (bool, error) {
+func (n *notiBaseResolver) HasRead(ctx context.Context) (bool, error) {
 	return n.noti.HasRead, nil
+}
+
+// SystemNotiResolver ...
+type SystemNotiResolver struct {
+	notiBaseResolver
 }
 
 // Title ...
 func (n *SystemNotiResolver) Title(ctx context.Context) (string, error) {
-	return n.noti.Title, nil
+	return n.noti.System.Title, nil
 }
 
 // Content ...
 func (n *SystemNotiResolver) Content(ctx context.Context) (string, error) {
-	return n.noti.Content, nil
+	return n.noti.System.Content, nil
 }
 
 // RepliedNotiResolver ...
 type RepliedNotiResolver struct {
-	noti *model.RepliedNoti
-}
-
-// ID ...
-func (n *RepliedNotiResolver) ID(ctx context.Context) (string, error) {
-	return n.noti.ID, nil
-}
-
-// Type ...
-func (n *RepliedNotiResolver) Type(ctx context.Context) (string, error) {
-	return string(n.noti.Type), nil
-}
-
-// EventTime ...
-func (n *RepliedNotiResolver) EventTime(ctx context.Context) (time.Time, error) {
-	return n.noti.EventTime, nil
-}
-
-// HasRead ...
-func (n *RepliedNotiResolver) HasRead(ctx context.Context) (bool, error) {
-	return n.noti.HasRead, nil
+	notiBaseResolver
 }
 
 // Thread ...
 func (n *RepliedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error) {
-	thread, err := model.FindThread(ctx, n.noti.ThreadID)
+	thread, err := model.FindThread(ctx, n.noti.Replied.ThreadID)
 	if err != nil {
 		return nil, err
 	}
@@ -180,37 +174,17 @@ func (n *RepliedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, erro
 
 // Repliers ...
 func (n *RepliedNotiResolver) Repliers(ctx context.Context) ([]string, error) {
-	return n.noti.Repliers, nil
+	return n.noti.Replied.Repliers, nil
 }
 
 // ReferedNotiResolver ...
 type ReferedNotiResolver struct {
-	noti *model.ReferedNoti
-}
-
-// ID ...
-func (n *ReferedNotiResolver) ID(ctx context.Context) (string, error) {
-	return n.noti.ID, nil
-}
-
-// Type ...
-func (n *ReferedNotiResolver) Type(ctx context.Context) (string, error) {
-	return string(n.noti.Type), nil
-}
-
-// EventTime ...
-func (n *ReferedNotiResolver) EventTime(ctx context.Context) (time.Time, error) {
-	return n.noti.EventTime, nil
-}
-
-// HasRead ...
-func (n *ReferedNotiResolver) HasRead(ctx context.Context) (bool, error) {
-	return n.noti.HasRead, nil
+	notiBaseResolver
 }
 
 // Thread ...
 func (n *ReferedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error) {
-	thread, err := model.FindThread(ctx, n.noti.ThreadID)
+	thread, err := model.FindThread(ctx, n.noti.Refered.ThreadID)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +193,7 @@ func (n *ReferedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, erro
 
 // Post ...
 func (n *ReferedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
-	post, err := model.FindPost(ctx, n.noti.PostID)
+	post, err := model.FindPost(ctx, n.noti.Refered.PostID)
 	if err != nil {
 		return nil, err
 	}
@@ -228,5 +202,5 @@ func (n *ReferedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
 
 // Referers ...
 func (n *ReferedNotiResolver) Referers(ctx context.Context) ([]string, error) {
-	return n.noti.Referers, nil
+	return n.noti.Refered.Referers, nil
 }

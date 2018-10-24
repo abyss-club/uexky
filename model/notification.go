@@ -34,26 +34,10 @@ const (
 	AllUser UserGroup = "all"
 )
 
-// BaseNoti ...
-type BaseNoti struct {
-	ID          string        `bson:"id"`
-	Type        NotiType      `bson:"type"`
-	SendTo      bson.ObjectId `bson:"send_to"`
-	SendToGroup UserGroup     `bson:"send_to_group"`
-	EventTime   time.Time     `bson:"event_time"`
-	HasRead     bool          `bson:"-"`
-}
-
 // SystemNotiContent ...
 type SystemNotiContent struct {
 	Title   string `bson:"title"`
 	Content string `bson:"content"`
-}
-
-// SystemNoti ...
-type SystemNoti struct {
-	*BaseNoti
-	*SystemNotiContent
 }
 
 // RepliedNotiContent ...
@@ -63,24 +47,12 @@ type RepliedNotiContent struct {
 	ReplierIDs []bson.ObjectId `bson:"replier_ids"`
 }
 
-// RepliedNoti ...
-type RepliedNoti struct {
-	*BaseNoti
-	*RepliedNotiContent
-}
-
 // ReferedNotiContent ...
 type ReferedNotiContent struct {
 	ThreadID   string          `bson:"thread_id"`
 	PostID     string          `bson:"post_id"`
 	Referers   []string        `bson:"repliers"`
 	RefererIDs []bson.ObjectId `bson:"replier_ids"`
-}
-
-// ReferedNoti ...
-type ReferedNoti struct {
-	*BaseNoti
-	*ReferedNotiContent
 }
 
 // NotiStore for save notification in DB
@@ -111,35 +83,6 @@ func (ns *NotiStore) checkIfRead(user *User, t NotiType) {
 	case NotiTypeRefered:
 		ns.HasRead = user.ReadNotiTime.Refered.After(ns.EventTime)
 	}
-}
-
-func (ns *NotiStore) baseNoti() *BaseNoti {
-	return &BaseNoti{ns.ID, ns.Type, ns.SendTo, ns.SendToGroup,
-		ns.EventTime, ns.HasRead}
-}
-
-// GetSystemNoti ...
-func (ns *NotiStore) GetSystemNoti() *SystemNoti {
-	if ns.System == nil {
-		return nil
-	}
-	return &SystemNoti{ns.baseNoti(), ns.System}
-}
-
-// GetRepliedNoti ...
-func (ns *NotiStore) GetRepliedNoti() *RepliedNoti {
-	if ns.Replied == nil {
-		return nil
-	}
-	return &RepliedNoti{ns.baseNoti(), ns.Replied}
-}
-
-// GetReferedNoti ...
-func (ns *NotiStore) GetReferedNoti() *ReferedNoti {
-	if ns.Refered == nil {
-		return nil
-	}
-	return &ReferedNoti{ns.baseNoti(), ns.Refered}
 }
 
 // GetUnreadNotificationCount ...

@@ -25,9 +25,9 @@ type Query {
 
 
     # query unread notification count
-    unreadNotifCount(type: String): Int!
+    unreadNotiCount(): UnreadNotiCount!
     # query notification for user
-    notification(type: String!, query: SliceQuery!): NotifSlice!
+    notification(type: String!, query: SliceQuery!): NotiSlice!
 
 
     # Containing mainTags and tagTree.
@@ -128,16 +128,45 @@ type ThreadSlice {
 }
 
 
-type NotifSlice {
-    notif: [Notif]!
+type UnreadNotiCount {
+    system: Int!
+    replied: Int!
+    refered: Int!
+}
+
+type NotiSlice {
+    system: [SystemNoti!]
+    replied: [RepliedNoti!]
+    refered: [ReferedNoti!]
     sliceInfo: SliceInfo!
 }
 
-type Notif {
-    type String!
-    releaseTime Time!
-    hasRead Boolean!
-    content String!
+type SystemNoti {
+    id: String!
+    type: String!
+    eventTime: Time!
+    hasRead: Boolean!
+    title: String!
+    content: String!
+}
+
+type RepliedNoti {
+    id: String!
+    type: String!
+    eventTime: Time!
+    hasRead: Boolean!
+    thread: Thread!
+    repliers: [String!]!
+}
+
+type ReferedNoti {
+    id: String!
+    type: String!
+    eventTime: Time!
+    hasRead: Boolean!
+    thread: Thread!
+    post: Post!
+    referers: [String!]!
 }
 
 

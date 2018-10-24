@@ -22,8 +22,8 @@ type NotiSlice {
 type SystemNoti {
     id: String!
     type: String!
-    eventTime Time!
-    hasRead Boolean!
+    eventTime: Time!
+    hasRead: Boolean!
     title: String!
     content: String!
 }
@@ -31,8 +31,8 @@ type SystemNoti {
 type RepliedNoti {
     id: String!
     type: String!
-    eventTime Time!
-    hasRead Boolean!
+    eventTime: Time!
+    hasRead: Boolean!
     thread: Thread!
     repliers: [String!]!
 }
@@ -40,8 +40,8 @@ type RepliedNoti {
 type ReferedNoti {
     id: String!
     type: String!
-    eventTime Time!
-    hasRead Boolean!
+    eventTime: Time!
+    hasRead: Boolean!
     thread: Thread!
     post: Post!
     referers: [String!]!
