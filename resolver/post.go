@@ -103,8 +103,8 @@ func (pr *PostResolver) Refers(ctx context.Context) (*[]*PostResolver, error) {
 	return &rps, nil
 }
 
-// CountOfReferred ...
-func (pr *PostResolver) CountOfReferred(ctx context.Context) (int32, error) {
-	count, err := pr.Post.CountOfReferred(ctx)
+// CountOfRefered ...
+func (pr *PostResolver) CountOfRefered(ctx context.Context) (int32, error) {
+	count, err := pr.Post.CountOfRefered(ctx)
 	return int32(count), err
 }

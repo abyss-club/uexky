@@ -26,11 +26,11 @@ func TestTriggerNotifForPost(t *testing.T) {
 	}
 	refers := []*Post{
 		&Post{
-			ID:     "NotiTestReferredPost1",
+			ID:     "NotiTestReferedPost1",
 			UserID: receiver.ID,
 		},
 		&Post{
-			ID:     "NotiTestReferredPost2",
+			ID:     "NotiTestReferedPost2",
 			UserID: author.ID,
 		},
 	}
@@ -52,10 +52,10 @@ func TestTriggerNotifForPost(t *testing.T) {
 	} else if c != 0 {
 		t.Fatalf("GetUnreadNotificationCount(Replied) = %v, want = %v", c, 1)
 	}
-	if c, err := GetUnreadNotificationCount(ctx, NotiTypeReferred); err != nil {
-		t.Fatalf("GetUnreadNotificationCount(Referred) error = %v", err)
+	if c, err := GetUnreadNotificationCount(ctx, NotiTypeRefered); err != nil {
+		t.Fatalf("GetUnreadNotificationCount(Refered) error = %v", err)
 	} else if c != 0 {
-		t.Fatalf("GetUnreadNotificationCount(Referred) = %v, want = %v", c, 1)
+		t.Fatalf("GetUnreadNotificationCount(Refered) = %v, want = %v", c, 1)
 	}
 
 	// check notification
@@ -101,20 +101,20 @@ func TestTriggerNotifForPost(t *testing.T) {
 		}
 	}
 	{
-		noti, slice, err := GetNotification(ctx, NotiTypeReferred, sq)
+		noti, slice, err := GetNotification(ctx, NotiTypeRefered, sq)
 		if err != nil {
-			t.Fatalf("GetNotification(Referred) error = %v", err)
+			t.Fatalf("GetNotification(Refered) error = %v", err)
 		}
 		if len(noti) != 1 {
-			t.Fatalf("GetNotification(Referred) != [], len = %v", len(noti))
+			t.Fatalf("GetNotification(Refered) != [], len = %v", len(noti))
 		}
 		want := &NotiStore{
-			ID:        "referred:NotiTestReferredPost1",
-			Type:      NotiTypeReferred,
+			ID:        "refered:NotiTestReferedPost1",
+			Type:      NotiTypeRefered,
 			SendTo:    receiver.ID,
 			EventTime: post.CreateTime,
 			HasRead:   false,
-			Referred: &ReferredNotiContent{
+			Refered: &ReferedNotiContent{
 				ThreadID:   thread.ID,
 				PostID:     refers[0].ID,
 				Referers:   []string{post.Author},
@@ -122,11 +122,11 @@ func TestTriggerNotifForPost(t *testing.T) {
 			},
 		}
 		if diff := cmp.Diff(want, noti[0], timeCmp); diff != "" {
-			t.Fatalf("GetNotification(Referred) error, diff = %+v", diff)
+			t.Fatalf("GetNotification(Refered) error, diff = %+v", diff)
 		}
 		if slice.FirstCursor != noti[0].genCursor() ||
 			slice.LastCursor != noti[0].genCursor() {
-			t.Fatalf("GetNotification(Referred).slice != {}, slice = %v", *slice)
+			t.Fatalf("GetNotification(Refered).slice != {}, slice = %v", *slice)
 		}
 	}
 }

@@ -17,13 +17,13 @@ type NotiType string
 const (
 	NotiTypeSystem  NotiType = "system"
 	NotiTypeReplied NotiType = "replied"
-	NotiTypeReferred NotiType = "referred"
+	NotiTypeRefered NotiType = "refered"
 )
 
 var allNotiTypes = map[NotiType]bool{
 	NotiTypeSystem:  true,
 	NotiTypeReplied: true,
-	NotiTypeReferred: true,
+	NotiTypeRefered: true,
 }
 
 // UserGroup ...
@@ -47,8 +47,8 @@ type RepliedNotiContent struct {
 	ReplierIDs []bson.ObjectId `bson:"replier_ids"`
 }
 
-// ReferredNotiContent ...
-type ReferredNotiContent struct {
+// ReferedNotiContent ...
+type ReferedNotiContent struct {
 	ThreadID   string          `bson:"thread_id"`
 	PostID     string          `bson:"post_id"`
 	Referers   []string        `bson:"repliers"`
@@ -67,7 +67,7 @@ type NotiStore struct {
 
 	System  *SystemNotiContent  `bson:"system"`
 	Replied *RepliedNotiContent `bson:"replied"`
-	Referred *ReferredNotiContent `bson:"referred"`
+	Refered *ReferedNotiContent `bson:"refered"`
 }
 
 func (ns *NotiStore) genCursor() string {
@@ -80,8 +80,8 @@ func (ns *NotiStore) checkIfRead(user *User, t NotiType) {
 		ns.HasRead = user.ReadNotiTime.System.After(ns.EventTime)
 	case NotiTypeReplied:
 		ns.HasRead = user.ReadNotiTime.Replied.After(ns.EventTime)
-	case NotiTypeReferred:
-		ns.HasRead = user.ReadNotiTime.Referred.After(ns.EventTime)
+	case NotiTypeRefered:
+		ns.HasRead = user.ReadNotiTime.Refered.After(ns.EventTime)
 	}
 }
 
@@ -186,19 +186,19 @@ func TriggerNotifForPost(
 		if post.UserID == rp.UserID {
 			continue
 		}
-		id := fmt.Sprintf("referred:%v", rp.ID)
+		id := fmt.Sprintf("refered:%v", rp.ID)
 		if _, err := c.Upsert(bson.M{"id": id}, bson.M{
 			"$set": bson.M{
 				"id":                id,
-				"type":              NotiTypeReferred,
+				"type":              NotiTypeRefered,
 				"send_to":           rp.UserID,
 				"event_time":        post.CreateTime,
-				"referred.thread_id": thread.ID,
-				"referred.post_id":   rp.ID,
+				"refered.thread_id": thread.ID,
+				"refered.post_id":   rp.ID,
 			},
 			"$addToSet": bson.M{
-				"referred.repliers":    post.Author,
-				"referred.replier_ids": post.UserID,
+				"refered.repliers":    post.Author,
+				"refered.replier_ids": post.UserID,
 			},
 		}); err != nil {
 			return err

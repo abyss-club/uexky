@@ -26,7 +26,7 @@ type Post {
     content: String!
     createTime: Time!
     refers: [Post!]
-    countOfReferred: Int!
+    countOfRefered: Int!
 }
 
 # PostSlice object is for selecting specific 'slice' of Post objects to return. Affects returned SliceInfo.
