@@ -58,7 +58,7 @@ func (ur *UnreadResolver) Quoted(ctx context.Context) (int32, error) {
 // NotiSliceResolver ...
 type NotiSliceResolver struct {
 	notiType  model.NotiType
-	notiSlice []*model.NotiStore
+	notiSlice []*model.Notification
 	sliceInfo *model.SliceInfo
 }
 
@@ -120,7 +120,7 @@ func (nsr *NotiSliceResolver) SliceInfo(ctx context.Context) (*SliceInfoResolver
 
 type notiBaseResolver struct {
 	notiType model.NotiType
-	noti     *model.NotiStore
+	noti     *model.Notification
 }
 
 // ID ...
@@ -200,7 +200,7 @@ func (n *QuotedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
 	return &PostResolver{post}, nil
 }
 
-// Quoters ...
-func (n *QuotedNotiResolver) Quoters(ctx context.Context) ([]string, error) {
-	return n.noti.Quoted.Quoters, nil
+// Quoter ...
+func (n *QuotedNotiResolver) Quoter(ctx context.Context) (string, error) {
+	return n.noti.Quoted.Quoter, nil
 }

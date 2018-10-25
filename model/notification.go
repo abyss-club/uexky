@@ -49,15 +49,15 @@ type RepliedNotiContent struct {
 
 // QuotedNotiContent ...
 type QuotedNotiContent struct {
-	ThreadID  string          `bson:"thread_id"`
-	PostID    string          `bson:"post_id"`
-	Quoters   []string        `bson:"quoters"`
-	QuoterIDs []bson.ObjectId `bson:"quoter_ids"`
+	ThreadID string        `bson:"thread_id"`
+	PostID   string        `bson:"post_id"`
+	Quoter   string        `bson:"quoter"`
+	QuoterID bson.ObjectId `bson:"quoter_id"`
 }
 
-// NotiStore for save notification in DB
-type NotiStore struct {
-	// BaseNoti...
+// Notification for save notification in DB
+type Notification struct {
+	// base info
 	ID          string        `bson:"id"`
 	Type        NotiType      `bson:"type"`
 	SendTo      bson.ObjectId `bson:"send_to"`
@@ -70,11 +70,11 @@ type NotiStore struct {
 	Quoted  *QuotedNotiContent  `bson:"quoted"`
 }
 
-func (ns *NotiStore) genCursor() string {
+func (ns *Notification) genCursor() string {
 	return genTimeCursor(ns.EventTime)
 }
 
-func (ns *NotiStore) checkIfRead(user *User, t NotiType) {
+func (ns *Notification) checkIfRead(user *User, t NotiType) {
 	switch t {
 	case NotiTypeSystem:
 		ns.HasRead = user.ReadNotiTime.System.After(ns.EventTime)
@@ -115,7 +115,7 @@ func GetUnreadNotificationCount(ctx context.Context, t NotiType) (int, error) {
 // GetNotification ...
 func GetNotification(
 	ctx context.Context, t NotiType, sq *SliceQuery,
-) ([]*NotiStore, *SliceInfo, error) {
+) ([]*Notification, *SliceInfo, error) {
 	if !allNotiTypes[t] {
 		return nil, nil, errors.Errorf("Invalidate notification type: %v", t)
 	}
@@ -133,7 +133,7 @@ func GetNotification(
 	}
 	query["type"] = t
 
-	var noti []*NotiStore
+	var noti []*Notification
 	now := time.Now()
 	err = sq.Find(ctx, colleNotification, "event_time", query, &noti)
 	if err != nil {
@@ -186,21 +186,19 @@ func TriggerNotifForPost(
 		if post.UserID == q.UserID {
 			continue
 		}
-		id := fmt.Sprintf("quoted:%v", q.ID)
-		if _, err := c.Upsert(bson.M{"id": id}, bson.M{
-			"$set": bson.M{
-				"id":               id,
-				"type":             NotiTypeQuoted,
-				"send_to":          q.UserID,
-				"event_time":       post.CreateTime,
-				"quoted.thread_id": thread.ID,
-				"quoted.post_id":   q.ID,
+		qn := &Notification{
+			ID:        fmt.Sprintf("quoted:%v", q.ID),
+			Type:      NotiTypeQuoted,
+			SendTo:    q.UserID,
+			EventTime: post.CreateTime,
+			Quoted: &QuotedNotiContent{
+				ThreadID: thread.ID,
+				PostID:   q.ID,
+				Quoter:   post.Author,
+				QuoterID: post.UserID,
 			},
-			"$addToSet": bson.M{
-				"quoted.quoters":    post.Author,
-				"quoted.quoter_ids": post.UserID,
-			},
-		}); err != nil {
+		}
+		if err := c.Insert(qn); err != nil {
 			return err
 		}
 	}
