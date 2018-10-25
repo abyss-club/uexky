@@ -80,7 +80,7 @@ func TestTriggerNotifForPost(t *testing.T) {
 		if len(noti) != 1 {
 			t.Fatalf("GetNotification(Replied).len != 1, len = %v", len(noti))
 		}
-		want := &NotiStore{
+		want := &Notification{
 			ID:        "replied:NotiTestThread",
 			Type:      NotiTypeReplied,
 			SendTo:    receiver.ID,
@@ -108,17 +108,17 @@ func TestTriggerNotifForPost(t *testing.T) {
 		if len(noti) != 1 {
 			t.Fatalf("GetNotification(Quoted) != [], len = %v", len(noti))
 		}
-		want := &NotiStore{
+		want := &Notification{
 			ID:        "quoted:NotiTestQuotedPost1",
 			Type:      NotiTypeQuoted,
 			SendTo:    receiver.ID,
 			EventTime: post.CreateTime,
 			HasRead:   false,
 			Quoted: &QuotedNotiContent{
-				ThreadID:  thread.ID,
-				PostID:    quotes[0].ID,
-				Quoters:   []string{post.Author},
-				QuoterIDs: []bson.ObjectId{post.UserID},
+				ThreadID: thread.ID,
+				PostID:   quotes[0].ID,
+				Quoter:   post.Author,
+				QuoterID: post.UserID,
 			},
 		}
 		if diff := cmp.Diff(want, noti[0], timeCmp); diff != "" {
