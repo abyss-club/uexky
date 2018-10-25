@@ -49,9 +49,9 @@ func (ur *UnreadResolver) Replied(ctx context.Context) (int32, error) {
 	return int32(count), err
 }
 
-// Refered ...
-func (ur *UnreadResolver) Refered(ctx context.Context) (int32, error) {
-	count, err := model.GetUnreadNotificationCount(ctx, model.NotiTypeRefered)
+// Quoted ...
+func (ur *UnreadResolver) Quoted(ctx context.Context) (int32, error) {
+	count, err := model.GetUnreadNotificationCount(ctx, model.NotiTypeQuoted)
 	return int32(count), err
 }
 
@@ -96,16 +96,16 @@ func (nsr *NotiSliceResolver) Replied(ctx context.Context) (
 	return &rnrs, nil
 }
 
-// Refered ...
-func (nsr *NotiSliceResolver) Refered(ctx context.Context) (
-	*[]*ReferedNotiResolver, error,
+// Quoted ...
+func (nsr *NotiSliceResolver) Quoted(ctx context.Context) (
+	*[]*QuotedNotiResolver, error,
 ) {
-	if nsr.notiType != model.NotiTypeRefered {
+	if nsr.notiType != model.NotiTypeQuoted {
 		return nil, nil
 	}
-	rnrs := []*ReferedNotiResolver{}
+	rnrs := []*QuotedNotiResolver{}
 	for _, n := range nsr.notiSlice {
-		rnrs = append(rnrs, &ReferedNotiResolver{notiBaseResolver{
+		rnrs = append(rnrs, &QuotedNotiResolver{notiBaseResolver{
 			notiType: nsr.notiType,
 			noti:     n,
 		}})
@@ -177,14 +177,14 @@ func (n *RepliedNotiResolver) Repliers(ctx context.Context) ([]string, error) {
 	return n.noti.Replied.Repliers, nil
 }
 
-// ReferedNotiResolver ...
-type ReferedNotiResolver struct {
+// QuotedNotiResolver ...
+type QuotedNotiResolver struct {
 	notiBaseResolver
 }
 
 // Thread ...
-func (n *ReferedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error) {
-	thread, err := model.FindThread(ctx, n.noti.Refered.ThreadID)
+func (n *QuotedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error) {
+	thread, err := model.FindThread(ctx, n.noti.Quoted.ThreadID)
 	if err != nil {
 		return nil, err
 	}
@@ -192,15 +192,15 @@ func (n *ReferedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, erro
 }
 
 // Post ...
-func (n *ReferedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
-	post, err := model.FindPost(ctx, n.noti.Refered.PostID)
+func (n *QuotedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
+	post, err := model.FindPost(ctx, n.noti.Quoted.PostID)
 	if err != nil {
 		return nil, err
 	}
 	return &PostResolver{post}, nil
 }
 
-// Referers ...
-func (n *ReferedNotiResolver) Referers(ctx context.Context) ([]string, error) {
-	return n.noti.Refered.Referers, nil
+// Quoters ...
+func (n *QuotedNotiResolver) Quoters(ctx context.Context) ([]string, error) {
+	return n.noti.Quoted.Quoters, nil
 }

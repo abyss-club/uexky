@@ -34,7 +34,7 @@ type User struct {
 	ReadNotiTime struct {
 		System  time.Time `bson:"system"`
 		Replied time.Time `bson:"replied"`
-		Refered time.Time `bson:"refered"`
+		Quoted  time.Time `bson:"quoted"`
 	} `bson:"read_noti_time"`
 }
 
@@ -93,7 +93,7 @@ func (a *User) SetName(ctx context.Context, name string) error {
 	if used, err := isNameUsed(ctx, name); err != nil {
 		return errors.Wrapf(err, "Check name '%s'", name)
 	} else if used {
-		return fmt.Errorf("This name is already in use.")
+		return errors.New("This name is already in use")
 	}
 
 	c := mw.GetMongo(ctx).C(colleUser)
@@ -213,8 +213,8 @@ func (a *User) getReadNotiTime(t NotiType) time.Time {
 		return a.ReadNotiTime.System
 	case NotiTypeReplied:
 		return a.ReadNotiTime.Replied
-	case NotiTypeRefered:
-		return a.ReadNotiTime.Refered
+	case NotiTypeQuoted:
+		return a.ReadNotiTime.Quoted
 	default:
 		return time.Unix(0, 0)
 	}
@@ -233,8 +233,8 @@ func (a *User) setReadNotiTime(ctx context.Context, t NotiType, time time.Time) 
 		a.ReadNotiTime.System = time
 	case NotiTypeReplied:
 		a.ReadNotiTime.Replied = time
-	case NotiTypeRefered:
-		a.ReadNotiTime.Refered = time
+	case NotiTypeQuoted:
+		a.ReadNotiTime.Quoted = time
 	default:
 		panic("Invalidate Notification Type")
 	}

@@ -31,7 +31,7 @@ func TestPost(t *testing.T) {
 	if post1.ObjectID == "" || post1.ID == "" || post1.Anonymous != false ||
 		post1.Author != user.Name || post1.UserID != user.ID ||
 		post1.ThreadID != thread.ID || post1.Content != input1.Content ||
-		len(post1.Refers) != 0 {
+		len(post1.Quotes) != 0 {
 		t.Fatal(errors.Errorf("Post1 wrong! get: %+v, input = %+v, user = %+v", post1, input1, user))
 	}
 
@@ -55,40 +55,40 @@ func TestPost(t *testing.T) {
 		))
 	}
 
-	t.Log("Post3, has refers")
+	t.Log("Post3, has quotes")
 	input3 := &PostInput{
 		ThreadID:  thread.ID,
 		Anonymous: true,
 		Content:   "post3",
-		Refers:    &[]string{post1.ID, post2.ID},
+		Quotes:    &[]string{post1.ID, post2.ID},
 	}
 	post3, err := NewPost(ctx, input3)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create post2"))
 	}
-	if !reflect.DeepEqual(post3.Refers, *(input3.Refers)) {
+	if !reflect.DeepEqual(post3.Quotes, *(input3.Quotes)) {
 		t.Fatalf(
-			"Post 3 refers error: %v, want %v", post3.Refers, input3.Refers,
+			"Post 3 quotes error: %v, want %v", post3.Quotes, input3.Quotes,
 		)
 	}
-	refers, err := post3.ReferPosts(ctx)
+	quotes, err := post3.QuotePosts(ctx)
 	if err != nil {
-		t.Fatal(errors.Wrap(err, "find refer posts"))
+		t.Fatal(errors.Wrap(err, "find quote posts"))
 	}
-	if !equal(post1, refers[0]) {
-		t.Fatalf("refers[0] = %v, want = %v", refers[0], post1)
+	if !equal(post1, quotes[0]) {
+		t.Fatalf("quotes[0] = %v, want = %v", quotes[0], post1)
 	}
-	if !equal(post2, refers[1]) {
-		t.Fatalf("refers[0] = %v, want %v", refers[0], post2)
+	if !equal(post2, quotes[1]) {
+		t.Fatalf("quotes[0] = %v, want %v", quotes[0], post2)
 	}
 
-	t.Log("Check refered count of Post1")
-	c, err := post1.CountOfRefered(ctx)
+	t.Log("Check quoted count of Post1")
+	c, err := post1.QuoteCount(ctx)
 	if err != nil {
-		t.Errorf("Post.CountOfRefered() error = %v", err)
+		t.Errorf("Post.CountOfQuoted() error = %v", err)
 	}
 	if c != 1 {
-		t.Errorf("Post.CountOfRefered() = %v, want %v", c, 1)
+		t.Errorf("Post.CountOfQuoted() = %v, want %v", c, 1)
 	}
 
 	t.Log("Find post")

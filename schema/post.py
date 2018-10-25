@@ -14,8 +14,8 @@ input PostInput {
     threadID: String!
     anonymous: Boolean!
     content: String!
-    # Set referring PostIDs.
-    refers: [String!]
+    # Set quoting PostIDs.
+    quotes: [String!]
 }
 
 # Object describing a Post.
@@ -25,8 +25,8 @@ type Post {
     author: String!
     content: String!
     createTime: Time!
-    refers: [Post!]
-    countOfRefered: Int!
+    quotes: [Post!]
+    quoteCount: Int!
 }
 
 # PostSlice object is for selecting specific 'slice' of Post objects to return. Affects returned SliceInfo.

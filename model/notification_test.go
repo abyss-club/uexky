@@ -24,19 +24,19 @@ func TestTriggerNotifForPost(t *testing.T) {
 		Author:     "TestAuthor",
 		CreateTime: time.Now(),
 	}
-	refers := []*Post{
+	quotes := []*Post{
 		&Post{
-			ID:     "NotiTestReferedPost1",
+			ID:     "NotiTestQuotedPost1",
 			UserID: receiver.ID,
 		},
 		&Post{
-			ID:     "NotiTestReferedPost2",
+			ID:     "NotiTestQuotedPost2",
 			UserID: author.ID,
 		},
 	}
 
 	// publish test post
-	if err := TriggerNotifForPost(ctx, thread, post, refers); err != nil {
+	if err := TriggerNotifForPost(ctx, thread, post, quotes); err != nil {
 		t.Fatalf("TriggerNotifForPost() error = %v", err)
 	}
 
@@ -52,10 +52,10 @@ func TestTriggerNotifForPost(t *testing.T) {
 	} else if c != 0 {
 		t.Fatalf("GetUnreadNotificationCount(Replied) = %v, want = %v", c, 1)
 	}
-	if c, err := GetUnreadNotificationCount(ctx, NotiTypeRefered); err != nil {
-		t.Fatalf("GetUnreadNotificationCount(Refered) error = %v", err)
+	if c, err := GetUnreadNotificationCount(ctx, NotiTypeQuoted); err != nil {
+		t.Fatalf("GetUnreadNotificationCount(Quoted) error = %v", err)
 	} else if c != 0 {
-		t.Fatalf("GetUnreadNotificationCount(Refered) = %v, want = %v", c, 1)
+		t.Fatalf("GetUnreadNotificationCount(Quoted) = %v, want = %v", c, 1)
 	}
 
 	// check notification
@@ -101,32 +101,32 @@ func TestTriggerNotifForPost(t *testing.T) {
 		}
 	}
 	{
-		noti, slice, err := GetNotification(ctx, NotiTypeRefered, sq)
+		noti, slice, err := GetNotification(ctx, NotiTypeQuoted, sq)
 		if err != nil {
-			t.Fatalf("GetNotification(Refered) error = %v", err)
+			t.Fatalf("GetNotification(Quoted) error = %v", err)
 		}
 		if len(noti) != 1 {
-			t.Fatalf("GetNotification(Refered) != [], len = %v", len(noti))
+			t.Fatalf("GetNotification(Quoted) != [], len = %v", len(noti))
 		}
 		want := &NotiStore{
-			ID:        "refered:NotiTestReferedPost1",
-			Type:      NotiTypeRefered,
+			ID:        "quoted:NotiTestQuotedPost1",
+			Type:      NotiTypeQuoted,
 			SendTo:    receiver.ID,
 			EventTime: post.CreateTime,
 			HasRead:   false,
-			Refered: &ReferedNotiContent{
-				ThreadID:   thread.ID,
-				PostID:     refers[0].ID,
-				Referers:   []string{post.Author},
-				RefererIDs: []bson.ObjectId{post.UserID},
+			Quoted: &QuotedNotiContent{
+				ThreadID:  thread.ID,
+				PostID:    quotes[0].ID,
+				Quoters:   []string{post.Author},
+				QuoterIDs: []bson.ObjectId{post.UserID},
 			},
 		}
 		if diff := cmp.Diff(want, noti[0], timeCmp); diff != "" {
-			t.Fatalf("GetNotification(Refered) error, diff = %+v", diff)
+			t.Fatalf("GetNotification(Quoted) error, diff = %+v", diff)
 		}
 		if slice.FirstCursor != noti[0].genCursor() ||
 			slice.LastCursor != noti[0].genCursor() {
-			t.Fatalf("GetNotification(Refered).slice != {}, slice = %v", *slice)
+			t.Fatalf("GetNotification(Quoted).slice != {}, slice = %v", *slice)
 		}
 	}
 }

@@ -228,8 +228,8 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 	return posts, si, nil
 }
 
-// CountOfReplies ...
-func (t *Thread) CountOfReplies(ctx context.Context) (int, error) {
+// ReplyCount ...
+func (t *Thread) ReplyCount(ctx context.Context) (int, error) {
 	c := mw.GetMongo(ctx).C(collePost)
 	c.EnsureIndexKey("thread_id")
 

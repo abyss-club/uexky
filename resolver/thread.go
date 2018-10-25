@@ -162,8 +162,8 @@ func (tr *ThreadResolver) Replies(ctx context.Context, args struct {
 	return &PostSliceResolver{posts: prs, sliceInfo: sir}, nil
 }
 
-// CountOfReplies ...
-func (tr *ThreadResolver) CountOfReplies(ctx context.Context) (int32, error) {
-	count, err := tr.Thread.CountOfReplies(ctx)
+// ReplyCount ...
+func (tr *ThreadResolver) ReplyCount(ctx context.Context) (int32, error) {
+	count, err := tr.Thread.ReplyCount(ctx)
 	return int32(count), err
 }
