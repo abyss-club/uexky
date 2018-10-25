@@ -9,6 +9,7 @@ mutations = '''
 '''
 
 types = '''
+# Input object describing a Post to be published.
 input PostInput {
     threadID: String!
     anonymous: Boolean!
@@ -17,6 +18,7 @@ input PostInput {
     refers: [String!]
 }
 
+# Object describing a Post.
 type Post {
     id: String!
     anonymous: Boolean!
@@ -27,6 +29,7 @@ type Post {
     countOfReferred: Int!
 }
 
+# PostSlice object is for selecting specific 'slice' of Post objects to return. Affects returned SliceInfo.
 type PostSlice {
     posts: [Post]!
     sliceInfo: SliceInfo!
