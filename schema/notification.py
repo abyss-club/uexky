@@ -9,13 +9,13 @@ types = '''
 type UnreadNotiCount {
     system: Int!
     replied: Int!
-    refered: Int!
+    referred: Int!
 }
 
 type NotiSlice {
     system: [SystemNoti!]
     replied: [RepliedNoti!]
-    refered: [ReferedNoti!]
+    referred: [ReferredNoti!]
     sliceInfo: SliceInfo!
 }
 
@@ -37,7 +37,7 @@ type RepliedNoti {
     repliers: [String!]!
 }
 
-type ReferedNoti {
+type ReferredNoti {
     id: String!
     type: String!
     eventTime: Time!

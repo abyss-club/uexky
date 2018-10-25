@@ -82,13 +82,13 @@ func TestPost(t *testing.T) {
 		t.Fatalf("refers[0] = %v, want %v", refers[0], post2)
 	}
 
-	t.Log("Check refered count of Post1")
-	c, err := post1.CountOfRefered(ctx)
+	t.Log("Check referred count of Post1")
+	c, err := post1.CountOfReferred(ctx)
 	if err != nil {
-		t.Errorf("Post.CountOfRefered() error = %v", err)
+		t.Errorf("Post.CountOfReferred() error = %v", err)
 	}
 	if c != 1 {
-		t.Errorf("Post.CountOfRefered() = %v, want %v", c, 1)
+		t.Errorf("Post.CountOfReferred() = %v, want %v", c, 1)
 	}
 
 	t.Log("Find post")

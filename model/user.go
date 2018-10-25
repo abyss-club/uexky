@@ -34,7 +34,7 @@ type User struct {
 	ReadNotiTime struct {
 		System  time.Time `bson:"system"`
 		Replied time.Time `bson:"replied"`
-		Refered time.Time `bson:"refered"`
+		Referred time.Time `bson:"referred"`
 	} `bson:"read_noti_time"`
 }
 
@@ -213,8 +213,8 @@ func (a *User) getReadNotiTime(t NotiType) time.Time {
 		return a.ReadNotiTime.System
 	case NotiTypeReplied:
 		return a.ReadNotiTime.Replied
-	case NotiTypeRefered:
-		return a.ReadNotiTime.Refered
+	case NotiTypeReferred:
+		return a.ReadNotiTime.Referred
 	default:
 		return time.Unix(0, 0)
 	}
@@ -233,8 +233,8 @@ func (a *User) setReadNotiTime(ctx context.Context, t NotiType, time time.Time) 
 		a.ReadNotiTime.System = time
 	case NotiTypeReplied:
 		a.ReadNotiTime.Replied = time
-	case NotiTypeRefered:
-		a.ReadNotiTime.Refered = time
+	case NotiTypeReferred:
+		a.ReadNotiTime.Referred = time
 	default:
 		panic("Invalidate Notification Type")
 	}

@@ -24,7 +24,7 @@ type Post {
     content: String!
     createTime: Time!
     refers: [Post!]
-    countOfRefered: Int!
+    countOfReferred: Int!
 }
 
 type PostSlice {
