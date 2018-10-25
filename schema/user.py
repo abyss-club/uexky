@@ -8,9 +8,11 @@ mutations = '''
     auth(email: String!): Boolean!
     # Set the Name of user.
     setName(name: String!): User!
-    # Save/Add/Del tags subscribed by user.
+    # Directly edit tags subscribed by user.
     syncTags(tags: [String]!): User!
+    # Add tags subscribed by user.
     addSubbedTags(tags: [String!]!): User!
+    # Delete tags subscribed by user.
     delSubbedTags(tags: [String!]!): User!
 '''
 
