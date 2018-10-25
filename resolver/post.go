@@ -87,24 +87,24 @@ func (pr *PostResolver) CreateTime(ctx context.Context) (graphql.Time, error) {
 	return graphql.Time{Time: pr.Post.CreateTime}, nil
 }
 
-// Refers ...
-func (pr *PostResolver) Refers(ctx context.Context) (*[]*PostResolver, error) {
-	refers, err := pr.Post.ReferPosts(ctx)
+// Quotes ...
+func (pr *PostResolver) Quotes(ctx context.Context) (*[]*PostResolver, error) {
+	quotes, err := pr.Post.QuotePosts(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if len(refers) == 0 {
+	if len(quotes) == 0 {
 		return nil, nil
 	}
 	var rps []*PostResolver
-	for _, p := range refers {
-		rps = append(rps, &PostResolver{Post: p})
+	for _, q := range quotes {
+		rps = append(rps, &PostResolver{Post: q})
 	}
 	return &rps, nil
 }
 
-// CountOfRefered ...
-func (pr *PostResolver) CountOfRefered(ctx context.Context) (int32, error) {
-	count, err := pr.Post.CountOfRefered(ctx)
+// QuoteCount ...
+func (pr *PostResolver) QuoteCount(ctx context.Context) (int32, error) {
+	count, err := pr.Post.QuoteCount(ctx)
 	return int32(count), err
 }

@@ -40,7 +40,7 @@ type Thread {
     # Default to '无题'.
     title: String
     replies(query: SliceQuery!): PostSlice!
-    countOfReplies: Int!
+    replyCount: Int!
 }
 
 type ThreadSlice {

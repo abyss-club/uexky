@@ -17,13 +17,13 @@ type NotiType string
 const (
 	NotiTypeSystem  NotiType = "system"
 	NotiTypeReplied NotiType = "replied"
-	NotiTypeRefered NotiType = "refered"
+	NotiTypeQuoted  NotiType = "quoted"
 )
 
 var allNotiTypes = map[NotiType]bool{
 	NotiTypeSystem:  true,
 	NotiTypeReplied: true,
-	NotiTypeRefered: true,
+	NotiTypeQuoted:  true,
 }
 
 // UserGroup ...
@@ -47,12 +47,12 @@ type RepliedNotiContent struct {
 	ReplierIDs []bson.ObjectId `bson:"replier_ids"`
 }
 
-// ReferedNotiContent ...
-type ReferedNotiContent struct {
-	ThreadID   string          `bson:"thread_id"`
-	PostID     string          `bson:"post_id"`
-	Referers   []string        `bson:"repliers"`
-	RefererIDs []bson.ObjectId `bson:"replier_ids"`
+// QuotedNotiContent ...
+type QuotedNotiContent struct {
+	ThreadID  string          `bson:"thread_id"`
+	PostID    string          `bson:"post_id"`
+	Quoters   []string        `bson:"quoters"`
+	QuoterIDs []bson.ObjectId `bson:"quoter_ids"`
 }
 
 // NotiStore for save notification in DB
@@ -67,7 +67,7 @@ type NotiStore struct {
 
 	System  *SystemNotiContent  `bson:"system"`
 	Replied *RepliedNotiContent `bson:"replied"`
-	Refered *ReferedNotiContent `bson:"refered"`
+	Quoted  *QuotedNotiContent  `bson:"quoted"`
 }
 
 func (ns *NotiStore) genCursor() string {
@@ -80,8 +80,8 @@ func (ns *NotiStore) checkIfRead(user *User, t NotiType) {
 		ns.HasRead = user.ReadNotiTime.System.After(ns.EventTime)
 	case NotiTypeReplied:
 		ns.HasRead = user.ReadNotiTime.Replied.After(ns.EventTime)
-	case NotiTypeRefered:
-		ns.HasRead = user.ReadNotiTime.Refered.After(ns.EventTime)
+	case NotiTypeQuoted:
+		ns.HasRead = user.ReadNotiTime.Quoted.After(ns.EventTime)
 	}
 }
 
@@ -159,7 +159,7 @@ func GetNotification(
 
 // TriggerNotifForPost ...
 func TriggerNotifForPost(
-	ctx context.Context, thread *Thread, post *Post, refers []*Post,
+	ctx context.Context, thread *Thread, post *Post, quotes []*Post,
 ) error {
 	c := mw.GetMongo(ctx).C(colleNotification)
 	c.EnsureIndexKey("id")
@@ -182,23 +182,23 @@ func TriggerNotifForPost(
 		}
 	}
 
-	for _, rp := range refers {
-		if post.UserID == rp.UserID {
+	for _, q := range quotes {
+		if post.UserID == q.UserID {
 			continue
 		}
-		id := fmt.Sprintf("refered:%v", rp.ID)
+		id := fmt.Sprintf("quoted:%v", q.ID)
 		if _, err := c.Upsert(bson.M{"id": id}, bson.M{
 			"$set": bson.M{
-				"id":                id,
-				"type":              NotiTypeRefered,
-				"send_to":           rp.UserID,
-				"event_time":        post.CreateTime,
-				"refered.thread_id": thread.ID,
-				"refered.post_id":   rp.ID,
+				"id":               id,
+				"type":             NotiTypeQuoted,
+				"send_to":          q.UserID,
+				"event_time":       post.CreateTime,
+				"quoted.thread_id": thread.ID,
+				"quoted.post_id":   q.ID,
 			},
 			"$addToSet": bson.M{
-				"refered.repliers":    post.Author,
-				"refered.replier_ids": post.UserID,
+				"quoted.quoters":    post.Author,
+				"quoted.quoter_ids": post.UserID,
 			},
 		}); err != nil {
 			return err

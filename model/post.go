@@ -10,7 +10,7 @@ import (
 	"gitlab.com/abyss.club/uexky/mw"
 )
 
-const referLimit = 3
+const quoteLimit = 3
 
 // Post ...
 type Post struct {
@@ -23,7 +23,7 @@ type Post struct {
 
 	ThreadID string   `bson:"thread_id"`
 	Content  string   `bson:"content"`
-	Refers   []string `bson:"refers,omitempty"`
+	Quotes   []string `bson:"quotes,omitempty"`
 }
 
 // PostInput ...
@@ -31,7 +31,7 @@ type PostInput struct {
 	ThreadID  string
 	Anonymous bool
 	Content   string
-	Refers    *[]string
+	Quotes    *[]string
 }
 
 // ParsePost ...
@@ -75,22 +75,22 @@ func (pi *PostInput) ParsePost(ctx context.Context, user *User) (
 		post.Author = user.Name
 	}
 
-	referPosts := []*Post{}
-	if pi.Refers != nil {
-		refers := *(pi.Refers)
-		if len(refers) > referLimit {
-			return nil, nil, nil, fmt.Errorf("Count of Refers can't greater than 5")
+	quotePosts := []*Post{}
+	if pi.Quotes != nil {
+		quotes := *(pi.Quotes)
+		if len(quotes) > quoteLimit {
+			return nil, nil, nil, fmt.Errorf("Count of Quotes can't greater than 5")
 		}
-		for _, r := range refers {
+		for _, r := range quotes {
 			p, err := FindPost(ctx, r)
 			if err != nil {
-				return nil, nil, nil, errors.Wrap(err, "find refer post")
+				return nil, nil, nil, errors.Wrap(err, "find quote posts")
 			}
-			referPosts = append(referPosts, p)
+			quotePosts = append(quotePosts, p)
 		}
-		post.Refers = refers
+		post.Quotes = quotes
 	}
-	return post, thread, referPosts, nil
+	return post, thread, quotePosts, nil
 }
 
 // NewPost ...
@@ -100,7 +100,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		return nil, errors.Wrap(err, "find sign info")
 	}
 
-	post, thread, refers, err := input.ParsePost(ctx, user)
+	post, thread, quotes, err := input.ParsePost(ctx, user)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		return nil, errors.Wrapf(err, "update thread %s", post.ThreadID)
 	}
 
-	if err := TriggerNotifForPost(ctx, thread, post, refers); err != nil {
+	if err := TriggerNotifForPost(ctx, thread, post, quotes); err != nil {
 		return nil, err
 	}
 	return post, nil
@@ -139,24 +139,24 @@ func FindPost(ctx context.Context, ID string) (*Post, error) {
 	return post, nil
 }
 
-// ReferPosts ...
-func (p *Post) ReferPosts(ctx context.Context) ([]*Post, error) {
-	var refers []*Post
-	for _, id := range p.Refers {
+// QuotePosts ...
+func (p *Post) QuotePosts(ctx context.Context) ([]*Post, error) {
+	var quotes []*Post
+	for _, id := range p.Quotes {
 		post, err := FindPost(ctx, id)
 		if err != nil {
 			return nil, err
 		}
-		refers = append(refers, post)
+		quotes = append(quotes, post)
 	}
-	return refers, nil
+	return quotes, nil
 }
 
-// CountOfRefered ...
-func (p *Post) CountOfRefered(ctx context.Context) (int, error) {
+// QuoteCount ...
+func (p *Post) QuoteCount(ctx context.Context) (int, error) {
 	c := mw.GetMongo(ctx).C(collePost)
-	c.EnsureIndexKey("refers")
-	return c.Find(bson.M{"refers": p.ID}).Count()
+	c.EnsureIndexKey("quotes")
+	return c.Find(bson.M{"quotes": p.ID}).Count()
 }
 
 func isPostExist(ctx context.Context, postID string) (bool, error) {

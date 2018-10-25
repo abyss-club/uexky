@@ -239,7 +239,7 @@ func TestThread_GetReplies(t *testing.T) {
 		})
 	}
 	{
-		c, err := thread.CountOfReplies(ctx)
+		c, err := thread.ReplyCount(ctx)
 		if err != nil {
 			t.Fatalf("Thread.CountOfReplies() error = %v", err)
 		}
