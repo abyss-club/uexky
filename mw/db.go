@@ -51,8 +51,7 @@ func WithMongo(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		m := mongo.Copy()
 		defer m.Close()
-		req = req.WithContext(context.WithValue(
-			req.Context(), ContextKeyMongo, m))
+		req = reqWithValue(req, ContextKeyMongo, m)
 		handle(w, req, p)
 	}
 }

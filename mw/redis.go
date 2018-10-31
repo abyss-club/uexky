@@ -40,8 +40,7 @@ func WithRedis(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		conn := RedisPool.Get()
 		defer conn.Close()
-		req = req.WithContext(context.WithValue(
-			req.Context(), ContextKeyRedis, conn))
+		req = reqWithValue(req, ContextKeyRedis, conn)
 		handle(w, req, p)
 	}
 }

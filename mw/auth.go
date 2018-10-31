@@ -2,7 +2,6 @@ package mw
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -71,14 +70,12 @@ func refreshToken(ctx context.Context, token string) error {
 func AuthHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	code := req.URL.Query().Get("code")
 	if code == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("缺乏必要信息"))
+		httpError(w, http.StatusBadRequest, "缺乏必要信息")
 		return
 	}
 	token, err := authCode(req.Context(), code)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(fmt.Sprintf("验证信息错误，或已失效。 %v", err)))
+		httpErrorf(w, http.StatusBadRequest, "验证信息错误，或已失效。 %v", err)
 		return
 	}
 
@@ -108,7 +105,7 @@ func WithAuth(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		tokenCookie, err := req.Cookie("token")
 		log.Printf("find token cookie %v", tokenCookie)
-		if err != nil { // err must be ErrNoCookie,  non-login user, do nothing
+		if err != nil { // err must be ErrNoCookie, non-login user, do nothing
 			handle(w, req, p)
 			return
 		}
@@ -124,8 +121,7 @@ func WithAuth(handle httprouter.Handle) httprouter.Handle {
 		}
 		if email != "" {
 			log.Printf("Logged user %s", email)
-			ctx := context.WithValue(req.Context(), ContextKeyEmail, email)
-			req = req.WithContext(ctx)
+			req = reqWithValue(req, ContextKeyEmail, email)
 		}
 
 		handle(w, req, p)
