@@ -19,7 +19,7 @@ type Post struct {
 	Anonymous  bool          `bson:"anonymous"`
 	Author     string        `bson:"author"`
 	UserID     bson.ObjectId `bson:"user_id"`
-	CreateTime time.Time     `bson:"creaate_time"`
+	CreateTime time.Time     `bson:"create_time"`
 
 	ThreadID string   `bson:"thread_id"`
 	Content  string   `bson:"content"`
