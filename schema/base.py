@@ -7,7 +7,7 @@ type SliceInfo {
     lastCursor: String!
 }
 
-# SliceQuery object is for selecting specific 'slice' of an object to return. Affects returned SliceInfo.
+# SliceQuery object is for selecting specific 'slice' of an object to return. Affects the returning SliceInfo.
 input SliceQuery {
     # Either this field or 'after' is required.
     # An empty string means slice from the beginning.

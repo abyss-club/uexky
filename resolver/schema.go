@@ -27,7 +27,11 @@ type Query {
     # The count of unread notifications.
     unreadNotiCount(): UnreadNotiCount!
     # Notifications for current user.
-    notification(type: String!, query: SliceQuery!): NotiSlice!
+    notification(
+        # One of 'system', 'replied' or 'quoted'.
+        type: String!, 
+        query: SliceQuery!,
+    ): NotiSlice!
 
 
     # Containing mainTags and tagTree.
@@ -79,7 +83,7 @@ type Post {
     quoteCount: Int!
 }
 
-# PostSlice object is for selecting specific 'slice' of Post objects to return. Affects returned SliceInfo.
+# PostSlice object is for selecting specific 'slice' of Post objects to return. Affects the returning SliceInfo.
 type PostSlice {
     posts: [Post]!
     sliceInfo: SliceInfo!
@@ -143,7 +147,7 @@ type UnreadNotiCount {
     quoted: Int!
 }
 
-# NotiSlice object is for selecting specific 'slice' of an object to return. Affects returned SliceInfo.
+# NotiSlice object is for selecting specific 'slice' of an object to return. Affects the returning SliceInfo.
 type NotiSlice {
     # Announcement messages from server.
     system: [SystemNoti!]
@@ -213,7 +217,7 @@ type SliceInfo {
     lastCursor: String!
 }
 
-# SliceQuery object is for selecting specific 'slice' of an object to return. Affects returned SliceInfo.
+# SliceQuery object is for selecting specific 'slice' of an object to return. Affects the returning SliceInfo.
 input SliceQuery {
     # Either this field or 'after' is required.
     # An empty string means slice from the beginning.

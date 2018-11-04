@@ -29,7 +29,7 @@ type Post {
     quoteCount: Int!
 }
 
-# PostSlice object is for selecting specific 'slice' of Post objects to return. Affects returned SliceInfo.
+# PostSlice object is for selecting specific 'slice' of Post objects to return. Affects the returning SliceInfo.
 type PostSlice {
     posts: [Post]!
     sliceInfo: SliceInfo!
