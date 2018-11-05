@@ -103,7 +103,7 @@ func GetUnreadNotificationCount(ctx context.Context, t NotiType) (int, error) {
 			bson.M{"send_to_group": AllUser},
 		},
 		"type":       t,
-		"event_time": bson.M{"$lt": user.getReadNotiTime(t)},
+		"event_time": bson.M{"$gt": user.getReadNotiTime(t)},
 	}
 	count, err := c.Find(query).Count()
 	if err != nil {

@@ -49,12 +49,12 @@ func TestTriggerNotifForPost(t *testing.T) {
 	}
 	if c, err := GetUnreadNotificationCount(ctx, NotiTypeReplied); err != nil {
 		t.Fatalf("GetUnreadNotificationCount(Replied) error = %v", err)
-	} else if c != 0 {
+	} else if c != 1 {
 		t.Fatalf("GetUnreadNotificationCount(Replied) = %v, want = %v", c, 1)
 	}
 	if c, err := GetUnreadNotificationCount(ctx, NotiTypeQuoted); err != nil {
 		t.Fatalf("GetUnreadNotificationCount(Quoted) error = %v", err)
-	} else if c != 0 {
+	} else if c != 1 {
 		t.Fatalf("GetUnreadNotificationCount(Quoted) = %v, want = %v", c, 1)
 	}
 
