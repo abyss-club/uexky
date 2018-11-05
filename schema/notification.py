@@ -2,7 +2,11 @@ queries = '''
     # The count of unread notifications.
     unreadNotiCount(): UnreadNotiCount!
     # Notifications for current user.
-    notification(type: String!, query: SliceQuery!): NotiSlice!
+    notification(
+        # One of 'system', 'replied' or 'quoted'.
+        type: String!, 
+        query: SliceQuery!,
+    ): NotiSlice!
 '''
 
 types = '''
@@ -16,7 +20,7 @@ type UnreadNotiCount {
     quoted: Int!
 }
 
-# NotiSlice object is for selecting specific 'slice' of an object to return. Affects returned SliceInfo.
+# NotiSlice object is for selecting specific 'slice' of an object to return. Affects the returning SliceInfo.
 type NotiSlice {
     # Announcement messages from server.
     system: [SystemNoti!]
