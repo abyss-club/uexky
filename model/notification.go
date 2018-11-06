@@ -187,7 +187,7 @@ func TriggerNotifForPost(
 			continue
 		}
 		qn := &Notification{
-			ID:        fmt.Sprintf("quoted:%v", q.ID),
+			ID:        fmt.Sprintf("quoted:%v:%v", q.ID, post.ID),
 			Type:      NotiTypeQuoted,
 			SendTo:    q.UserID,
 			EventTime: post.CreateTime,
