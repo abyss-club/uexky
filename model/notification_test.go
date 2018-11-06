@@ -109,7 +109,7 @@ func TestTriggerNotifForPost(t *testing.T) {
 			t.Fatalf("GetNotification(Quoted) != [], len = %v", len(noti))
 		}
 		want := &Notification{
-			ID:        "quoted:NotiTestQuotedPost1",
+			ID:        "quoted:NotiTestQuotedPost1:NotiTestPost",
 			Type:      NotiTypeQuoted,
 			SendTo:    receiver.ID,
 			EventTime: post.CreateTime,
