@@ -9,10 +9,12 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
 const remoteIPHeader = "Remote-IP"
 
+// WithFlowControl is middleware for rate limit
 func WithFlowControl(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		ip := req.Header.Get(remoteIPHeader)
@@ -29,20 +31,70 @@ func WithFlowControl(handle httprouter.Handle) httprouter.Handle {
 
 		handle(w, req, p)
 
-		if remaining, err := flc.remaining(req.Context()); err != nil {
-			httpError(w, http.StatusInternalServerError,
-				"read rete limit error")
-			return
-		} else {
-			w.Header().Set("RateLimitRemaining", remaining)
-		}
+		remaining := flc.Remaining()
+		w.Header().Set("RateLimitRemaining", remaining)
 	}
 }
 
 // FlowController manage flowcontrol amount
 type FlowController struct {
-	ip    string
-	email string
+	ip         string
+	email      string
+	limiters   []*limiter
+	queryIndex []int
+	mutIndex   []int
+}
+
+// NewFlowController ...
+func NewFlowController(ip, email string) *FlowController {
+	fc := &FlowController{ip: ip, email: email}
+	cfg := &mgmt.Config.RateLimit
+	fc.limiters = []*limiter{
+		newLimiter(fc.ipKey(), cfg.QueryLimit, cfg.QueryResetTime, 10),
+		newLimiter(fc.ipMutKey(), cfg.MutLimit, cfg.MutResetTime, 1),
+	}
+
+	if email == "" {
+		fc.queryIndex = []int{0}
+		fc.mutIndex = []int{1}
+		return fc
+	}
+	fc.limiters = append(fc.limiters,
+		newLimiter(fc.emailKey(), cfg.QueryLimit, cfg.QueryResetTime, 10),
+		newLimiter(fc.emailMutKey(), cfg.MutLimit, cfg.MutResetTime, 1),
+	)
+	fc.queryIndex = []int{0, 2}
+	fc.mutIndex = []int{1, 3}
+	return fc
+}
+
+// CostQuery ...
+func (fc *FlowController) CostQuery(ctx context.Context, count int) error {
+	for _, idx := range fc.queryIndex {
+		if err := fc.limiters[idx].cost(ctx, count); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// CostMut ...
+func (fc *FlowController) CostMut(ctx context.Context, count int) error {
+	for _, idx := range fc.mutIndex {
+		if err := fc.limiters[idx].cost(ctx, count); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Remaining ...
+func (fc *FlowController) Remaining() string {
+	strs := []string{}
+	for _, l := range fc.limiters {
+		strs = append(strs, l.getRemaining())
+	}
+	return strings.Join(strs, ",")
 }
 
 func (fc *FlowController) ipKey() string {
@@ -53,75 +105,53 @@ func (fc *FlowController) emailKey() string {
 	return fmt.Sprintf("fc-email-%s", fc.email)
 }
 
-func (fc *FlowController) ipMutationKey() string {
+func (fc *FlowController) ipMutKey() string {
 	return fmt.Sprintf("fc-ip-m-%s", fc.ip)
 }
 
-func (fc *FlowController) emailMutationKey() string {
+func (fc *FlowController) emailMutKey() string {
 	return fmt.Sprintf("fc-email-m-%s", fc.email)
 }
 
-const expireSeconds = 3600
+type limiter struct {
+	// setting
+	key    string
+	limit  int
+	ratio  int
+	expire int
 
-func costLimit(ctx context.Context, key string, init, count int) error {
-	rd := GetRedis(ctx)
-	if _, err := rd.Do("SET", key, init, "EX", expireSeconds, "NX"); err != nil {
-		return errors.Wrap(err, "set rate limit")
-	}
-	if remaining, err := redis.Int(rd.Do("DECRBY", key, count)); err != nil {
-		return errors.Wrap(err, "cost flow control")
-	} else if remaining < 0 {
-		return errors.New("Rate limit exceeded")
-	}
-	return nil
+	// runtime
+	count     int // count of not-dealed
+	remaining int
 }
 
-// Cost flowcontrol amount by count, if amount < 0, return error
-func (fc *FlowController) Cost(ctx context.Context, count int) error {
-	if err := costLimit(ctx, fc.ipKey(), 1000, count); err != nil {
-		return err
-	}
-	if fc.email == "" {
+func newLimiter(key string, limit, expire, ratio int) *limiter {
+	return &limiter{key, limit, ratio, expire, 0, limit}
+}
+
+func (l *limiter) cost(ctx context.Context, count int) error {
+	rd := GetRedis(ctx)
+	l.count += count
+	if l.count < l.ratio {
 		return nil
 	}
-	if err := costLimit(ctx, fc.emailKey(), 1000, count); err != nil {
-		return err
+
+	cost := l.count / l.ratio
+	l.count -= cost * l.ratio
+	if _, err := rd.Do("SET", l.key, l.limit, "EX", l.expire, "NX"); err != nil {
+		return errors.Wrap(err, "set rate limit")
+	}
+	remaining, err := redis.Int(rd.Do("DECRBY", l.key, cost))
+	if err != nil {
+		return errors.Wrap(err, "cost flow control")
+	}
+	l.remaining = remaining
+	if l.remaining < 0 {
+		return errors.New("rate limit exceeded")
 	}
 	return nil
 }
 
-// MutationCost cost rate limit when do mutation
-func (fc *FlowController) MutationCost(ctx context.Context, count int) error {
-	if fc.email == "" {
-		return errors.New("you should login before do mutation")
-	}
-	if err := costLimit(ctx, fc.ipMutationKey(), 1000, count); err != nil {
-		return err
-	}
-	if err := costLimit(ctx, fc.emailMutationKey(), 1000, count); err != nil {
-		return err
-	}
-	return nil
-}
-
-// remaining of Rete limit:
-// Not Login: "<queryByIP>"
-// Loginned: "<queryByIP>,<queryByEmail>,<mutationByIP>,<mutationByEmail>
-func (fc *FlowController) remaining(ctx context.Context) (string, error) {
-	rd := GetRedis(ctx)
-	keys := []string{fc.ipKey()}
-	remainings := []string{}
-	if fc.email != "" {
-		keys = append(
-			keys, fc.emailKey(), fc.ipMutationKey(), fc.emailMutationKey(),
-		)
-	}
-	for _, key := range keys {
-		if r, err := redis.Int(rd.Do("GET", key)); err != nil {
-			return "", errors.New("query rate limit remaining")
-		} else {
-			remainings = append(remainings, fmt.Sprint(r))
-		}
-	}
-	return strings.Join(remainings, ","), nil
+func (l *limiter) getRemaining() string {
+	return fmt.Sprint(l.remaining)
 }

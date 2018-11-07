@@ -21,22 +21,33 @@ Config file use json, structure is:
 
 ```go
 var Config struct {
-        Mongo struct {
-                URL string `json:"url"`
-                DB  string `json:"db"`
-        } `json:"mongo"`
-        RedisURL string   `json:"redis_url"`
-        MainTags []string `json:"main_tags"`
-        Proto    string   `json:"proto"`
-        Domain   struct {
-                WEB string `json:"web"`
-                API string `json:"api"`
-        } `json:"domain"`
-        Mail struct {
-                Domain     string `json:"domain"`
-                PrivateKey string `json:"private_key"`
-                PublicKey  string `json:"public_key"`
-        } `json:"mail"`
+    Mongo struct {
+        URL string `json:"url"`
+        DB  string `json:"db"`
+    } `json:"mongo"`
+    RedisURL string   `json:"redis_url"`
+    MainTags []string `json:"main_tags"`
+    Proto    string   `json:"proto"`
+    Domain   struct {
+        WEB string `json:"web"`
+        API string `json:"api"`
+    } `json:"domain"`
+    Mail struct {
+        Domain     string `json:"domain"`
+        PrivateKey string `json:"private_key"`
+        PublicKey  string `json:"public_key"`
+    } `json:"mail"`
+    RateLimit struct {
+        QueryLimit        int `json:"query_limit"`
+        QueryResetTime    int `json:"query_reset_time"`
+        MutLimit     int `json:"mut_limit"`
+        MutResetTime int `json:"mut_reset_time"`
+        Cost              struct {
+            CreateUser int `json:"create_user"`
+            PubThread  int `json:"pub_thread"`
+            PubPost    int `json:"pub_post"`
+        } `json:"cost"`
+    } `json:"rate_limit"`
 }
 ```
 
@@ -57,6 +68,14 @@ Default Value is:
     "mail": {
         "domain": "mail.abyss.club"
     }
+    "rate_limit": {
+        "query_limit": 300,
+        "query_reset_time": 3600,
+        "mut_limit": 30,
+        "mut_reset_time": 3600,
+        "pub_thread_count": 10,
+        "pub_post_count": 1,
+        "create_count": 30,
 }
 ```
 
