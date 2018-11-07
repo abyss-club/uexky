@@ -70,20 +70,32 @@ func NewFlowController(ip, email string) *FlowController {
 
 // CostQuery ...
 func (fc *FlowController) CostQuery(ctx context.Context, count int) error {
+	exceeded := false
 	for _, idx := range fc.queryIndex {
-		if err := fc.limiters[idx].cost(ctx, count); err != nil {
+		e, err := fc.limiters[idx].cost(ctx, count)
+		if err != nil {
 			return err
 		}
+		exceeded = exceeded || e
+	}
+	if exceeded {
+		return errors.New("rate limit exceeded")
 	}
 	return nil
 }
 
 // CostMut ...
 func (fc *FlowController) CostMut(ctx context.Context, count int) error {
+	exceeded := false
 	for _, idx := range fc.mutIndex {
-		if err := fc.limiters[idx].cost(ctx, count); err != nil {
+		e, err := fc.limiters[idx].cost(ctx, count)
+		if err != nil {
 			return err
 		}
+		exceeded = exceeded || e
+	}
+	if exceeded {
+		return errors.New("rate limit exceeded")
 	}
 	return nil
 }
@@ -129,27 +141,28 @@ func newLimiter(key string, limit, expire, ratio int) *limiter {
 	return &limiter{key, limit, ratio, expire, 0, limit}
 }
 
-func (l *limiter) cost(ctx context.Context, count int) error {
+// bool: return true if rate limit exceeded
+func (l *limiter) cost(ctx context.Context, count int) (bool, error) {
 	rd := GetRedis(ctx)
 	l.count += count
 	if l.count < l.ratio {
-		return nil
+		return false, nil
 	}
 
 	cost := l.count / l.ratio
 	l.count -= cost * l.ratio
 	if _, err := rd.Do("SET", l.key, l.limit, "EX", l.expire, "NX"); err != nil {
-		return errors.Wrap(err, "set rate limit")
+		return false, errors.Wrap(err, "set rate limit")
 	}
 	remaining, err := redis.Int(rd.Do("DECRBY", l.key, cost))
 	if err != nil {
-		return errors.Wrap(err, "cost flow control")
+		return false, errors.Wrap(err, "cost flow control")
 	}
 	l.remaining = remaining
 	if l.remaining < 0 {
-		return errors.New("rate limit exceeded")
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
 
 func (l *limiter) getRemaining() string {
