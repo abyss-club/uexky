@@ -6,6 +6,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/mgmt"
 	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
@@ -99,6 +100,9 @@ func (ti *ThreadInput) ParseThead(ctx context.Context, user *User) (*Thread, err
 
 // NewThread init new thread and insert to db
 func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
+	if err := mw.FlowCostMut(ctx, mgmt.Config.RateLimit.Cost.PubThread); err != nil {
+		return nil, err
+	}
 	user, err := requireSignIn(ctx)
 	if err != nil {
 		return nil, err
@@ -163,7 +167,7 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		return threads, &SliceInfo{}, nil
 	}
 	if !sq.Desc {
-		reverseThreads(threads)
+		ReverseSlice(threads)
 	}
 	return threads, &SliceInfo{
 		FirstCursor: threads[0].genCursor(),
@@ -173,6 +177,9 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 
 // FindThread by id
 func FindThread(ctx context.Context, ID string) (*Thread, error) {
+	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+		return nil, err
+	}
 	c := mw.GetMongo(ctx).C(colleThread)
 	c.EnsureIndexKey("id")
 
@@ -190,6 +197,9 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 }
 
 func isThreadExist(ctx context.Context, threadID string) (bool, error) {
+	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+		return false, err
+	}
 	c := mw.GetMongo(ctx).C(colleThread)
 	c.EnsureIndexKey("id")
 
@@ -219,7 +229,7 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 		return posts, &SliceInfo{}, nil
 	}
 	if sq.Desc {
-		reversePosts(posts)
+		ReverseSlice(posts)
 	}
 	si := &SliceInfo{
 		FirstCursor: posts[0].ObjectID.Hex(),
@@ -230,6 +240,9 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 
 // ReplyCount ...
 func (t *Thread) ReplyCount(ctx context.Context) (int, error) {
+	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+		return 0, err
+	}
 	c := mw.GetMongo(ctx).C(collePost)
 	c.EnsureIndexKey("thread_id")
 
@@ -239,18 +252,4 @@ func (t *Thread) ReplyCount(ctx context.Context) (int, error) {
 // return unix time of update time in millisecond(ms)
 func (t *Thread) genCursor() string {
 	return genTimeCursor(t.UpdateTime)
-}
-
-func reverseThreads(threads []*Thread) {
-	l := len(threads)
-	for i := 0; i != l/2; i++ {
-		threads[i], threads[l-i-1] = threads[l-i-1], threads[i]
-	}
-}
-
-func reversePosts(posts []*Post) {
-	l := len(posts)
-	for i := 0; i != l/2; i++ {
-		posts[i], posts[l-i-1] = posts[l-i-1], posts[i]
-	}
 }

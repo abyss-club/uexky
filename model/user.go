@@ -50,6 +50,9 @@ func GetUser(ctx context.Context) (*User, error) {
 
 // GetUserByEmail ...
 func GetUserByEmail(ctx context.Context, email string) (*User, error) {
+	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+		return nil, err
+	}
 	c := mw.GetMongo(ctx).C(colleUser)
 	c.EnsureIndexKey("email")
 
@@ -78,6 +81,9 @@ func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 }
 
 func isNameUsed(ctx context.Context, name string) (bool, error) {
+	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+		return false, err
+	}
 	c := mw.GetMongo(ctx).C(colleUser)
 	c.EnsureIndexKey("name")
 

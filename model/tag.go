@@ -97,6 +97,10 @@ func GetTagTree(ctx context.Context, query string) (*TagTree, error) {
 }
 
 func getNewestSubTags(ctx context.Context, mainTag string, query string) ([]string, error) {
+	queryCount := 10
+	if err := mw.FlowCostQuery(ctx, queryCount); err != nil {
+		return nil, nil
+	}
 	c := mw.GetMongo(ctx).C(colleTag)
 	c.EnsureIndexKey("main_tags")
 	c.EnsureIndexKey("-updated_time", "-_id")
@@ -106,7 +110,7 @@ func getNewestSubTags(ctx context.Context, mainTag string, query string) ([]stri
 	if query != "" {
 		find["name"] = bson.M{"$regex": query}
 	}
-	if err := c.Find(find).Sort("-updated_time", "-_id").Limit(10).All(&tags); err != nil {
+	if err := c.Find(find).Sort("-updated_time", "-_id").Limit(queryCount).All(&tags); err != nil {
 		return nil, errors.Wrapf(err, "find newest sub tag for '%s'", mainTag)
 	}
 	var tagStrings []string

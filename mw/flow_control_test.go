@@ -9,8 +9,8 @@ import (
 	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
-func diffFlowController(l, r *FlowController) string {
-	return cmp.Diff(l, r, cmp.AllowUnexported(FlowController{}, limiter{}))
+func diffFlowController(l, r *flowController) string {
+	return cmp.Diff(l, r, cmp.AllowUnexported(flowController{}, limiter{}))
 }
 
 func TestNewFlowController(t *testing.T) {
@@ -22,7 +22,7 @@ func TestNewFlowController(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *FlowController
+		want *flowController
 	}{
 		{
 			name: "not logged in",
@@ -30,7 +30,7 @@ func TestNewFlowController(t *testing.T) {
 				ip:    "192.168.1.1",
 				email: "",
 			},
-			want: &FlowController{
+			want: &flowController{
 				ip:    "192.168.1.1",
 				email: "",
 				limiters: []*limiter{
@@ -61,7 +61,7 @@ func TestNewFlowController(t *testing.T) {
 				ip:    "192.168.1.1",
 				email: "test@uexky.com",
 			},
-			want: &FlowController{
+			want: &flowController{
 				ip:    "192.168.1.1",
 				email: "test@uexky.com",
 				limiters: []*limiter{
@@ -105,7 +105,7 @@ func TestNewFlowController(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewFlowController(tt.args.ip, tt.args.email)
+			got := newFlowController(tt.args.ip, tt.args.email)
 			if diff := diffFlowController(got, tt.want); diff != "" {
 				t.Errorf("NewFlowController() want %v, diff = %s", tt.want, diff)
 			}
@@ -121,25 +121,25 @@ func TestFlowController_CostQuery(t *testing.T) {
 	ctx := context.WithValue(context.Background(), ContextKeyRedis, conn)
 	tests := []struct {
 		name string
-		fc   *FlowController
-		want *FlowController
+		fc   *flowController
+		want *flowController
 	}{
 		{
 			name: "not login",
-			fc:   NewFlowController("192.168.1.1", ""),
-			want: NewFlowController("192.168.1.1", ""),
+			fc:   newFlowController("192.168.1.1", ""),
+			want: newFlowController("192.168.1.1", ""),
 		},
 		{
 			name: "logged in",
-			fc:   NewFlowController("192.168.1.1", "test@uexky.com"),
-			want: NewFlowController("192.168.1.1", "test@uexky.com"),
+			fc:   newFlowController("192.168.1.1", "test@uexky.com"),
+			want: newFlowController("192.168.1.1", "test@uexky.com"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conn.Do("FLUSHDB")
 			t.Log("cost small query")
-			tt.fc.CostQuery(ctx, 5)
+			tt.fc.costQuery(ctx, 5)
 			for _, idx := range tt.want.queryIndex {
 				tt.want.limiters[idx].count = 5
 			}
@@ -148,7 +148,7 @@ func TestFlowController_CostQuery(t *testing.T) {
 			}
 
 			t.Log("cost big query")
-			tt.fc.CostQuery(ctx, 15)
+			tt.fc.costQuery(ctx, 15)
 			for _, idx := range tt.want.queryIndex {
 				tt.want.limiters[idx].count = 0
 				tt.want.limiters[idx].remaining -= 2
@@ -158,7 +158,7 @@ func TestFlowController_CostQuery(t *testing.T) {
 			}
 
 			t.Log("let rate limit exceeded")
-			if err := tt.fc.CostQuery(ctx, 3000); err == nil {
+			if err := tt.fc.costQuery(ctx, 3000); err == nil {
 				t.Fatalf("must return err")
 			} else if err.Error() != errMsg {
 				t.Fatalf("err must be '%s', but get '%s'", errMsg, err.Error())
@@ -182,25 +182,25 @@ func TestFlowController_CostMut(t *testing.T) {
 	ctx := context.WithValue(context.Background(), ContextKeyRedis, conn)
 	tests := []struct {
 		name string
-		fc   *FlowController
-		want *FlowController
+		fc   *flowController
+		want *flowController
 	}{
 		{
 			name: "not login",
-			fc:   NewFlowController("192.168.1.1", ""),
-			want: NewFlowController("192.168.1.1", ""),
+			fc:   newFlowController("192.168.1.1", ""),
+			want: newFlowController("192.168.1.1", ""),
 		},
 		{
 			name: "logged in",
-			fc:   NewFlowController("192.168.1.1", "test@uexky.com"),
-			want: NewFlowController("192.168.1.1", "test@uexky.com"),
+			fc:   newFlowController("192.168.1.1", "test@uexky.com"),
+			want: newFlowController("192.168.1.1", "test@uexky.com"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conn.Do("FLUSHDB")
 			t.Log("cost normal")
-			tt.fc.CostMut(ctx, 5)
+			tt.fc.costMut(ctx, 5)
 			for _, idx := range tt.want.mutIndex {
 				tt.want.limiters[idx].remaining -= 5
 			}
@@ -209,7 +209,7 @@ func TestFlowController_CostMut(t *testing.T) {
 			}
 
 			t.Log("let rate limit exceeded")
-			if err := tt.fc.CostMut(ctx, 100); err == nil {
+			if err := tt.fc.costMut(ctx, 100); err == nil {
 				t.Fatalf("must return err")
 			} else if err.Error() != errMsg {
 				t.Fatalf("err must be '%s', but get '%s'", errMsg, err.Error())
@@ -228,24 +228,24 @@ func TestFlowController_Remaining(t *testing.T) {
 	cfg := mgmt.Config.RateLimit
 	tests := []struct {
 		name string
-		fc   *FlowController
+		fc   *flowController
 		want string
 	}{
 		{
 			name: "not log in",
-			fc:   NewFlowController("192.168.1.1", ""),
+			fc:   newFlowController("192.168.1.1", ""),
 			want: fmt.Sprintf("%v,%v", cfg.QueryLimit, cfg.MutLimit),
 		},
 		{
 			name: "logged in",
-			fc:   NewFlowController("192.168.1.1", "test@uexky.com"),
+			fc:   newFlowController("192.168.1.1", "test@uexky.com"),
 			want: fmt.Sprintf("%v,%v,%v,%v", cfg.QueryLimit, cfg.MutLimit,
 				cfg.QueryLimit, cfg.MutLimit),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.fc.Remaining(); got != tt.want {
+			if got := tt.fc.remaining(); got != tt.want {
 				t.Errorf("FlowController.Remaining() = %v, want %v", got, tt.want)
 			}
 		})

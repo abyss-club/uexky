@@ -3,6 +3,7 @@ package mw
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -18,26 +19,45 @@ const remoteIPHeader = "Remote-IP"
 func WithFlowControl(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		ip := req.Header.Get(remoteIPHeader)
+		email := ""
 		if ip == "" {
 			httpErrorf(w, http.StatusBadRequest,
 				"Not found header '%s'", remoteIPHeader)
 			return
 		}
-		flc := &FlowController{ip: ip}
-		if email, ok := req.Context().Value(ContextKeyEmail).(string); ok {
-			flc.email = email
+		if userEmail, ok := req.Context().Value(ContextKeyEmail).(string); ok {
+			email = userEmail
 		}
-		req = reqWithValue(req, ContextKeyFlowControl, flc)
+		fc := newFlowController(ip, email)
+		req = reqWithValue(req, ContextKeyFlowControl, fc)
 
 		handle(w, req, p)
 
-		remaining := flc.Remaining()
+		remaining := fc.remaining()
 		w.Header().Set("RateLimitRemaining", remaining)
 	}
 }
 
-// FlowController manage flowcontrol amount
-type FlowController struct {
+// FlowCostQuery ...
+func FlowCostQuery(ctx context.Context, count int) error {
+	fc, ok := ctx.Value(ContextKeyFlowControl).(*flowController)
+	if !ok {
+		log.Fatal("Can't find flow controller in context")
+	}
+	return fc.costQuery(ctx, count)
+}
+
+// FlowCostMut ...
+func FlowCostMut(ctx context.Context, count int) error {
+	fc, ok := ctx.Value(ContextKeyFlowControl).(*flowController)
+	if !ok {
+		log.Fatal("Can't find flow controller in context")
+	}
+	return fc.costMut(ctx, count)
+}
+
+// flowController manage flowcontrol amount
+type flowController struct {
 	ip         string
 	email      string
 	limiters   []*limiter
@@ -45,9 +65,9 @@ type FlowController struct {
 	mutIndex   []int
 }
 
-// NewFlowController ...
-func NewFlowController(ip, email string) *FlowController {
-	fc := &FlowController{ip: ip, email: email}
+// newFlowController ...
+func newFlowController(ip, email string) *flowController {
+	fc := &flowController{ip: ip, email: email}
 	cfg := &mgmt.Config.RateLimit
 	fc.limiters = []*limiter{
 		newLimiter(fc.ipKey(), cfg.QueryLimit, cfg.QueryResetTime, 10),
@@ -68,8 +88,8 @@ func NewFlowController(ip, email string) *FlowController {
 	return fc
 }
 
-// CostQuery ...
-func (fc *FlowController) CostQuery(ctx context.Context, count int) error {
+// costQuery ...
+func (fc *flowController) costQuery(ctx context.Context, count int) error {
 	exceeded := false
 	for _, idx := range fc.queryIndex {
 		e, err := fc.limiters[idx].cost(ctx, count)
@@ -84,8 +104,8 @@ func (fc *FlowController) CostQuery(ctx context.Context, count int) error {
 	return nil
 }
 
-// CostMut ...
-func (fc *FlowController) CostMut(ctx context.Context, count int) error {
+// costMut ...
+func (fc *flowController) costMut(ctx context.Context, count int) error {
 	exceeded := false
 	for _, idx := range fc.mutIndex {
 		e, err := fc.limiters[idx].cost(ctx, count)
@@ -100,8 +120,8 @@ func (fc *FlowController) CostMut(ctx context.Context, count int) error {
 	return nil
 }
 
-// Remaining ...
-func (fc *FlowController) Remaining() string {
+// remaining ...
+func (fc *flowController) remaining() string {
 	strs := []string{}
 	for _, l := range fc.limiters {
 		strs = append(strs, l.getRemaining())
@@ -109,19 +129,19 @@ func (fc *FlowController) Remaining() string {
 	return strings.Join(strs, ",")
 }
 
-func (fc *FlowController) ipKey() string {
+func (fc *flowController) ipKey() string {
 	return fmt.Sprintf("fc-ip-%s", fc.ip)
 }
 
-func (fc *FlowController) emailKey() string {
+func (fc *flowController) emailKey() string {
 	return fmt.Sprintf("fc-email-%s", fc.email)
 }
 
-func (fc *FlowController) ipMutKey() string {
+func (fc *flowController) ipMutKey() string {
 	return fmt.Sprintf("fc-ip-m-%s", fc.ip)
 }
 
-func (fc *FlowController) emailMutKey() string {
+func (fc *flowController) emailMutKey() string {
 	return fmt.Sprintf("fc-email-m-%s", fc.email)
 }
 

@@ -88,6 +88,10 @@ func (ns *Notification) checkIfRead(user *User, t NotiType) {
 
 // GetUnreadNotificationCount ...
 func GetUnreadNotificationCount(ctx context.Context, t NotiType) (int, error) {
+	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+		return 0, err
+	}
+
 	if !allNotiTypes[t] {
 		return 0, errors.Errorf("Invalidate notification type: %v", t)
 	}

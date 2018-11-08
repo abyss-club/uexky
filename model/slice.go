@@ -78,6 +78,9 @@ func (sq *SliceQuery) Find(
 	if sq.Limit <= 0 {
 		return errors.New("limit must greater than 0")
 	}
+	if err := mw.FlowCostQuery(ctx, sq.Limit); err != nil {
+		return err
+	}
 	log.Printf("slice do query '%+v'", queryObj)
 	query := mw.GetMongo(ctx).C(collection).Find(queryObj).Limit(sq.Limit)
 	if sq.Desc {
