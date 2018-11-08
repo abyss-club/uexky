@@ -200,6 +200,15 @@ func (n *QuotedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
 	return &PostResolver{post}, nil
 }
 
+// QuotedPost ...
+func (n *QuotedNotiResolver) QuotedPost(ctx context.Context) (*PostResolver, error) {
+	post, err := model.FindPost(ctx, n.noti.Quoted.QuotedPostID)
+	if err != nil {
+		return nil, err
+	}
+	return &PostResolver{post}, nil
+}
+
 // Quoter ...
 func (n *QuotedNotiResolver) Quoter(ctx context.Context) (string, error) {
 	return n.noti.Quoted.Quoter, nil
