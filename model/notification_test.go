@@ -115,10 +115,11 @@ func TestTriggerNotifForPost(t *testing.T) {
 			EventTime: post.CreateTime,
 			HasRead:   false,
 			Quoted: &QuotedNotiContent{
-				ThreadID: thread.ID,
-				PostID:   quotes[0].ID,
-				Quoter:   post.Author,
-				QuoterID: post.UserID,
+				ThreadID:     thread.ID,
+				PostID:       post.ID,
+				QuotedPostID: quotes[0].ID,
+				Quoter:       post.Author,
+				QuoterID:     post.UserID,
 			},
 		}
 		if diff := cmp.Diff(want, noti[0], timeCmp); diff != "" {

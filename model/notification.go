@@ -49,10 +49,11 @@ type RepliedNotiContent struct {
 
 // QuotedNotiContent ...
 type QuotedNotiContent struct {
-	ThreadID string        `bson:"thread_id"`
-	PostID   string        `bson:"post_id"`
-	Quoter   string        `bson:"quoter"`
-	QuoterID bson.ObjectId `bson:"quoter_id"`
+	ThreadID     string        `bson:"thread_id"`
+	PostID       string        `bson:"post_id"`
+	QuotedPostID string        `bson:"quoted_post_id"`
+	Quoter       string        `bson:"quoter"`
+	QuoterID     bson.ObjectId `bson:"quoter_id"`
 }
 
 // Notification for save notification in DB
@@ -192,10 +193,11 @@ func TriggerNotifForPost(
 			SendTo:    q.UserID,
 			EventTime: post.CreateTime,
 			Quoted: &QuotedNotiContent{
-				ThreadID: thread.ID,
-				PostID:   q.ID,
-				Quoter:   post.Author,
-				QuoterID: post.UserID,
+				ThreadID:     thread.ID,
+				PostID:       post.ID,
+				QuotedPostID: q.ID,
+				Quoter:       post.Author,
+				QuoterID:     post.UserID,
 			},
 		}
 		if err := c.Insert(qn); err != nil {
