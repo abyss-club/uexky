@@ -61,14 +61,14 @@ type Notification struct {
 	// base info
 	ID          string        `bson:"id"`
 	Type        NotiType      `bson:"type"`
-	SendTo      bson.ObjectId `bson:"send_to"`
-	SendToGroup UserGroup     `bson:"send_to_group"`
+	SendTo      bson.ObjectId `bson:"send_to,omitempty"`
+	SendToGroup UserGroup     `bson:"send_to_group,omitempty"`
 	EventTime   time.Time     `bson:"event_time"`
 	HasRead     bool          `bson:"-"`
 
-	System  *SystemNotiContent  `bson:"system"`
-	Replied *RepliedNotiContent `bson:"replied"`
-	Quoted  *QuotedNotiContent  `bson:"quoted"`
+	System  *SystemNotiContent  `bson:"system,omitempty"`
+	Replied *RepliedNotiContent `bson:"replied,omitempty"`
+	Quoted  *QuotedNotiContent  `bson:"quoted,omitempty"`
 }
 
 func (ns *Notification) genCursor() string {
@@ -203,6 +203,26 @@ func TriggerNotifForPost(
 		if err := c.Insert(qn); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// SendSystemNotification Send a system notification
+func SendSystemNotification(ctx context.Context, title, content string) error {
+	c := mw.GetMongo(ctx).C(colleNotification)
+	now := time.Now()
+	noti := &Notification{
+		ID:          fmt.Sprintf("system:%v", now.Unix()),
+		Type:        NotiTypeSystem,
+		SendToGroup: AllUser,
+		EventTime:   now,
+		System: &SystemNotiContent{
+			Title:   title,
+			Content: content,
+		},
+	}
+	if err := c.Insert(noti); err != nil {
+		return err
 	}
 	return nil
 }
