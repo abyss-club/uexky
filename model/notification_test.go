@@ -131,3 +131,56 @@ func TestTriggerNotifForPost(t *testing.T) {
 		}
 	}
 }
+
+func TestSendSystemNotification(t *testing.T) {
+	ctx := ctxWithUser(mockUsers[2])
+	title := "Test!"
+	content := `This is a *markdown* Notification`
+	if err := SendSystemNotification(ctx, title, content); err != nil {
+		t.Fatalf("SendSystemNotification() error = %v", err)
+	}
+	t.Log("check unread count")
+	{
+		if c, err := GetUnreadNotificationCount(ctx, NotiTypeSystem); err != nil {
+			t.Fatalf("GetUnreadNotificationCount(System) error = %v", err)
+		} else if c != 1 {
+			t.Fatalf("GetUnreadNotificationCount(System) = %v, want = 1", c)
+		}
+	}
+	t.Log("check noti content")
+	{
+		sq := &SliceQuery{Limit: 10, Desc: true, Cursor: genTimeCursor(time.Now())}
+		noti, slice, err := GetNotification(ctx, NotiTypeSystem, sq)
+		if err != nil {
+			t.Fatalf("GetNotification(System) error = %v", err)
+		}
+		if len(noti) != 1 {
+			t.Fatalf("GetNotification(System) != [], len = %v", len(noti))
+		}
+		got := noti[0]
+		want := &Notification{
+			Type:        NotiTypeSystem,
+			SendToGroup: AllUser,
+			System: &SystemNotiContent{
+				Title:   title,
+				Content: content,
+			},
+		}
+		if slice.FirstCursor != got.genCursor() ||
+			slice.LastCursor != got.genCursor() {
+			t.Fatalf("GetNotification(System).slice != {}, slice = %v", *slice)
+		}
+		if got.Type != want.Type {
+			t.Fatalf("GetNotification(System).Type = %v, want %v",
+				got.Type, want.Type)
+		}
+		if got.SendToGroup != want.SendToGroup {
+			t.Fatalf("GetNotification(System).SendToGroup = %v, want %v",
+				got.SendToGroup, want.SendToGroup)
+		}
+		if diff := cmp.Diff(want.System, got.System, timeCmp); diff != "" {
+			t.Fatalf("GetNotification(System).System = %v, diff = %s",
+				got.SendToGroup, diff)
+		}
+	}
+}
