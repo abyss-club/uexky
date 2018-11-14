@@ -5,6 +5,7 @@ import (
 
 	"gitlab.com/abyss.club/uexky/mgmt"
 	"gitlab.com/abyss.club/uexky/model"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // queries:
@@ -34,11 +35,12 @@ func (tr *TagResolver) Tree(
 	ctx context.Context,
 	args struct{ Query *string },
 ) (*[]*TagTreeNodeResolver, error) {
+	u := uexky.Pop(ctx)
 	query := ""
 	if args.Query != nil {
 		query = *args.Query
 	}
-	tree, err := model.GetTagTree(ctx, query)
+	tree, err := model.GetTagTree(u, query)
 	if err != nil {
 		return nil, err
 	}

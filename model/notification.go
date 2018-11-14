@@ -94,7 +94,7 @@ func GetUnreadNotificationCount(u *uexky.Uexky, t NotiType) (int, error) {
 	if !allNotiTypes[t] {
 		return 0, errors.Errorf("Invalidate notification type: %v", t)
 	}
-	user, err := u.Auth.GetUser()
+	user, err := GetSignedInUser(u)
 	if err != nil {
 		return 0, err
 	}
@@ -123,7 +123,7 @@ func GetNotification(
 	if !allNotiTypes[t] {
 		return nil, nil, errors.Errorf("Invalidate notification type: %v", t)
 	}
-	user, err := u.Auth.GetUser()
+	user, err := GetSignedInUser(u)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -139,14 +139,14 @@ func GetNotification(
 
 	var noti []*Notification
 	now := time.Now()
-	err = sq.Find(ctx, colleNotification, "event_time", query, &noti)
+	err = sq.Find(u, colleNotification, "event_time", query, &noti)
 	if err != nil {
 		return nil, nil, err
 	}
 	for _, n := range noti {
 		n.checkIfRead(user, t)
 	}
-	user.setReadNotiTime(ctx, t, now)
+	user.setReadNotiTime(u, t, now)
 
 	if len(noti) == 0 {
 		return noti, &SliceInfo{}, nil

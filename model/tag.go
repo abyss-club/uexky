@@ -81,7 +81,7 @@ func GetTagTree(u *uexky.Uexky, query string) (*TagTree, error) {
 	tree = &TagTree{}
 	for _, mTag := range mgmt.Config.MainTags {
 		log.Printf("start fetch subTags for '%s'", mTag)
-		newest, err := getNewestSubTags(ctx, mTag, query)
+		newest, err := getNewestSubTags(u, mTag, query)
 		if err != nil {
 			return nil, err
 		}

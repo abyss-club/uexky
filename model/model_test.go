@@ -1,7 +1,6 @@
 package model
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -13,41 +12,38 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 const testDB = "testing"
 
-var testCtx context.Context
+var mockUsers []*User
+var uexkyPool *uexky.Pool
+var mu []*uexky.Uexky // mock uexky
 
 func TestMain(m *testing.M) {
-	ctx := prepTestDB()
-	addMockUser(ctx)
-	testCtx = ctx
+	prepTestDB()
+	addMockUser(u)
 	os.Exit(m.Run())
 }
 
 // this file only have common test tools
-func prepTestDB() context.Context {
+func prepTestDB() {
 	mgmt.LoadConfig("")
 	mgmt.Config.Mongo.DB = testDB
 	mgmt.Config.MainTags = []string{"MainA", "MainB", "MainC"}
 	mgmt.ReplaceConfigByEnv()
 
-	mongo := mw.ConnectMongodb()
-	if err := mongo.DB().DropDatabase(); err != nil {
+	uexkyPool = uexky.InitPool()
+	u := uexkyPool.NewUexky()
+	defer u.Close()
+
+	if err := u.Mongo.DB().DropDatabase(); err != nil {
 		log.Fatal(errors.Wrap(err, "drop test dababase"))
 	}
-	ctx := context.WithValue(
-		context.Background(), mw.ContextKeyMongo, mongo,
-	)
-
-	rd := mw.RedisPool.Get()
-	ctx = context.WithValue(ctx, mw.ContextKeyRedis, rd)
-	return ctx
 }
 
-func addMockUser(ctx context.Context) {
+func addMockUser(u *uexky.Uexky) {
 	log.Print("addMockUser!")
 	users := []*User{
 		&User{
@@ -77,10 +73,13 @@ func addMockUser(ctx context.Context) {
 		}
 	}
 	mockUsers = users
-}
-
-func ctxWithUser(u *User) context.Context {
-	return context.WithValue(testCtx, mw.ContextKeyEmail, u.Email)
+	mu := []uexky.Uexky{}
+	for i, user := range users {
+		ai := NewAuthInfo(u, user.Email)
+		flow := NewFlow(u, fmt.Sprintf("127.0.0.%v", i), user.Email) // TODO: mock
+		u := uexkyPool.NewUexky(ai, flow)
+		mu = append(mu, u)
+	}
 }
 
 // compare functions:

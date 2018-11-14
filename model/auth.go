@@ -56,7 +56,7 @@ func (ai *AuthInfo) CheckPriority(action string) bool {
 // GetUser who signed in
 func (ai *AuthInfo) GetUser() (*User, error) {
 	if err := ai.RequireSignedIn(); err != nil {
-		return errors.New("unauthorized, require signed in")
+		return nil, errors.New("unauthorized, require signed in")
 	}
 	if ai.user != nil {
 		return ai.user, nil

@@ -1,7 +1,6 @@
 package model
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -42,7 +41,7 @@ func (pi *PostInput) ParsePost(u *uexky.Uexky, user *User) (
 	if pi.Content == "" {
 		return nil, nil, nil, errors.New("required params missed")
 	}
-	thread, err := FindThread(ctx, pi.ThreadID)
+	thread, err := FindThread(u, pi.ThreadID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -64,7 +63,7 @@ func (pi *PostInput) ParsePost(u *uexky.Uexky, user *User) (
 	post.ID = postID
 
 	if pi.Anonymous {
-		author, err := user.AnonymousID(ctx, pi.ThreadID, false)
+		author, err := user.AnonymousID(u, pi.ThreadID, false)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "get AnonymousID")
 		}
@@ -83,7 +82,7 @@ func (pi *PostInput) ParsePost(u *uexky.Uexky, user *User) (
 			return nil, nil, nil, fmt.Errorf("Count of Quotes can't greater than 5")
 		}
 		for _, r := range quotes {
-			p, err := FindPost(ctx, r)
+			p, err := FindPost(u, r)
 			if err != nil {
 				return nil, nil, nil, errors.Wrap(err, "find quote posts")
 			}
@@ -99,12 +98,12 @@ func NewPost(u *uexky.Uexky, input *PostInput) (*Post, error) {
 	if err := u.Flow.CostMut(mgmt.Config.RateLimit.Cost.PubPost); err != nil {
 		return nil, err
 	}
-	user, err := u.Auth.GetUser()
+	user, err := GetSignedInUser(u)
 	if err != nil {
 		return nil, errors.Wrap(err, "find sign info")
 	}
 
-	post, thread, quotes, err := input.ParsePost(ctx, user)
+	post, thread, quotes, err := input.ParsePost(u, user)
 	if err != nil {
 		return nil, err
 	}
@@ -119,7 +118,7 @@ func NewPost(u *uexky.Uexky, input *PostInput) (*Post, error) {
 		return nil, errors.Wrapf(err, "update thread %s", post.ThreadID)
 	}
 
-	if err := TriggerNotifForPost(ctx, thread, post, quotes); err != nil {
+	if err := TriggerNotifForPost(u, thread, post, quotes); err != nil {
 		return nil, err
 	}
 	return post, nil
@@ -146,10 +145,10 @@ func FindPost(u *uexky.Uexky, ID string) (*Post, error) {
 }
 
 // QuotePosts ...
-func (p *Post) QuotePosts(ctx context.Context) ([]*Post, error) {
+func (p *Post) QuotePosts(u *uexky.Uexky) ([]*Post, error) {
 	var quotes []*Post
 	for _, id := range p.Quotes {
-		post, err := FindPost(ctx, id)
+		post, err := FindPost(u, id)
 		if err != nil {
 			return nil, err
 		}
@@ -159,7 +158,7 @@ func (p *Post) QuotePosts(ctx context.Context) ([]*Post, error) {
 }
 
 // QuoteCount ...
-func (p *Post) QuoteCount(ctx context.Context) (int, error) {
+func (p *Post) QuoteCount(u *uexky.Uexky) (int, error) {
 	if err := u.Flow.CostQuery(1); err != nil {
 		return 0, nil
 	}

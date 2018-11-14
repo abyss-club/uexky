@@ -1,7 +1,6 @@
 package resolver
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -10,7 +9,7 @@ import (
 	mailgun "github.com/mailgun/mailgun-go"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
@@ -41,7 +40,8 @@ func isValidateEmail(mail string) bool {
 	return false
 }
 
-func authEmail(ctx context.Context, email string) (string, error) {
+//TODO: should not be here
+func authEmail(u *uexky.Uexky, email string) (string, error) {
 	if !isValidateEmail(email) {
 		return "", errors.New("Invalid Email Address")
 	}
@@ -50,7 +50,7 @@ func authEmail(ctx context.Context, email string) (string, error) {
 		return "", err
 	}
 	// expired at 20 minutes.
-	if _, err := mw.GetRedis(ctx).Do("SET", code, email, "EX", 1200); err != nil {
+	if _, err := u.Redis.Do("SET", code, email, "EX", 1200); err != nil {
 		return "", errors.Wrap(err, "set code to redis")
 	}
 	return fmt.Sprintf("%s/auth/?code=%s", mgmt.APIURLPrefix(), code), nil

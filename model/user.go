@@ -92,7 +92,7 @@ func (a *User) SetName(u *uexky.Uexky, name string) error {
 	if a.Name != "" {
 		return fmt.Errorf("You already have name '%v'", a.Name)
 	}
-	if used, err := isNameUsed(ctx, name); err != nil {
+	if used, err := isNameUsed(u, name); err != nil {
 		return errors.Wrapf(err, "Check name '%s'", name)
 	} else if used {
 		return errors.New("This name is already in use")

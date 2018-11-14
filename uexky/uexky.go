@@ -22,35 +22,40 @@ func InitPool() *Pool {
 	}
 }
 
-// ContextKey ...
-type ContextKey string
-
-// ContextKeys
-const (
-	ContextKeyUexky = ContextKey("frame")
-)
-
-// Push an uexky object to context
-func (p *Pool) Push(
-	ctx context.Context, auth Auth, flow *Flow,
-) (context.Context, func()) {
-	frame := &Uexky{
+// NewUexky Make a new Uexky
+func (p *Pool) NewUexky(auth Auth, flow *Flow) *Uexky {
+	return &Uexky{
 		Mongo: p.mongoPool.Copy(),
 		Redis: p.redisPool.Get(),
 		Auth:  auth,
 		Flow:  flow,
 	}
-	return context.WithValue(ctx, ContextKeyUexky, frame), frame.Close
+}
+
+// Push an uexky object to context
+func (p *Pool) Push(
+	ctx context.Context, auth Auth, flow *Flow,
+) (context.Context, func()) {
+	uexky := p.NewUexky(auth, flow)
+	return context.WithValue(ctx, contextKeyUexky, uexky), uexky.Close
 }
 
 // Pop an uexky from context, if don't find uexky, will panic
 func Pop(ctx context.Context) *Uexky {
-	u, ok := ctx.Value(ContextKeyUexky).(*Uexky)
+	u, ok := ctx.Value(contextKeyUexky).(*Uexky)
 	if !ok {
 		log.Fatal("Can't find frame")
 	}
 	return u
 }
+
+// contextKey ...
+type contextKey string
+
+// contextKeys
+const (
+	contextKeyUexky = contextKey("frame")
+)
 
 // Uexky is context for http request
 type Uexky struct {

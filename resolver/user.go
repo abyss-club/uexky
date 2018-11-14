@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"gitlab.com/abyss.club/uexky/model"
-	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/uexky"
 )
 
@@ -26,12 +25,12 @@ func (r *Resolver) Profile(ctx context.Context) (*UserResolver, error) {
 func (r *Resolver) Auth(
 	ctx context.Context, args struct{ Email string },
 ) (bool, error) {
-	_, ok := ctx.Value(mw.ContextKeyEmail).(string)
-	if ok {
+	u := uexky.Pop(ctx)
+	if u.Auth.IsSignedIn() {
 		return false, nil
 	}
 
-	authURL, err := authEmail(ctx, args.Email)
+	authURL, err := authEmail(u, args.Email)
 	if err != nil {
 		return false, nil
 	}
@@ -50,7 +49,7 @@ func (r *Resolver) SetName(
 	if err != nil {
 		return nil, err
 	}
-	if err := user.SetName(ctx, args.Name); err != nil {
+	if err := user.SetName(u, args.Name); err != nil {
 		return nil, err
 	}
 	return &UserResolver{User: user}, nil
@@ -71,7 +70,7 @@ func (r *Resolver) SyncTags(
 			tags = append(tags, *t)
 		}
 	}
-	if err := user.SyncTags(ctx, tags); err != nil {
+	if err := user.SyncTags(u, tags); err != nil {
 		return nil, err
 	}
 	return &UserResolver{User: user}, nil
@@ -86,7 +85,7 @@ func (r *Resolver) AddSubbedTags(
 	if err != nil {
 		return nil, err
 	}
-	if err := user.AddSubbedTags(ctx, args.Tags); err != nil {
+	if err := user.AddSubbedTags(u, args.Tags); err != nil {
 		return nil, err
 	}
 	return &UserResolver{User: user}, nil
@@ -101,7 +100,7 @@ func (r *Resolver) DelSubbedTags(
 	if err != nil {
 		return nil, err
 	}
-	if err := user.DelSubbedTags(ctx, args.Tags); err != nil {
+	if err := user.DelSubbedTags(u, args.Tags); err != nil {
 		return nil, err
 	}
 	return &UserResolver{User: user}, nil
