@@ -1,5 +1,6 @@
-package mw
+package uexky
 
+/*
 import (
 	"context"
 	"fmt"
@@ -9,11 +10,11 @@ import (
 	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
-func diffFlowController(l, r *flowController) string {
-	return cmp.Diff(l, r, cmp.AllowUnexported(flowController{}, limiter{}))
+func diffFlow(l, r *Flow) string {
+	return cmp.Diff(l, r, cmp.AllowUnexported(Flow{}, limiter{}))
 }
 
-func TestNewFlowController(t *testing.T) {
+func TestNewFlow(t *testing.T) {
 	type args struct {
 		ip    string
 		email string
@@ -22,7 +23,7 @@ func TestNewFlowController(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *flowController
+		want *Flow
 	}{
 		{
 			name: "not logged in",
@@ -30,12 +31,12 @@ func TestNewFlowController(t *testing.T) {
 				ip:    "192.168.1.1",
 				email: "",
 			},
-			want: &flowController{
+			want: &Flow{
 				ip:    "192.168.1.1",
 				email: "",
 				limiters: []*limiter{
 					&limiter{
-						key:       "fc-ip-192.168.1.1",
+						key:       "flow-ip-192.168.1.1",
 						limit:     cfg.QueryLimit,
 						ratio:     10,
 						expire:    cfg.QueryResetTime,
@@ -43,7 +44,7 @@ func TestNewFlowController(t *testing.T) {
 						remaining: cfg.QueryLimit,
 					},
 					&limiter{
-						key:       "fc-ip-m-192.168.1.1",
+						key:       "flow-ip-m-192.168.1.1",
 						limit:     cfg.MutLimit,
 						ratio:     1,
 						expire:    cfg.MutResetTime,
@@ -61,12 +62,12 @@ func TestNewFlowController(t *testing.T) {
 				ip:    "192.168.1.1",
 				email: "test@uexky.com",
 			},
-			want: &flowController{
+			want: &Flow{
 				ip:    "192.168.1.1",
 				email: "test@uexky.com",
 				limiters: []*limiter{
 					&limiter{
-						key:       "fc-ip-192.168.1.1",
+						key:       "flow-ip-192.168.1.1",
 						limit:     cfg.QueryLimit,
 						ratio:     10,
 						expire:    cfg.QueryResetTime,
@@ -74,7 +75,7 @@ func TestNewFlowController(t *testing.T) {
 						remaining: cfg.QueryLimit,
 					},
 					&limiter{
-						key:       "fc-ip-m-192.168.1.1",
+						key:       "flow-ip-m-192.168.1.1",
 						limit:     cfg.MutLimit,
 						ratio:     1,
 						expire:    cfg.MutResetTime,
@@ -82,7 +83,7 @@ func TestNewFlowController(t *testing.T) {
 						remaining: cfg.MutLimit,
 					},
 					&limiter{
-						key:       "fc-email-test@uexky.com",
+						key:       "flow-email-test@uexky.com",
 						limit:     cfg.QueryLimit,
 						ratio:     10,
 						expire:    cfg.QueryResetTime,
@@ -90,7 +91,7 @@ func TestNewFlowController(t *testing.T) {
 						remaining: cfg.QueryLimit,
 					},
 					&limiter{
-						key:       "fc-email-m-test@uexky.com",
+						key:       "flow-email-m-test@uexky.com",
 						limit:     cfg.MutLimit,
 						ratio:     1,
 						expire:    cfg.MutResetTime,
@@ -105,15 +106,15 @@ func TestNewFlowController(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newFlowController(tt.args.ip, tt.args.email)
-			if diff := diffFlowController(got, tt.want); diff != "" {
-				t.Errorf("NewFlowController() want %v, diff = %s", tt.want, diff)
+			got := newFlow(tt.args.ip, tt.args.email)
+			if diff := diffFlow(got, tt.want); diff != "" {
+				t.Errorf("NewFlow() want %v, diff = %s", tt.want, diff)
 			}
 		})
 	}
 }
 
-func TestFlowController_CostQuery(t *testing.T) {
+func TestFlow_CostQuery(t *testing.T) {
 	mgmt.LoadConfig("")
 	mgmt.ReplaceConfigByEnv()
 	conn := RedisPool.Get()
@@ -121,44 +122,44 @@ func TestFlowController_CostQuery(t *testing.T) {
 	ctx := context.WithValue(context.Background(), ContextKeyRedis, conn)
 	tests := []struct {
 		name string
-		fc   *flowController
-		want *flowController
+		flow   *Flow
+		want *Flow
 	}{
 		{
 			name: "not login",
-			fc:   newFlowController("192.168.1.1", ""),
-			want: newFlowController("192.168.1.1", ""),
+			flow:   newFlow("192.168.1.1", ""),
+			want: newFlow("192.168.1.1", ""),
 		},
 		{
 			name: "logged in",
-			fc:   newFlowController("192.168.1.1", "test@uexky.com"),
-			want: newFlowController("192.168.1.1", "test@uexky.com"),
+			flow:   newFlow("192.168.1.1", "test@uexky.com"),
+			want: newFlow("192.168.1.1", "test@uexky.com"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conn.Do("FLUSHDB")
 			t.Log("cost small query")
-			tt.fc.costQuery(ctx, 5)
+			tt.flow.costQuery(ctx, 5)
 			for _, idx := range tt.want.queryIndex {
 				tt.want.limiters[idx].count = 5
 			}
-			if diff := diffFlowController(tt.want, tt.fc); diff != "" {
+			if diff := diffFlow(tt.want, tt.flow); diff != "" {
 				t.Fatalf("tt.want %v, diff = %v", tt.want, diff)
 			}
 
 			t.Log("cost big query")
-			tt.fc.costQuery(ctx, 15)
+			tt.flow.costQuery(ctx, 15)
 			for _, idx := range tt.want.queryIndex {
 				tt.want.limiters[idx].count = 0
 				tt.want.limiters[idx].remaining -= 2
 			}
-			if diff := diffFlowController(tt.want, tt.fc); diff != "" {
+			if diff := diffFlow(tt.want, tt.flow); diff != "" {
 				t.Fatalf("tt.want %v, diff = %v", tt.want, diff)
 			}
 
 			t.Log("let rate limit exceeded")
-			if err := tt.fc.costQuery(ctx, 3000); err == nil {
+			if err := tt.flow.costQuery(ctx, 3000); err == nil {
 				t.Fatalf("must return err")
 			} else if err.Error() != errMsg {
 				t.Fatalf("err must be '%s', but get '%s'", errMsg, err.Error())
@@ -167,14 +168,14 @@ func TestFlowController_CostQuery(t *testing.T) {
 				tt.want.limiters[idx].count = 0
 				tt.want.limiters[idx].remaining -= 300
 			}
-			if diff := diffFlowController(tt.want, tt.fc); diff != "" {
+			if diff := diffFlow(tt.want, tt.flow); diff != "" {
 				t.Fatalf("tt.want %v, diff = %v", tt.want, diff)
 			}
 		})
 	}
 }
 
-func TestFlowController_CostMut(t *testing.T) {
+func TestFlow_CostMut(t *testing.T) {
 	mgmt.LoadConfig("")
 	mgmt.ReplaceConfigByEnv()
 	conn := RedisPool.Get()
@@ -182,34 +183,34 @@ func TestFlowController_CostMut(t *testing.T) {
 	ctx := context.WithValue(context.Background(), ContextKeyRedis, conn)
 	tests := []struct {
 		name string
-		fc   *flowController
-		want *flowController
+		flow   *Flow
+		want *Flow
 	}{
 		{
 			name: "not login",
-			fc:   newFlowController("192.168.1.1", ""),
-			want: newFlowController("192.168.1.1", ""),
+			flow:   newFlow("192.168.1.1", ""),
+			want: newFlow("192.168.1.1", ""),
 		},
 		{
 			name: "logged in",
-			fc:   newFlowController("192.168.1.1", "test@uexky.com"),
-			want: newFlowController("192.168.1.1", "test@uexky.com"),
+			flow:   newFlow("192.168.1.1", "test@uexky.com"),
+			want: newFlow("192.168.1.1", "test@uexky.com"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conn.Do("FLUSHDB")
 			t.Log("cost normal")
-			tt.fc.costMut(ctx, 5)
+			tt.flow.costMut(ctx, 5)
 			for _, idx := range tt.want.mutIndex {
 				tt.want.limiters[idx].remaining -= 5
 			}
-			if diff := diffFlowController(tt.want, tt.fc); diff != "" {
+			if diff := diffFlow(tt.want, tt.flow); diff != "" {
 				t.Fatalf("tt.want %v, diff = %v", tt.want, diff)
 			}
 
 			t.Log("let rate limit exceeded")
-			if err := tt.fc.costMut(ctx, 100); err == nil {
+			if err := tt.flow.costMut(ctx, 100); err == nil {
 				t.Fatalf("must return err")
 			} else if err.Error() != errMsg {
 				t.Fatalf("err must be '%s', but get '%s'", errMsg, err.Error())
@@ -217,37 +218,38 @@ func TestFlowController_CostMut(t *testing.T) {
 			for _, idx := range tt.want.mutIndex {
 				tt.want.limiters[idx].remaining -= 100
 			}
-			if diff := diffFlowController(tt.want, tt.fc); diff != "" {
+			if diff := diffFlow(tt.want, tt.flow); diff != "" {
 				t.Fatalf("tt.want %v, diff = %v", tt.want, diff)
 			}
 		})
 	}
 }
 
-func TestFlowController_Remaining(t *testing.T) {
+func TestFlow_Remaining(t *testing.T) {
 	cfg := mgmt.Config.RateLimit
 	tests := []struct {
 		name string
-		fc   *flowController
+		flow   *Flow
 		want string
 	}{
 		{
 			name: "not log in",
-			fc:   newFlowController("192.168.1.1", ""),
+			flow:   newFlow("192.168.1.1", ""),
 			want: fmt.Sprintf("%v,%v", cfg.QueryLimit, cfg.MutLimit),
 		},
 		{
 			name: "logged in",
-			fc:   newFlowController("192.168.1.1", "test@uexky.com"),
+			flow:   newFlow("192.168.1.1", "test@uexky.com"),
 			want: fmt.Sprintf("%v,%v,%v,%v", cfg.QueryLimit, cfg.MutLimit,
 				cfg.QueryLimit, cfg.MutLimit),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.fc.remaining(); got != tt.want {
-				t.Errorf("FlowController.Remaining() = %v, want %v", got, tt.want)
+			if got := tt.flow.remaining(); got != tt.want {
+				t.Errorf("Flow.Remaining() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
+*/

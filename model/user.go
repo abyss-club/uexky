@@ -1,13 +1,12 @@
 package model
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
@@ -21,8 +20,6 @@ var aidGenerator = uuid64.Generator{Sections: []uuid64.Section{
 const (
 	nameLimit = 5
 	tagLimit  = 15
-	// ContextKeyUser for logged in user
-	ContextKeyUser = mw.ContextKey("user")
 )
 
 // User for uexky
@@ -38,10 +35,9 @@ type User struct {
 	} `bson:"read_noti_time"`
 }
 
-// GetUser by id (in context)
-func GetUser(ctx context.Context) (*User, error) {
-	// TODO: duplicate
-	user, err := requireSignIn(ctx)
+// GetSignedInUser in uexky
+func GetSignedInUser(u *uexky.Uexky) (*User, error) {
+	user, err := u.Auth.(*AuthInfo).GetUser()
 	if err != nil {
 		return nil, err
 	}
@@ -49,11 +45,11 @@ func GetUser(ctx context.Context) (*User, error) {
 }
 
 // GetUserByEmail ...
-func GetUserByEmail(ctx context.Context, email string) (*User, error) {
-	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+func GetUserByEmail(u *uexky.Uexky, email string) (*User, error) {
+	if err := u.Flow.CostQuery(1); err != nil {
 		return nil, err
 	}
-	c := mw.GetMongo(ctx).C(colleUser)
+	c := u.Mongo.C(colleUser)
 	c.EnsureIndexKey("email")
 
 	query := c.Find(bson.M{"email": email})
@@ -80,11 +76,11 @@ func GetUserByEmail(ctx context.Context, email string) (*User, error) {
 	return user, nil
 }
 
-func isNameUsed(ctx context.Context, name string) (bool, error) {
-	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+func isNameUsed(u *uexky.Uexky, name string) (bool, error) {
+	if err := u.Flow.CostQuery(1); err != nil {
 		return false, err
 	}
-	c := mw.GetMongo(ctx).C(colleUser)
+	c := u.Mongo.C(colleUser)
 	c.EnsureIndexKey("name")
 
 	count, err := c.Find(bson.M{"name": name}).Count()
@@ -92,7 +88,7 @@ func isNameUsed(ctx context.Context, name string) (bool, error) {
 }
 
 // SetName ...
-func (a *User) SetName(ctx context.Context, name string) error {
+func (a *User) SetName(u *uexky.Uexky, name string) error {
 	if a.Name != "" {
 		return fmt.Errorf("You already have name '%v'", a.Name)
 	}
@@ -102,7 +98,7 @@ func (a *User) SetName(ctx context.Context, name string) error {
 		return errors.New("This name is already in use")
 	}
 
-	c := mw.GetMongo(ctx).C(colleUser)
+	c := u.Mongo.C(colleUser)
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
 		"$set": bson.M{"name": name},
 	}); err != nil {
@@ -113,7 +109,7 @@ func (a *User) SetName(ctx context.Context, name string) error {
 }
 
 // SyncTags ...
-func (a *User) SyncTags(ctx context.Context, tags []string) error {
+func (a *User) SyncTags(u *uexky.Uexky, tags []string) error {
 	tagSet := map[string]struct{}{}
 	tagList := []string{}
 	for _, tag := range tags {
@@ -126,7 +122,7 @@ func (a *User) SyncTags(ctx context.Context, tags []string) error {
 		tagList = tagList[:tagLimit]
 	}
 
-	c := mw.GetMongo(ctx).C(colleUser)
+	c := u.Mongo.C(colleUser)
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{
 		"$set": bson.M{"tags": tagList},
 	}); err != nil {
@@ -137,8 +133,8 @@ func (a *User) SyncTags(ctx context.Context, tags []string) error {
 }
 
 // AddSubbedTags ...
-func (a *User) AddSubbedTags(ctx context.Context, tags []string) error {
-	c := mw.GetMongo(ctx).C(colleUser)
+func (a *User) AddSubbedTags(u *uexky.Uexky, tags []string) error {
+	c := u.Mongo.C(colleUser)
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{"$addToSet": bson.M{
 		"tags": bson.M{"$each": tags},
 	}}); err != nil {
@@ -153,8 +149,8 @@ func (a *User) AddSubbedTags(ctx context.Context, tags []string) error {
 }
 
 // DelSubbedTags ...
-func (a *User) DelSubbedTags(ctx context.Context, tags []string) error {
-	c := mw.GetMongo(ctx).C(colleUser)
+func (a *User) DelSubbedTags(u *uexky.Uexky, tags []string) error {
+	c := u.Mongo.C(colleUser)
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{"$pull": bson.M{
 		"tags": bson.M{"$in": tags},
 	}}); err != nil {
@@ -176,8 +172,8 @@ type userAID struct {
 }
 
 // AnonymousID ...
-func (a *User) AnonymousID(ctx context.Context, threadID string, new bool) (string, error) {
-	c := mw.GetMongo(ctx).C(colleAID)
+func (a *User) AnonymousID(u *uexky.Uexky, threadID string, new bool) (string, error) {
+	c := u.Mongo.C(colleAID)
 	c.EnsureIndexKey("thread_id", "user_id")
 
 	newAID := func() (string, error) {
@@ -226,8 +222,8 @@ func (a *User) getReadNotiTime(t NotiType) time.Time {
 	}
 }
 
-func (a *User) setReadNotiTime(ctx context.Context, t NotiType, time time.Time) error {
-	c := mw.GetMongo(ctx).C(colleUser)
+func (a *User) setReadNotiTime(u *uexky.Uexky, t NotiType, time time.Time) error {
+	c := u.Mongo.C(colleUser)
 	if err := c.Update(bson.M{"_id": a.ID}, bson.M{"$set": bson.M{
 		fmt.Sprintf("read_noti_time.%v", t): time,
 	}}); err != nil {
@@ -245,12 +241,4 @@ func (a *User) setReadNotiTime(ctx context.Context, t NotiType, time time.Time) 
 		panic("Invalidate Notification Type")
 	}
 	return nil
-}
-
-func requireSignIn(ctx context.Context) (*User, error) {
-	email, ok := ctx.Value(mw.ContextKeyEmail).(string)
-	if !ok {
-		return nil, fmt.Errorf("Forbidden, no access token")
-	}
-	return GetUserByEmail(ctx, email)
 }

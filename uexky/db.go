@@ -1,12 +1,9 @@
-package mw
+package uexky
 
 import (
-	"context"
 	"log"
-	"net/http"
 
 	"github.com/globalsign/mgo"
-	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
 )
@@ -43,24 +40,4 @@ func (m *Mongo) DB() *mgo.Database {
 // C return collection
 func (m *Mongo) C(name string) *mgo.Collection {
 	return m.session.DB(mgmt.Config.Mongo.DB).C(name)
-}
-
-// WithMongo set mongodb session to context
-func WithMongo(handle httprouter.Handle) httprouter.Handle {
-	mongo := ConnectMongodb()
-	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
-		m := mongo.Copy()
-		defer m.Close()
-		req = reqWithValue(req, ContextKeyMongo, m)
-		handle(w, req, p)
-	}
-}
-
-// GetMongo from contenxt
-func GetMongo(ctx context.Context) *Mongo {
-	m, ok := ctx.Value(ContextKeyMongo).(*Mongo)
-	if !ok {
-		log.Fatal("Can't find mongodb in context")
-	}
-	return m
 }

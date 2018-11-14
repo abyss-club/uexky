@@ -1,13 +1,12 @@
 package model
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // NotiType ...
@@ -87,19 +86,19 @@ func (ns *Notification) checkIfRead(user *User, t NotiType) {
 }
 
 // GetUnreadNotificationCount ...
-func GetUnreadNotificationCount(ctx context.Context, t NotiType) (int, error) {
-	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+func GetUnreadNotificationCount(u *uexky.Uexky, t NotiType) (int, error) {
+	if err := u.Flow.CostQuery(1); err != nil {
 		return 0, err
 	}
 
 	if !allNotiTypes[t] {
 		return 0, errors.Errorf("Invalidate notification type: %v", t)
 	}
-	user, err := requireSignIn(ctx)
+	user, err := u.Auth.GetUser()
 	if err != nil {
 		return 0, err
 	}
-	c := mw.GetMongo(ctx).C(colleNotification)
+	c := u.Mongo.C(colleNotification)
 	c.EnsureIndexKey("send_to", "type", "release_time")
 	c.EnsureIndexKey("send_to_group", "type", "release_time")
 	query := bson.M{
@@ -119,12 +118,12 @@ func GetUnreadNotificationCount(ctx context.Context, t NotiType) (int, error) {
 
 // GetNotification ...
 func GetNotification(
-	ctx context.Context, t NotiType, sq *SliceQuery,
+	u *uexky.Uexky, t NotiType, sq *SliceQuery,
 ) ([]*Notification, *SliceInfo, error) {
 	if !allNotiTypes[t] {
 		return nil, nil, errors.Errorf("Invalidate notification type: %v", t)
 	}
-	user, err := requireSignIn(ctx)
+	user, err := u.Auth.GetUser()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -164,9 +163,9 @@ func GetNotification(
 
 // TriggerNotifForPost ...
 func TriggerNotifForPost(
-	ctx context.Context, thread *Thread, post *Post, quotes []*Post,
+	u *uexky.Uexky, thread *Thread, post *Post, quotes []*Post,
 ) error {
-	c := mw.GetMongo(ctx).C(colleNotification)
+	c := u.Mongo.C(colleNotification)
 	c.EnsureIndexKey("id")
 	id := fmt.Sprintf("replied:%v", thread.ID)
 	if post.UserID != thread.UserID {
@@ -212,8 +211,8 @@ func TriggerNotifForPost(
 }
 
 // SendSystemNotification Send a system notification
-func SendSystemNotification(ctx context.Context, title, content string) error {
-	c := mw.GetMongo(ctx).C(colleNotification)
+func SendSystemNotification(u *uexky.Uexky, title, content string) error {
+	c := u.Mongo.C(colleNotification)
 	now := time.Now()
 	noti := &Notification{
 		ID:          fmt.Sprintf("system:%v", now.Unix()),

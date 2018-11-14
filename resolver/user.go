@@ -5,13 +5,15 @@ import (
 
 	"gitlab.com/abyss.club/uexky/model"
 	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // queries:
 
 // Profile resolve query 'profile'
 func (r *Resolver) Profile(ctx context.Context) (*UserResolver, error) {
-	user, err := model.GetUser(ctx)
+	u := uexky.Pop(ctx)
+	user, err := model.GetSignedInUser(u)
 	if err != nil { // not login, return null user
 		return &UserResolver{&model.User{}}, nil
 	}
@@ -43,7 +45,8 @@ func (r *Resolver) Auth(
 func (r *Resolver) SetName(
 	ctx context.Context, args struct{ Name string },
 ) (*UserResolver, error) {
-	user, err := model.GetUser(ctx)
+	u := uexky.Pop(ctx)
+	user, err := model.GetSignedInUser(u)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +60,8 @@ func (r *Resolver) SetName(
 func (r *Resolver) SyncTags(
 	ctx context.Context, args struct{ Tags []*string },
 ) (*UserResolver, error) {
-	user, err := model.GetUser(ctx)
+	u := uexky.Pop(ctx)
+	user, err := model.GetSignedInUser(u)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +81,8 @@ func (r *Resolver) SyncTags(
 func (r *Resolver) AddSubbedTags(
 	ctx context.Context, args struct{ Tags []string },
 ) (*UserResolver, error) {
-	user, err := model.GetUser(ctx)
+	u := uexky.Pop(ctx)
+	user, err := model.GetSignedInUser(u)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +96,8 @@ func (r *Resolver) AddSubbedTags(
 func (r *Resolver) DelSubbedTags(
 	ctx context.Context, args struct{ Tags []string },
 ) (*UserResolver, error) {
-	user, err := model.GetUser(ctx)
+	u := uexky.Pop(ctx)
+	user, err := model.GetSignedInUser(u)
 	if err != nil {
 		return nil, err
 	}

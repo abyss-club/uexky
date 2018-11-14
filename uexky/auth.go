@@ -1,8 +1,6 @@
-package mw
+package uexky
 
 import (
-	"context"
-	"log"
 	"net/http"
 	"time"
 
@@ -42,9 +40,8 @@ func newTokenCookie(token string) *http.Cookie {
 //  |--- code --->|
 //  |<-- token ---|
 
-func authCode(ctx context.Context, code string) (string, error) {
-	rd := GetRedis(ctx)
-	email, err := redis.String(rd.Do("GET", code))
+func authCode(u *Uexky, code string) (string, error) {
+	email, err := redis.String(u.Redis.Do("GET", code))
 	if err == redis.ErrNil {
 		return "", errors.New("Invalid code")
 	} else if err != nil {
@@ -54,15 +51,14 @@ func authCode(ctx context.Context, code string) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "gen token")
 	}
-	if _, err := rd.Do("SET", token, email, "EX", tokenCookieAge); err != nil {
+	if _, err := u.Redis.Do("SET", token, email, "EX", tokenCookieAge); err != nil {
 		return "", errors.Wrap(err, "set token to redis")
 	}
 	return token, nil
 }
 
-func refreshToken(ctx context.Context, token string) error {
-	rd := GetRedis(ctx)
-	_, err := rd.Do("EXPIRE", token, tokenCookieAge)
+func refreshToken(u *Uexky, token string) error {
+	_, err := u.Redis.Do("EXPIRE", token, tokenCookieAge)
 	return err
 }
 
@@ -73,13 +69,14 @@ func AuthHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		httpError(w, http.StatusBadRequest, "缺乏必要信息")
 		return
 	}
-	token, err := authCode(req.Context(), code)
+	u := Pop(req.Context())
+	token, err := authCode(u, code)
 	if err != nil {
 		httpErrorf(w, http.StatusBadRequest, "验证信息错误，或已失效。 %v", err)
 		return
 	}
 
-	GetRedis(req.Context()).Do("DEL", code) // delete after use
+	u.Redis.Do("DEL", code) // delete after use
 	cookie := newTokenCookie(token)
 	http.SetCookie(w, cookie)
 	w.Header().Set("Location", mgmt.WebURLPrefix())
@@ -90,40 +87,12 @@ func AuthHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 // User         Uexky
 //  |--- token -->|
 
-func authToken(ctx context.Context, token string) (string, error) {
-	email, err := redis.String(GetRedis(ctx).Do("GET", token))
+func authToken(u *Uexky, token string) (string, error) {
+	email, err := redis.String(u.Redis.Do("GET", token))
 	if err == redis.ErrNil {
 		return "", nil
 	} else if err != nil {
 		return "", errors.Wrap(err, "Get token from redis")
 	}
 	return email, nil
-}
-
-// WithAuth ...
-func WithAuth(handle httprouter.Handle) httprouter.Handle {
-	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
-		tokenCookie, err := req.Cookie("token")
-		log.Printf("find token cookie %v", tokenCookie)
-		if err != nil { // err must be ErrNoCookie, non-login user, do nothing
-			handle(w, req, p)
-			return
-		}
-		// refresh expire
-		refreshToken(req.Context(), tokenCookie.Value)
-		cookie := newTokenCookie(tokenCookie.Value)
-		http.SetCookie(w, cookie)
-
-		email, err := authToken(req.Context(), tokenCookie.Value)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
-		}
-		if email != "" {
-			log.Printf("Logged user %s", email)
-			req = reqWithValue(req, ContextKeyEmail, email)
-		}
-
-		handle(w, req, p)
-	}
 }

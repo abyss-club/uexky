@@ -70,7 +70,7 @@ func addMockUser(ctx context.Context) {
 		},
 	}
 
-	c := mw.GetMongo(ctx).C(colleUser)
+	c := u.Mongo.C(colleUser)
 	for _, user := range users {
 		if err := c.Insert(user); err != nil {
 			log.Fatal(errors.Wrap(err, "gen mock users"))

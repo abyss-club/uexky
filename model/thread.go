@@ -7,7 +7,6 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/mw"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
@@ -100,10 +99,10 @@ func (ti *ThreadInput) ParseThead(ctx context.Context, user *User) (*Thread, err
 
 // NewThread init new thread and insert to db
 func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
-	if err := mw.FlowCostMut(ctx, mgmt.Config.RateLimit.Cost.PubThread); err != nil {
+	if err := u.Flow.CostMut(mgmt.Config.RateLimit.Cost.PubThread); err != nil {
 		return nil, err
 	}
-	user, err := requireSignIn(ctx)
+	user, err := u.Auth.GetUser()
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +112,7 @@ func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
 		return nil, err
 	}
 
-	c := mw.GetMongo(ctx).C(colleThread)
+	c := u.Mongo.C(colleThread)
 	if err := c.Insert(thread); err != nil {
 		return nil, err
 	}
@@ -154,7 +153,7 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		queryObj["sub_tags"] = bson.M{"$in": subTags}
 	}
 
-	c := mw.GetMongo(ctx).C(colleThread)
+	c := u.Mongo.C(colleThread)
 	c.EnsureIndexKey("main_tag")
 	c.EnsureIndexKey("sub_tags")
 	c.EnsureIndexKey("update_time")
@@ -177,10 +176,10 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 
 // FindThread by id
 func FindThread(ctx context.Context, ID string) (*Thread, error) {
-	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+	if err := u.Flow.CostQuery(1); err != nil {
 		return nil, err
 	}
-	c := mw.GetMongo(ctx).C(colleThread)
+	c := u.Mongo.C(colleThread)
 	c.EnsureIndexKey("id")
 
 	var th Thread
@@ -197,10 +196,10 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 }
 
 func isThreadExist(ctx context.Context, threadID string) (bool, error) {
-	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+	if err := u.Flow.CostQuery(1); err != nil {
 		return false, err
 	}
-	c := mw.GetMongo(ctx).C(colleThread)
+	c := u.Mongo.C(colleThread)
 	c.EnsureIndexKey("id")
 
 	count, err := c.Find(bson.M{"id": threadID}).Count()
@@ -212,7 +211,7 @@ func isThreadExist(ctx context.Context, threadID string) (bool, error) {
 
 // GetReplies ...
 func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *SliceInfo, error) {
-	c := mw.GetMongo(ctx).C(collePost)
+	c := u.Mongo.C(collePost)
 	c.EnsureIndexKey("thread_id")
 
 	queryObj, err := sq.GenQueryByObjectID()
@@ -240,10 +239,10 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 
 // ReplyCount ...
 func (t *Thread) ReplyCount(ctx context.Context) (int, error) {
-	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+	if err := u.Flow.CostQuery(1); err != nil {
 		return 0, err
 	}
-	c := mw.GetMongo(ctx).C(collePost)
+	c := u.Mongo.C(collePost)
 	c.EnsureIndexKey("thread_id")
 
 	return c.Find(bson.M{"thread_id": t.ID}).Count()

@@ -1,20 +1,9 @@
-package mw
+package uexky
 
 import (
 	"context"
 	"fmt"
 	"net/http"
-)
-
-// ContextKey ...
-type ContextKey string
-
-// ContextKeys
-const (
-	ContextKeyEmail       = ContextKey("loggedIn")
-	ContextKeyMongo       = ContextKey("mongo")
-	ContextKeyRedis       = ContextKey("redis")
-	ContextKeyFlowControl = ContextKey("flow-control")
 )
 
 func httpError(w http.ResponseWriter, statusCode int, a ...interface{}) {

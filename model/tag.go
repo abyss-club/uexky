@@ -1,7 +1,6 @@
 package model
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"time"
@@ -10,7 +9,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // Tag ...
@@ -32,7 +31,7 @@ type TagTreeNode struct {
 	SubTags []string `json:"sub_tags"`
 }
 
-const tagTreeCacheKey = "mw:tagtree"
+const tagTreeCacheKey = "cache:tagtree"
 
 func isMainTag(tag string) bool {
 	for _, mt := range mgmt.Config.MainTags {
@@ -44,8 +43,8 @@ func isMainTag(tag string) bool {
 }
 
 // UpsertTags after insert thread...
-func UpsertTags(ctx context.Context, mainTag string, tagStrings []string) error {
-	c := mw.GetMongo(ctx).C(colleTag)
+func UpsertTags(u *uexky.Uexky, mainTag string, tagStrings []string) error {
+	c := u.Mongo.C(colleTag)
 	c.EnsureIndex(mgo.Index{
 		Key:        []string{"name"},
 		Unique:     true,
@@ -69,11 +68,11 @@ func UpsertTags(ctx context.Context, mainTag string, tagStrings []string) error 
 }
 
 // GetTagTree ...
-func GetTagTree(ctx context.Context, query string) (*TagTree, error) {
+func GetTagTree(u *uexky.Uexky, query string) (*TagTree, error) {
 	// try cache
 	key := fmt.Sprintf("%s:%s", tagTreeCacheKey, query)
 	tree := &TagTree{}
-	if ok, err := mw.GetCache(ctx, key, tree); err != nil {
+	if ok, err := uexky.GetCache(u, key, tree); err != nil {
 		return nil, err
 	} else if ok {
 		return tree, nil
@@ -90,18 +89,18 @@ func GetTagTree(ctx context.Context, query string) (*TagTree, error) {
 	}
 
 	// set cache
-	if err := mw.SetCache(ctx, key, tree, 600); err != nil {
+	if err := uexky.SetCache(u, key, tree, 600); err != nil {
 		return nil, err
 	}
 	return tree, nil
 }
 
-func getNewestSubTags(ctx context.Context, mainTag string, query string) ([]string, error) {
+func getNewestSubTags(u *uexky.Uexky, mainTag string, query string) ([]string, error) {
 	queryCount := 10
-	if err := mw.FlowCostQuery(ctx, queryCount); err != nil {
+	if err := u.Flow.CostQuery(queryCount); err != nil {
 		return nil, nil
 	}
-	c := mw.GetMongo(ctx).C(colleTag)
+	c := u.Mongo.C(colleTag)
 	c.EnsureIndexKey("main_tags")
 	c.EnsureIndexKey("-updated_time", "-_id")
 

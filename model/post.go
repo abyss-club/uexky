@@ -8,7 +8,7 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 const quoteLimit = 3
@@ -36,7 +36,7 @@ type PostInput struct {
 }
 
 // ParsePost ...
-func (pi *PostInput) ParsePost(ctx context.Context, user *User) (
+func (pi *PostInput) ParsePost(u *uexky.Uexky, user *User) (
 	*Post, *Thread, []*Post, error,
 ) {
 	if pi.Content == "" {
@@ -95,11 +95,11 @@ func (pi *PostInput) ParsePost(ctx context.Context, user *User) (
 }
 
 // NewPost ...
-func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
-	if err := mw.FlowCostMut(ctx, mgmt.Config.RateLimit.Cost.PubPost); err != nil {
+func NewPost(u *uexky.Uexky, input *PostInput) (*Post, error) {
+	if err := u.Flow.CostMut(mgmt.Config.RateLimit.Cost.PubPost); err != nil {
 		return nil, err
 	}
-	user, err := requireSignIn(ctx)
+	user, err := u.Auth.GetUser()
 	if err != nil {
 		return nil, errors.Wrap(err, "find sign info")
 	}
@@ -109,11 +109,10 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 		return nil, err
 	}
 
-	m := mw.GetMongo(ctx)
-	if err := m.C(collePost).Insert(post); err != nil {
+	if err := u.Mongo.C(collePost).Insert(post); err != nil {
 		return nil, errors.Wrap(err, "insert post")
 	}
-	if err := m.C(colleThread).Update(
+	if err := u.Mongo.C(colleThread).Update(
 		bson.M{"id": post.ThreadID},
 		bson.M{"$set": bson.M{"update_time": post.CreateTime}},
 	); err != nil {
@@ -127,11 +126,11 @@ func NewPost(ctx context.Context, input *PostInput) (*Post, error) {
 }
 
 // FindPost ...
-func FindPost(ctx context.Context, ID string) (*Post, error) {
-	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+func FindPost(u *uexky.Uexky, ID string) (*Post, error) {
+	if err := u.Flow.CostQuery(1); err != nil {
 		return nil, err
 	}
-	c := mw.GetMongo(ctx).C(collePost)
+	c := u.Mongo.C(collePost)
 	c.EnsureIndexKey("id")
 	query := c.Find(bson.M{"id": ID})
 	if count, err := query.Count(); err != nil {
@@ -161,19 +160,19 @@ func (p *Post) QuotePosts(ctx context.Context) ([]*Post, error) {
 
 // QuoteCount ...
 func (p *Post) QuoteCount(ctx context.Context) (int, error) {
-	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+	if err := u.Flow.CostQuery(1); err != nil {
 		return 0, nil
 	}
-	c := mw.GetMongo(ctx).C(collePost)
+	c := u.Mongo.C(collePost)
 	c.EnsureIndexKey("quotes")
 	return c.Find(bson.M{"quotes": p.ID}).Count()
 }
 
-func isPostExist(ctx context.Context, postID string) (bool, error) {
-	if err := mw.FlowCostQuery(ctx, 1); err != nil {
+func isPostExist(u *uexky.Uexky, postID string) (bool, error) {
+	if err := u.Flow.CostQuery(1); err != nil {
 		return false, nil
 	}
-	c := mw.GetMongo(ctx).C(collePost)
+	c := u.Mongo.C(collePost)
 
 	if cnt, err := c.Find(bson.M{"id": postID}).Count(); err != nil {
 		return false, err
