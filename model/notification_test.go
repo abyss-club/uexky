@@ -40,7 +40,6 @@ func TestTriggerNotifForPost(t *testing.T) {
 	}
 
 	// check unread count
-	mu[1] = ctxWithUser(receiver)
 	if c, err := GetUnreadNotificationCount(mu[1], NotiTypeSystem); err != nil {
 		t.Fatalf("GetUnreadNotificationCount(System) error = %v", err)
 	} else if c != 0 {

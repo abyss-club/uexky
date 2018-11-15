@@ -1,8 +1,6 @@
 package uexky
 
-/*
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -11,10 +9,33 @@ import (
 )
 
 func diffFlow(l, r *Flow) string {
-	return cmp.Diff(l, r, cmp.AllowUnexported(Flow{}, limiter{}))
+	if l.u != r.u {
+		return "uexky is not same"
+	}
+	if l.ip != r.ip {
+		return fmt.Sprintf("ip: -%s\nip: +%s\n", l.ip, r.ip)
+	}
+	if l.email != r.email {
+		return fmt.Sprintf("email: -%s\nemail: +%s\n", l.email, r.email)
+	}
+	if diff := cmp.Diff(l.limiters, r.limiters, cmp.AllowUnexported(limiter{})); diff != "" {
+		return fmt.Sprintf("limiters' diff: %s", diff)
+	}
+	if diff := cmp.Diff(l.queryIndex, r.queryIndex); diff != "" {
+		return fmt.Sprintf("queryIndex' diff: %s", diff)
+	}
+	if diff := cmp.Diff(l.mutIndex, r.mutIndex); diff != "" {
+		return fmt.Sprintf("mutIndex' diff: %s", diff)
+	}
+	return ""
 }
 
 func TestNewFlow(t *testing.T) {
+	mgmt.LoadConfig("")
+	mgmt.ReplaceConfigByEnv()
+	pool := InitPool()
+	u := pool.NewUexky()
+
 	type args struct {
 		ip    string
 		email string
@@ -32,6 +53,7 @@ func TestNewFlow(t *testing.T) {
 				email: "",
 			},
 			want: &Flow{
+				u:     u,
 				ip:    "192.168.1.1",
 				email: "",
 				limiters: []*limiter{
@@ -63,6 +85,7 @@ func TestNewFlow(t *testing.T) {
 				email: "test@uexky.com",
 			},
 			want: &Flow{
+				u:     u,
 				ip:    "192.168.1.1",
 				email: "test@uexky.com",
 				limiters: []*limiter{
@@ -106,9 +129,9 @@ func TestNewFlow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newFlow(tt.args.ip, tt.args.email)
+			got := NewUexkyFlow(u, tt.args.ip, tt.args.email)
 			if diff := diffFlow(got, tt.want); diff != "" {
-				t.Errorf("NewFlow() want %v, diff = %s", tt.want, diff)
+				t.Errorf("NewUexkyFlow() want %v, diff = %s", tt.want, diff)
 			}
 		})
 	}
@@ -117,30 +140,31 @@ func TestNewFlow(t *testing.T) {
 func TestFlow_CostQuery(t *testing.T) {
 	mgmt.LoadConfig("")
 	mgmt.ReplaceConfigByEnv()
-	conn := RedisPool.Get()
+	pool := InitPool()
+	u := pool.NewUexky()
 	errMsg := "rate limit exceeded"
-	ctx := context.WithValue(context.Background(), ContextKeyRedis, conn)
+
 	tests := []struct {
 		name string
-		flow   *Flow
+		flow *Flow
 		want *Flow
 	}{
 		{
 			name: "not login",
-			flow:   newFlow("192.168.1.1", ""),
-			want: newFlow("192.168.1.1", ""),
+			flow: NewUexkyFlow(u, "192.168.1.1", ""),
+			want: NewUexkyFlow(u, "192.168.1.1", ""),
 		},
 		{
 			name: "logged in",
-			flow:   newFlow("192.168.1.1", "test@uexky.com"),
-			want: newFlow("192.168.1.1", "test@uexky.com"),
+			flow: NewUexkyFlow(u, "192.168.1.1", "test@uexky.com"),
+			want: NewUexkyFlow(u, "192.168.1.1", "test@uexky.com"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			conn.Do("FLUSHDB")
+			u.Redis.Do("FLUSHDB")
 			t.Log("cost small query")
-			tt.flow.costQuery(ctx, 5)
+			tt.flow.CostQuery(5)
 			for _, idx := range tt.want.queryIndex {
 				tt.want.limiters[idx].count = 5
 			}
@@ -149,7 +173,7 @@ func TestFlow_CostQuery(t *testing.T) {
 			}
 
 			t.Log("cost big query")
-			tt.flow.costQuery(ctx, 15)
+			tt.flow.CostQuery(15)
 			for _, idx := range tt.want.queryIndex {
 				tt.want.limiters[idx].count = 0
 				tt.want.limiters[idx].remaining -= 2
@@ -159,7 +183,7 @@ func TestFlow_CostQuery(t *testing.T) {
 			}
 
 			t.Log("let rate limit exceeded")
-			if err := tt.flow.costQuery(ctx, 3000); err == nil {
+			if err := tt.flow.CostQuery(3000); err == nil {
 				t.Fatalf("must return err")
 			} else if err.Error() != errMsg {
 				t.Fatalf("err must be '%s', but get '%s'", errMsg, err.Error())
@@ -178,30 +202,31 @@ func TestFlow_CostQuery(t *testing.T) {
 func TestFlow_CostMut(t *testing.T) {
 	mgmt.LoadConfig("")
 	mgmt.ReplaceConfigByEnv()
-	conn := RedisPool.Get()
+	pool := InitPool()
+	u := pool.NewUexky()
 	errMsg := "rate limit exceeded"
-	ctx := context.WithValue(context.Background(), ContextKeyRedis, conn)
+
 	tests := []struct {
 		name string
-		flow   *Flow
+		flow *Flow
 		want *Flow
 	}{
 		{
 			name: "not login",
-			flow:   newFlow("192.168.1.1", ""),
-			want: newFlow("192.168.1.1", ""),
+			flow: NewUexkyFlow(u, "192.168.1.1", ""),
+			want: NewUexkyFlow(u, "192.168.1.1", ""),
 		},
 		{
 			name: "logged in",
-			flow:   newFlow("192.168.1.1", "test@uexky.com"),
-			want: newFlow("192.168.1.1", "test@uexky.com"),
+			flow: NewUexkyFlow(u, "192.168.1.1", "test@uexky.com"),
+			want: NewUexkyFlow(u, "192.168.1.1", "test@uexky.com"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			conn.Do("FLUSHDB")
+			u.Redis.Do("FLUSHDB")
 			t.Log("cost normal")
-			tt.flow.costMut(ctx, 5)
+			tt.flow.CostMut(5)
 			for _, idx := range tt.want.mutIndex {
 				tt.want.limiters[idx].remaining -= 5
 			}
@@ -210,7 +235,7 @@ func TestFlow_CostMut(t *testing.T) {
 			}
 
 			t.Log("let rate limit exceeded")
-			if err := tt.flow.costMut(ctx, 100); err == nil {
+			if err := tt.flow.CostMut(100); err == nil {
 				t.Fatalf("must return err")
 			} else if err.Error() != errMsg {
 				t.Fatalf("err must be '%s', but get '%s'", errMsg, err.Error())
@@ -226,20 +251,24 @@ func TestFlow_CostMut(t *testing.T) {
 }
 
 func TestFlow_Remaining(t *testing.T) {
+	mgmt.LoadConfig("")
+	mgmt.ReplaceConfigByEnv()
+	pool := InitPool()
+	u := pool.NewUexky()
 	cfg := mgmt.Config.RateLimit
 	tests := []struct {
 		name string
-		flow   *Flow
+		flow *Flow
 		want string
 	}{
 		{
 			name: "not log in",
-			flow:   newFlow("192.168.1.1", ""),
+			flow: NewUexkyFlow(u, "192.168.1.1", ""),
 			want: fmt.Sprintf("%v,%v", cfg.QueryLimit, cfg.MutLimit),
 		},
 		{
 			name: "logged in",
-			flow:   newFlow("192.168.1.1", "test@uexky.com"),
+			flow: NewUexkyFlow(u, "192.168.1.1", "test@uexky.com"),
 			want: fmt.Sprintf("%v,%v,%v,%v", cfg.QueryLimit, cfg.MutLimit,
 				cfg.QueryLimit, cfg.MutLimit),
 		},
@@ -252,4 +281,3 @@ func TestFlow_Remaining(t *testing.T) {
 		})
 	}
 }
-*/

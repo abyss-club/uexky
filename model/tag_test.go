@@ -8,7 +8,6 @@ import (
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/mw"
 )
 
 func Test_isMainTag(t *testing.T) {
@@ -30,10 +29,10 @@ func Test_isMainTag(t *testing.T) {
 }
 
 func TestUpsertTags(t *testing.T) {
-	if err := UpsertTags(testCtx, "MainB", []string{"SubA", "SubB"}); err != nil {
+	if err := UpsertTags(mu[0], "MainB", []string{"SubA", "SubB"}); err != nil {
 		t.Fatalf("UpsertTags() error = %v", err)
 	}
-	c := mw.GetMongo(testCtx).C(colleTag)
+	c := mu[0].Mongo.C(colleTag)
 	var tags []*Tag
 	if err := c.Find(bson.M{"main_tags": "MainB"}).All(&tags); err != nil {
 		t.Fatalf("UpsertTags(), find tag error = %v", err)
@@ -49,7 +48,6 @@ func TestUpsertTags(t *testing.T) {
 
 func TestGetTagTree(t *testing.T) {
 	log.Println("start TestGetTagTree()")
-	ctx := ctxWithUser(mockUsers[2])
 	subTagsList := [][]string{
 		[]string{"Sub0", "Sub1"},
 		[]string{"Sub2"},
@@ -63,7 +61,7 @@ func TestGetTagTree(t *testing.T) {
 	}
 	t.Log("insert threads")
 	for _, subTags := range subTagsList {
-		if _, err := NewThread(ctx, &ThreadInput{
+		if _, err := NewThread(mu[2], &ThreadInput{
 			Anonymous: true,
 			Content:   "content",
 			MainTag:   mgmt.Config.MainTags[2],
@@ -87,7 +85,7 @@ func TestGetTagTree(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tree, err := GetTagTree(ctx, tt.query)
+			tree, err := GetTagTree(mu[2], tt.query)
 			if err != nil {
 				t.Fatal(errors.Wrap(err, "GetTagTree()"))
 			}

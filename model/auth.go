@@ -17,12 +17,14 @@ type AuthInfo struct {
 	user   *User
 }
 
-// NewAuthInfo ...
-func NewAuthInfo(uexky *uexky.Uexky, email string) *AuthInfo {
+// NewUexkyAuth make a new AuthInfo and add to Uexky
+func NewUexkyAuth(uexky *uexky.Uexky, email string) *AuthInfo {
 	if email != "" {
 		log.Printf("Logged user %s", email)
 	}
-	return &AuthInfo{uexky: uexky, email: email}
+	ai := &AuthInfo{uexky: uexky, email: email}
+	uexky.Auth = ai
+	return ai
 }
 
 // IsSignedIn ...

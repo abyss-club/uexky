@@ -19,7 +19,7 @@ import (
 func withUexky(handle httprouter.Handle) httprouter.Handle {
 	pool := uexky.InitPool()
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
-		ctx, done := pool.Push(req.Context(), nil, nil)
+		ctx, done := pool.Push(req.Context())
 		defer done()
 		req = req.WithContext(ctx)
 		handle(w, req, p)
@@ -53,8 +53,8 @@ func withAuthAndFlow(handle httprouter.Handle) httprouter.Handle {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
-		u.Auth = model.NewAuthInfo(u, email)
-		u.Flow = uexky.NewFlow(u, ip, email)
+		model.NewUexkyAuth(u, email)
+		uexky.NewUexkyFlow(u, ip, email)
 
 		handle(w, req, p)
 	}

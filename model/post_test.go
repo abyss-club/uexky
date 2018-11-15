@@ -10,8 +10,7 @@ import (
 
 func TestPost(t *testing.T) {
 	user := mockUsers[0]
-	ctx := ctxWithUser(user)
-	thread, err := NewThread(ctx, &ThreadInput{
+	thread, err := NewThread(mu[0], &ThreadInput{
 		Content: "thread!", MainTag: mgmt.Config.MainTags[0], Anonymous: true,
 	})
 	if err != nil {
@@ -24,7 +23,7 @@ func TestPost(t *testing.T) {
 		Anonymous: false,
 		Content:   "post1",
 	}
-	post1, err := NewPost(ctx, input1)
+	post1, err := NewPost(mu[0], input1)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create post1"))
 	}
@@ -41,7 +40,7 @@ func TestPost(t *testing.T) {
 		Anonymous: true,
 		Content:   "post2",
 	}
-	post2, err := NewPost(ctx, input2)
+	post2, err := NewPost(mu[0], input2)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create post2"))
 	}
@@ -62,7 +61,7 @@ func TestPost(t *testing.T) {
 		Content:   "post3",
 		Quotes:    &[]string{post1.ID, post2.ID},
 	}
-	post3, err := NewPost(ctx, input3)
+	post3, err := NewPost(mu[0], input3)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create post2"))
 	}
@@ -71,7 +70,7 @@ func TestPost(t *testing.T) {
 			"Post 3 quotes error: %v, want %v", post3.Quotes, input3.Quotes,
 		)
 	}
-	quotes, err := post3.QuotePosts(ctx)
+	quotes, err := post3.QuotePosts(mu[0])
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "find quote posts"))
 	}
@@ -83,7 +82,7 @@ func TestPost(t *testing.T) {
 	}
 
 	t.Log("Check quoted count of Post1")
-	c, err := post1.QuoteCount(ctx)
+	c, err := post1.QuoteCount(mu[0])
 	if err != nil {
 		t.Errorf("Post.CountOfQuoted() error = %v", err)
 	}
@@ -92,7 +91,7 @@ func TestPost(t *testing.T) {
 	}
 
 	t.Log("Find post")
-	post4, err := FindPost(ctx, post3.ID)
+	post4, err := FindPost(mu[0], post3.ID)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "find post"))
 	}
@@ -101,7 +100,7 @@ func TestPost(t *testing.T) {
 	}
 
 	t.Log("checkout thread update time")
-	nThread, err := FindThread(ctx, thread.ID)
+	nThread, err := FindThread(mu[0], thread.ID)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "find thread"))
 	}

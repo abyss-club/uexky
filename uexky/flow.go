@@ -2,6 +2,7 @@ package uexky
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/gomodule/redigo/redis"
@@ -9,10 +10,13 @@ import (
 	"gitlab.com/abyss.club/uexky/mgmt"
 )
 
-// NewFlow ...
-func NewFlow(u *Uexky, ip, email string) *Flow {
+// NewUexkyFlow make a new Flow, and add to Uexky
+func NewUexkyFlow(u *Uexky, ip, email string) *Flow {
 	flow := &Flow{u: u, ip: ip, email: email}
+	u.Flow = flow
+
 	cfg := &mgmt.Config.RateLimit
+	log.Printf("DEBUG!!! ratelimit cfg is %+v", cfg)
 	flow.limiters = []*limiter{
 		newLimiter(flow.ipKey(), cfg.QueryLimit, cfg.QueryResetTime, 10),
 		newLimiter(flow.ipMutKey(), cfg.MutLimit, cfg.MutResetTime, 1),
@@ -44,6 +48,7 @@ type Flow struct {
 
 // CostQuery ...
 func (flow *Flow) CostQuery(count int) error {
+	log.Printf("DEBUG!!! Flow getRemaining = %v", flow.remaining())
 	exceeded := false
 	for _, idx := range flow.queryIndex {
 		e, err := flow.limiters[idx].cost(flow.u, count)
@@ -60,6 +65,7 @@ func (flow *Flow) CostQuery(count int) error {
 
 // CostMut ...
 func (flow *Flow) CostMut(count int) error {
+	log.Printf("DEBUG!!! Flow getRemaining = %v", flow.remaining())
 	exceeded := false
 	for _, idx := range flow.mutIndex {
 		e, err := flow.limiters[idx].cost(flow.u, count)

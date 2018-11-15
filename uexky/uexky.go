@@ -23,20 +23,17 @@ func InitPool() *Pool {
 }
 
 // NewUexky Make a new Uexky
-func (p *Pool) NewUexky(auth Auth, flow *Flow) *Uexky {
-	return &Uexky{
+func (p *Pool) NewUexky() *Uexky {
+	u := &Uexky{
 		Mongo: p.mongoPool.Copy(),
 		Redis: p.redisPool.Get(),
-		Auth:  auth,
-		Flow:  flow,
 	}
+	return u
 }
 
 // Push an uexky object to context
-func (p *Pool) Push(
-	ctx context.Context, auth Auth, flow *Flow,
-) (context.Context, func()) {
-	uexky := p.NewUexky(auth, flow)
+func (p *Pool) Push(ctx context.Context) (context.Context, func()) {
+	uexky := p.NewUexky()
 	return context.WithValue(ctx, contextKeyUexky, uexky), uexky.Close
 }
 

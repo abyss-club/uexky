@@ -1,18 +1,16 @@
 package model
 
 import (
-	"context"
 	"reflect"
 	"testing"
 
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
-var mockUsers []*User
-
-func TestGetUser(t *testing.T) {
+func TestGetSignedInUser(t *testing.T) {
 	type args struct {
-		ctx context.Context
+		u *uexky.Uexky
 	}
 	tests := []struct {
 		name    string
@@ -20,29 +18,29 @@ func TestGetUser(t *testing.T) {
 		want    *User
 		wantErr bool
 	}{
-		{"normal", args{ctxWithUser(mockUsers[0])}, mockUsers[0], false},
+		{"normal", args{mu[0]}, mockUsers[0], false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetUser(tt.args.ctx)
+			got, err := GetSignedInUser(tt.args.u)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetUser() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("GetSignedInUser() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got == nil {
 				return
 			}
 			if !reflect.DeepEqual(got.ID, tt.want.ID) {
-				t.Errorf("GetUser() ID = %+v, want %+v", got, tt.want)
+				t.Errorf("GetSignedInUser() ID = %+v, want %+v", got, tt.want)
 			}
 			if !reflect.DeepEqual(got.Email, tt.want.Email) {
-				t.Errorf("GetUser() Token = %+v, want %+v", got, tt.want)
+				t.Errorf("GetSignedInUser() Token = %+v, want %+v", got, tt.want)
 			}
 			if !reflect.DeepEqual(got.Name, tt.want.Name) {
-				t.Errorf("GetUser() Names = %+v, want %+v", got, tt.want)
+				t.Errorf("GetSignedInUser() Names = %+v, want %+v", got, tt.want)
 			}
 			if !reflect.DeepEqual(got.Tags, tt.want.Tags) {
-				t.Errorf("GetUser() Tags = %+v, want %+v", got, tt.want)
+				t.Errorf("GetSignedInUser() Tags = %+v, want %+v", got, tt.want)
 			}
 		})
 	}
@@ -50,7 +48,7 @@ func TestGetUser(t *testing.T) {
 
 func TestGetUserByEmail(t *testing.T) {
 	type args struct {
-		ctx   context.Context
+		u     *uexky.Uexky
 		email string
 	}
 	tests := []struct {
@@ -60,13 +58,13 @@ func TestGetUserByEmail(t *testing.T) {
 		wantErr bool
 	}{
 		{"exist user", args{
-			ctxWithUser(mockUsers[0]), mockUsers[0].Email,
+			mu[0], mockUsers[0].Email,
 		}, mockUsers[0].Email, false},
-		{"new user", args{testCtx, "3@mail.com"}, "3@mail.com", false},
+		{"new user", args{mu[0], "3@mail.com"}, "3@mail.com", false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetUserByEmail(tt.args.ctx, tt.args.email)
+			got, err := GetUserByEmail(tt.args.u, tt.args.email)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetUserByEmail() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -84,6 +82,7 @@ func TestUser_SetName(t *testing.T) {
 	mockUsers[2].Name = ""
 	type args struct {
 		user *User
+		u    *uexky.Uexky
 		name string
 	}
 	tests := []struct {
@@ -92,17 +91,16 @@ func TestUser_SetName(t *testing.T) {
 		wantErr  bool
 		wantName string
 	}{
-		{"has name", args{mockUsers[0], "test1"}, true, "test0"},
-		{"no name", args{mockUsers[1], "testX"}, false, "testX"},
-		{"same name", args{mockUsers[2], "testX"}, true, ""},
+		{"has name", args{mockUsers[0], mu[0], "test1"}, true, "test0"},
+		{"no name", args{mockUsers[1], mu[1], "testX"}, false, "testX"},
+		{"same name", args{mockUsers[2], mu[2], "testX"}, true, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := ctxWithUser(tt.args.user)
-			if err := tt.args.user.SetName(ctx, tt.args.name); (err != nil) != tt.wantErr {
+			if err := tt.args.user.SetName(tt.args.u, tt.args.name); (err != nil) != tt.wantErr {
 				t.Errorf("User.AddName() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			a, err := GetUser(ctx)
+			a, err := GetSignedInUser(tt.args.u)
 			if err != nil {
 				t.Error(errors.Wrap(err, "User.AddName() get user error"))
 			}
@@ -145,6 +143,7 @@ func cmpTags(lTags []string, rTags []string) bool {
 func TestUser_SyncTags(t *testing.T) {
 	type args struct {
 		user *User
+		u    *uexky.Uexky
 		tags []string
 	}
 	tests := []struct {
@@ -153,19 +152,18 @@ func TestUser_SyncTags(t *testing.T) {
 		wantErr bool
 		want    []string
 	}{
-		{"add tag", args{mockUsers[1], []string{"tag1"}}, false, []string{"tag1"}},
-		{"delete tag", args{mockUsers[1], []string{}}, false, []string{}},
-		{"add tag with repeated", args{mockUsers[1], []string{"tag1", "tag2", "tag1"}}, false, []string{
+		{"add tag", args{mockUsers[1], mu[1], []string{"tag1"}}, false, []string{"tag1"}},
+		{"delete tag", args{mockUsers[1], mu[1], []string{}}, false, []string{}},
+		{"add tag with repeated", args{mockUsers[1], mu[1], []string{"tag1", "tag2", "tag1"}}, false, []string{
 			"tag1", "tag2"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := ctxWithUser(tt.args.user)
-			if err := tt.args.user.SyncTags(ctx, tt.args.tags); (err != nil) != tt.wantErr {
+			u := tt.args.u
+			if err := tt.args.user.SyncTags(u, tt.args.tags); (err != nil) != tt.wantErr {
 				t.Errorf("User.SyncTags() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			ctx = ctxWithUser(tt.args.user)
-			a, err := GetUser(ctx)
+			a, err := GetSignedInUser(u)
 			if err != nil {
 				t.Error(errors.Wrap(err, "User.AddName() get user error"))
 			}
@@ -182,11 +180,10 @@ func TestUser_SyncTags(t *testing.T) {
 
 func TestUser_AddSubbedTags(t *testing.T) {
 	user := mockUsers[2]
-	ctx := ctxWithUser(user)
 
 	t.Log("reset tags subscribed")
 	{
-		if err := user.SyncTags(ctx, []string{"A", "B", "C"}); err != nil {
+		if err := user.SyncTags(mu[2], []string{"A", "B", "C"}); err != nil {
 			t.Fatalf("reset tags error: %v", err)
 		}
 	}
@@ -194,12 +191,12 @@ func TestUser_AddSubbedTags(t *testing.T) {
 	t.Log("test add tags")
 	{
 		want := []string{"A", "B", "C", "D", "E"}
-		if err := user.AddSubbedTags(ctx, []string{"B", "B", "D", "E"}); err != nil {
+		if err := user.AddSubbedTags(mu[2], []string{"B", "B", "D", "E"}); err != nil {
 			t.Fatalf("AddSubbedTags() error: %v", err)
 		}
-		u, err := GetUser(ctx)
+		u, err := GetSignedInUser(mu[2])
 		if err != nil {
-			t.Fatalf("GetUser() error: %v", err)
+			t.Fatalf("GetSignedInUser() error: %v", err)
 		}
 		if !cmpTags(u.Tags, user.Tags) || !cmpTags(u.Tags, want) {
 			t.Fatalf("AddSubbedTags() want %q, in memory = %q, in db = %q",
@@ -210,12 +207,12 @@ func TestUser_AddSubbedTags(t *testing.T) {
 	t.Log("test add tags")
 	{
 		want := []string{"A", "C"}
-		if err := user.DelSubbedTags(ctx, []string{"B", "B", "D", "E"}); err != nil {
+		if err := user.DelSubbedTags(mu[2], []string{"B", "B", "D", "E"}); err != nil {
 			t.Fatalf("AddSubbedTags() error: %v", err)
 		}
-		u, err := GetUser(ctx)
+		u, err := GetSignedInUser(mu[2])
 		if err != nil {
-			t.Fatalf("GetUser() error: %v", err)
+			t.Fatalf("GetSignedInUser() error: %v", err)
 		}
 		if !cmpTags(u.Tags, user.Tags) || !cmpTags(u.Tags, want) {
 			t.Fatalf("AddSubbedTags() want %q, in memory = %q, in db = %q",
@@ -243,7 +240,7 @@ func TestUser_AnonymousID(t *testing.T) {
 	last := ""
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.args.user.AnonymousID(testCtx, tt.args.threadID, tt.args.new)
+			got, err := tt.args.user.AnonymousID(mu[0], tt.args.threadID, tt.args.new)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("User.AnonymousID() error = %v, wantErr %v", err, tt.wantErr)
 				return

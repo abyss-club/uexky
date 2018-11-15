@@ -23,7 +23,7 @@ var mu []*uexky.Uexky // mock uexky
 
 func TestMain(m *testing.M) {
 	prepTestDB()
-	addMockUser(u)
+	addMockUser()
 	os.Exit(m.Run())
 }
 
@@ -32,6 +32,8 @@ func prepTestDB() {
 	mgmt.LoadConfig("")
 	mgmt.Config.Mongo.DB = testDB
 	mgmt.Config.MainTags = []string{"MainA", "MainB", "MainC"}
+	mgmt.Config.RateLimit.QueryLimit = 100000000
+	mgmt.Config.RateLimit.MutLimit = 100000000
 	mgmt.ReplaceConfigByEnv()
 
 	uexkyPool = uexky.InitPool()
@@ -43,7 +45,9 @@ func prepTestDB() {
 	}
 }
 
-func addMockUser(u *uexky.Uexky) {
+func addMockUser() {
+	uTemp := uexkyPool.NewUexky()
+	defer uTemp.Close()
 	log.Print("addMockUser!")
 	users := []*User{
 		&User{
@@ -66,18 +70,18 @@ func addMockUser(u *uexky.Uexky) {
 		},
 	}
 
-	c := u.Mongo.C(colleUser)
+	c := uTemp.Mongo.C(colleUser)
 	for _, user := range users {
 		if err := c.Insert(user); err != nil {
 			log.Fatal(errors.Wrap(err, "gen mock users"))
 		}
 	}
 	mockUsers = users
-	mu := []uexky.Uexky{}
+	mu = []*uexky.Uexky{}
 	for i, user := range users {
-		ai := NewAuthInfo(u, user.Email)
-		flow := NewFlow(u, fmt.Sprintf("127.0.0.%v", i), user.Email) // TODO: mock
-		u := uexkyPool.NewUexky(ai, flow)
+		u := uexkyPool.NewUexky()
+		NewUexkyAuth(u, user.Email)
+		uexky.NewUexkyFlow(u, fmt.Sprintf("127.0.0.%v", i), user.Email) // TODO: mock
 		mu = append(mu, u)
 	}
 }
