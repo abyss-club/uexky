@@ -5,6 +5,7 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"gitlab.com/abyss.club/uexky/model"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // queries:
@@ -16,6 +17,7 @@ func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
 }) (
 	*ThreadSliceResolver, error,
 ) {
+	u := uexky.Pop(ctx)
 	sq, err := args.Query.Parse(true)
 	if err != nil {
 		return nil, err
@@ -26,7 +28,7 @@ func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
 		tags = *(args.Tags)
 	}
 
-	threads, sliceInfo, err := model.GetThreadsByTags(ctx, tags, sq)
+	threads, sliceInfo, err := model.GetThreadsByTags(u, tags, sq)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +45,8 @@ func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
 func (r *Resolver) Thread(
 	ctx context.Context, args struct{ ID string },
 ) (*ThreadResolver, error) {
-	th, err := model.FindThread(ctx, args.ID)
+	u := uexky.Pop(ctx)
+	th, err := model.FindThread(u, args.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +65,8 @@ func (r *Resolver) PubThread(
 ) (
 	*ThreadResolver, error,
 ) {
-	thread, err := model.NewThread(ctx, args.Thread)
+	u := uexky.Pop(ctx)
+	thread, err := model.NewThread(u, args.Thread)
 	if err != nil {
 		return nil, err
 	}
@@ -144,12 +148,13 @@ func (tr *ThreadResolver) Replies(ctx context.Context, args struct {
 }) (
 	*PostSliceResolver, error,
 ) {
+	u := uexky.Pop(ctx)
 	sq, err := args.Query.Parse(false)
 	if err != nil {
 		return nil, err
 	}
 
-	posts, sliceInfo, err := tr.Thread.GetReplies(ctx, sq)
+	posts, sliceInfo, err := tr.Thread.GetReplies(u, sq)
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +169,7 @@ func (tr *ThreadResolver) Replies(ctx context.Context, args struct {
 
 // ReplyCount ...
 func (tr *ThreadResolver) ReplyCount(ctx context.Context) (int32, error) {
-	count, err := tr.Thread.ReplyCount(ctx)
+	u := uexky.Pop(ctx)
+	count, err := tr.Thread.ReplyCount(u)
 	return int32(count), err
 }

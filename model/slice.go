@@ -1,7 +1,6 @@
 package model
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"reflect"
@@ -10,7 +9,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // SliceInfo ...
@@ -72,17 +71,17 @@ func parseTimeCursor(s string) (time.Time, error) {
 
 // Find ...
 func (sq *SliceQuery) Find(
-	ctx context.Context, collection, field string,
+	u *uexky.Uexky, collection, field string,
 	queryObj bson.M, result interface{},
 ) error {
 	if sq.Limit <= 0 {
 		return errors.New("limit must greater than 0")
 	}
-	if err := mw.FlowCostQuery(ctx, sq.Limit); err != nil {
+	if err := u.Flow.CostQuery(sq.Limit); err != nil {
 		return err
 	}
 	log.Printf("slice do query '%+v'", queryObj)
-	query := mw.GetMongo(ctx).C(collection).Find(queryObj).Limit(sq.Limit)
+	query := u.Mongo.C(collection).Find(queryObj).Limit(sq.Limit)
 	if sq.Desc {
 		query = query.Sort(fmt.Sprintf("-%s", field))
 	} else {

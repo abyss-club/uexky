@@ -5,6 +5,7 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"gitlab.com/abyss.club/uexky/model"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // queries:
@@ -19,13 +20,14 @@ func (r *Resolver) Notification(ctx context.Context, args struct {
 	Type  string
 	Query *SliceQuery
 }) (*NotiSliceResolver, error) {
+	u := uexky.Pop(ctx)
 	sq, err := args.Query.Parse(true)
 	if err != nil {
 		return nil, err
 	}
 	notiType := model.NotiType(args.Type)
 
-	noti, sliceInfo, err := model.GetNotification(ctx, notiType, sq)
+	noti, sliceInfo, err := model.GetNotification(u, notiType, sq)
 	if err != nil {
 		return nil, err
 	}
@@ -39,19 +41,22 @@ type UnreadResolver struct{}
 
 // System ...
 func (ur *UnreadResolver) System(ctx context.Context) (int32, error) {
-	count, err := model.GetUnreadNotificationCount(ctx, model.NotiTypeSystem)
+	u := uexky.Pop(ctx)
+	count, err := model.GetUnreadNotificationCount(u, model.NotiTypeSystem)
 	return int32(count), err
 }
 
 // Replied ...
 func (ur *UnreadResolver) Replied(ctx context.Context) (int32, error) {
-	count, err := model.GetUnreadNotificationCount(ctx, model.NotiTypeReplied)
+	u := uexky.Pop(ctx)
+	count, err := model.GetUnreadNotificationCount(u, model.NotiTypeReplied)
 	return int32(count), err
 }
 
 // Quoted ...
 func (ur *UnreadResolver) Quoted(ctx context.Context) (int32, error) {
-	count, err := model.GetUnreadNotificationCount(ctx, model.NotiTypeQuoted)
+	u := uexky.Pop(ctx)
+	count, err := model.GetUnreadNotificationCount(u, model.NotiTypeQuoted)
 	return int32(count), err
 }
 
@@ -165,7 +170,8 @@ type RepliedNotiResolver struct {
 
 // Thread ...
 func (n *RepliedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error) {
-	thread, err := model.FindThread(ctx, n.noti.Replied.ThreadID)
+	u := uexky.Pop(ctx)
+	thread, err := model.FindThread(u, n.noti.Replied.ThreadID)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +190,8 @@ type QuotedNotiResolver struct {
 
 // Thread ...
 func (n *QuotedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error) {
-	thread, err := model.FindThread(ctx, n.noti.Quoted.ThreadID)
+	u := uexky.Pop(ctx)
+	thread, err := model.FindThread(u, n.noti.Quoted.ThreadID)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +200,8 @@ func (n *QuotedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error
 
 // Post ...
 func (n *QuotedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
-	post, err := model.FindPost(ctx, n.noti.Quoted.PostID)
+	u := uexky.Pop(ctx)
+	post, err := model.FindPost(u, n.noti.Quoted.PostID)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +210,8 @@ func (n *QuotedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
 
 // QuotedPost ...
 func (n *QuotedNotiResolver) QuotedPost(ctx context.Context) (*PostResolver, error) {
-	post, err := model.FindPost(ctx, n.noti.Quoted.QuotedPostID)
+	u := uexky.Pop(ctx)
+	post, err := model.FindPost(u, n.noti.Quoted.QuotedPostID)
 	if err != nil {
 		return nil, err
 	}
