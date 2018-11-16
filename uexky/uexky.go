@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/gomodule/redigo/redis"
 )
 
@@ -59,7 +58,7 @@ type Uexky struct {
 	Mongo *Mongo
 	Redis redis.Conn
 	Auth  Auth
-	Flow  *Flow
+	Flow  Flow
 }
 
 // Close ...
@@ -75,6 +74,5 @@ type Auth interface {
 	IsSignedIn() bool
 	RequireSignedIn() error
 	Email() string
-	ID() bson.ObjectId
 	CheckPriority(action string) bool
 }

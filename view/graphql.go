@@ -11,6 +11,7 @@ import (
 
 // GraphQLHandle ...
 func GraphQLHandle() httprouter.Handle {
+	resolver.Init()
 	schema := graphql.MustParseSchema(resolver.Schema, &resolver.Resolver{})
 	return func(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 		params := graphqlParams{}

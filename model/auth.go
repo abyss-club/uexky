@@ -45,11 +45,6 @@ func (ai *AuthInfo) Email() string {
 	return ai.email
 }
 
-// ID ...
-func (ai *AuthInfo) ID() bson.ObjectId {
-	return ai.userID
-}
-
 // CheckPriority ...
 func (ai *AuthInfo) CheckPriority(action string) bool {
 	return false

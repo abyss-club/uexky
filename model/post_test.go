@@ -5,13 +5,13 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 )
 
 func TestPost(t *testing.T) {
 	user := mockUsers[0]
 	thread, err := NewThread(mu[0], &ThreadInput{
-		Content: "thread!", MainTag: mgmt.Config.MainTags[0], Anonymous: true,
+		Content: "thread!", MainTag: config.Config.MainTags[0], Anonymous: true,
 	})
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "create thread"))

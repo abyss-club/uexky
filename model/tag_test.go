@@ -7,7 +7,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 )
 
 func Test_isMainTag(t *testing.T) {
@@ -64,7 +64,7 @@ func TestGetTagTree(t *testing.T) {
 		if _, err := NewThread(mu[2], &ThreadInput{
 			Anonymous: true,
 			Content:   "content",
-			MainTag:   mgmt.Config.MainTags[2],
+			MainTag:   config.Config.MainTags[2],
 			SubTags:   &subTags,
 		}); err != nil {
 			t.Fatal(errors.Wrap(err, "create thread"))
@@ -89,9 +89,9 @@ func TestGetTagTree(t *testing.T) {
 			if err != nil {
 				t.Fatal(errors.Wrap(err, "GetTagTree()"))
 			}
-			if len(tree.Nodes) != len(mgmt.Config.MainTags) {
+			if len(tree.Nodes) != len(config.Config.MainTags) {
 				t.Fatalf("GetTagTree() should have %v node, got %v",
-					len(mgmt.Config.MainTags), len(tree.Nodes))
+					len(config.Config.MainTags), len(tree.Nodes))
 			}
 			if !reflect.DeepEqual(tree.Nodes[2].SubTags, tt.wantTags) {
 				t.Fatalf("GetTagTree().Nodes[2] = %q, want: %q",

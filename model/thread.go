@@ -5,7 +5,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
@@ -99,7 +99,7 @@ func (ti *ThreadInput) ParseThead(u *uexky.Uexky, user *User) (*Thread, error) {
 
 // NewThread init new thread and insert to db
 func NewThread(u *uexky.Uexky, input *ThreadInput) (*Thread, error) {
-	if err := u.Flow.CostMut(mgmt.Config.RateLimit.Cost.PubThread); err != nil {
+	if err := u.Flow.CostMut(config.Config.RateLimit.Cost.PubThread); err != nil {
 		return nil, err
 	}
 	user, err := GetSignedInUser(u)

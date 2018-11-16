@@ -6,7 +6,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/uexky"
 )
 
@@ -95,7 +95,7 @@ func (pi *PostInput) ParsePost(u *uexky.Uexky, user *User) (
 
 // NewPost ...
 func NewPost(u *uexky.Uexky, input *PostInput) (*Post, error) {
-	if err := u.Flow.CostMut(mgmt.Config.RateLimit.Cost.PubPost); err != nil {
+	if err := u.Flow.CostMut(config.Config.RateLimit.Cost.PubPost); err != nil {
 		return nil, err
 	}
 	user, err := GetSignedInUser(u)

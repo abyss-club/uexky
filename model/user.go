@@ -87,6 +87,11 @@ func isNameUsed(u *uexky.Uexky, name string) (bool, error) {
 	return count != 0, err
 }
 
+// String ...
+func (a User) String() string {
+	return fmt.Sprintf("<User: %s>", a.Email)
+}
+
 // SetName ...
 func (a *User) SetName(u *uexky.Uexky, name string) error {
 	if a.Name != "" {

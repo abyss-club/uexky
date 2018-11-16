@@ -5,10 +5,10 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 )
 
-func diffFlow(l, r *Flow) string {
+func diffFlow(l, r *FlowImpl) string {
 	if l.u != r.u {
 		return "uexky is not same"
 	}
@@ -31,8 +31,8 @@ func diffFlow(l, r *Flow) string {
 }
 
 func TestNewFlow(t *testing.T) {
-	mgmt.LoadConfig("")
-	mgmt.ReplaceConfigByEnv()
+	config.LoadConfig("")
+	config.ReplaceConfigByEnv()
 	pool := InitPool()
 	u := pool.NewUexky()
 
@@ -40,11 +40,11 @@ func TestNewFlow(t *testing.T) {
 		ip    string
 		email string
 	}
-	cfg := mgmt.Config.RateLimit
+	cfg := config.Config.RateLimit
 	tests := []struct {
 		name string
 		args args
-		want *Flow
+		want *FlowImpl
 	}{
 		{
 			name: "not logged in",
@@ -52,7 +52,7 @@ func TestNewFlow(t *testing.T) {
 				ip:    "192.168.1.1",
 				email: "",
 			},
-			want: &Flow{
+			want: &FlowImpl{
 				u:     u,
 				ip:    "192.168.1.1",
 				email: "",
@@ -84,7 +84,7 @@ func TestNewFlow(t *testing.T) {
 				ip:    "192.168.1.1",
 				email: "test@uexky.com",
 			},
-			want: &Flow{
+			want: &FlowImpl{
 				u:     u,
 				ip:    "192.168.1.1",
 				email: "test@uexky.com",
@@ -138,16 +138,16 @@ func TestNewFlow(t *testing.T) {
 }
 
 func TestFlow_CostQuery(t *testing.T) {
-	mgmt.LoadConfig("")
-	mgmt.ReplaceConfigByEnv()
+	config.LoadConfig("")
+	config.ReplaceConfigByEnv()
 	pool := InitPool()
 	u := pool.NewUexky()
 	errMsg := "rate limit exceeded"
 
 	tests := []struct {
 		name string
-		flow *Flow
-		want *Flow
+		flow *FlowImpl
+		want *FlowImpl
 	}{
 		{
 			name: "not login",
@@ -200,16 +200,16 @@ func TestFlow_CostQuery(t *testing.T) {
 }
 
 func TestFlow_CostMut(t *testing.T) {
-	mgmt.LoadConfig("")
-	mgmt.ReplaceConfigByEnv()
+	config.LoadConfig("")
+	config.ReplaceConfigByEnv()
 	pool := InitPool()
 	u := pool.NewUexky()
 	errMsg := "rate limit exceeded"
 
 	tests := []struct {
 		name string
-		flow *Flow
-		want *Flow
+		flow *FlowImpl
+		want *FlowImpl
 	}{
 		{
 			name: "not login",
@@ -251,14 +251,14 @@ func TestFlow_CostMut(t *testing.T) {
 }
 
 func TestFlow_Remaining(t *testing.T) {
-	mgmt.LoadConfig("")
-	mgmt.ReplaceConfigByEnv()
+	config.LoadConfig("")
+	config.ReplaceConfigByEnv()
 	pool := InitPool()
 	u := pool.NewUexky()
-	cfg := mgmt.Config.RateLimit
+	cfg := config.Config.RateLimit
 	tests := []struct {
 		name string
-		flow *Flow
+		flow *FlowImpl
 		want string
 	}{
 		{
@@ -275,7 +275,7 @@ func TestFlow_Remaining(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.flow.remaining(); got != tt.want {
+			if got := tt.flow.Remaining(); got != tt.want {
 				t.Errorf("Flow.Remaining() = %v, want %v", got, tt.want)
 			}
 		})

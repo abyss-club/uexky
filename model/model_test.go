@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/uexky"
 )
 
@@ -29,12 +29,10 @@ func TestMain(m *testing.M) {
 
 // this file only have common test tools
 func prepTestDB() {
-	mgmt.LoadConfig("")
-	mgmt.Config.Mongo.DB = testDB
-	mgmt.Config.MainTags = []string{"MainA", "MainB", "MainC"}
-	mgmt.Config.RateLimit.QueryLimit = 100000000
-	mgmt.Config.RateLimit.MutLimit = 100000000
-	mgmt.ReplaceConfigByEnv()
+	config.LoadConfig("")
+	config.Config.Mongo.DB = testDB
+	config.Config.MainTags = []string{"MainA", "MainB", "MainC"}
+	config.ReplaceConfigByEnv()
 
 	uexkyPool = uexky.InitPool()
 	u := uexkyPool.NewUexky()
@@ -78,10 +76,10 @@ func addMockUser() {
 	}
 	mockUsers = users
 	mu = []*uexky.Uexky{}
-	for i, user := range users {
+	for _, user := range users {
 		u := uexkyPool.NewUexky()
 		NewUexkyAuth(u, user.Email)
-		uexky.NewUexkyFlow(u, fmt.Sprintf("127.0.0.%v", i), user.Email) // TODO: mock
+		uexky.NewMockFlow(u)
 		mu = append(mu, u)
 	}
 }

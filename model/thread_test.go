@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 )
 
 func TestNewThread(t *testing.T) {
@@ -20,18 +20,18 @@ func TestNewThread(t *testing.T) {
 		wantErr bool
 	}{
 		{"normal, signed, titled", &ThreadInput{
-			false, "thread1", mgmt.Config.MainTags[0],
+			false, "thread1", config.Config.MainTags[0],
 			&[]string{"tag1", "tag2"}, &titles[0],
 		}, true, false},
 		{"normal, anonymous, non-title", &ThreadInput{
-			true, "thread2", mgmt.Config.MainTags[0],
+			true, "thread2", config.Config.MainTags[0],
 			&[]string{"tag1", "tag2"}, nil,
 		}, true, false},
 		{"error, no-main-tag", &ThreadInput{
 			true, "thread3", "em..", nil, nil,
 		}, false, true},
 		{"error, multi-main-tag", &ThreadInput{
-			true, "thread3", mgmt.Config.MainTags[0], &[]string{mgmt.Config.MainTags[1]}, nil,
+			true, "thread3", config.Config.MainTags[0], &[]string{config.Config.MainTags[1]}, nil,
 		}, false, true},
 	}
 	for _, tt := range tests {
@@ -86,7 +86,7 @@ func TestGetThreadsByTags(t *testing.T) {
 		input := &ThreadInput{
 			Anonymous: true,
 			Content:   "content",
-			MainTag:   mgmt.Config.MainTags[0],
+			MainTag:   config.Config.MainTags[0],
 			SubTags:   &subTags,
 		}
 		thread, err := NewThread(mu[1], input)
@@ -176,7 +176,7 @@ func TestThread_GetReplies(t *testing.T) {
 	input := &ThreadInput{
 		Content:   "content",
 		Anonymous: true,
-		MainTag:   mgmt.Config.MainTags[0],
+		MainTag:   config.Config.MainTags[0],
 	}
 	thread, err := NewThread(mu[1], input)
 	if err != nil {

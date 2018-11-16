@@ -7,15 +7,22 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 )
 
+// Flow ...
+type Flow interface {
+	CostQuery(count int) error
+	CostMut(count int) error
+	Remaining() string
+}
+
 // NewUexkyFlow make a new Flow, and add to Uexky
-func NewUexkyFlow(u *Uexky, ip, email string) *Flow {
-	flow := &Flow{u: u, ip: ip, email: email}
+func NewUexkyFlow(u *Uexky, ip, email string) *FlowImpl {
+	flow := &FlowImpl{u: u, ip: ip, email: email}
 	u.Flow = flow
 
-	cfg := &mgmt.Config.RateLimit
+	cfg := &config.Config.RateLimit
 	log.Printf("DEBUG!!! ratelimit cfg is %+v", cfg)
 	flow.limiters = []*limiter{
 		newLimiter(flow.ipKey(), cfg.QueryLimit, cfg.QueryResetTime, 10),
@@ -36,8 +43,8 @@ func NewUexkyFlow(u *Uexky, ip, email string) *Flow {
 	return flow
 }
 
-// Flow manage tool
-type Flow struct {
+// FlowImpl manage tool
+type FlowImpl struct {
 	u          *Uexky
 	ip         string
 	email      string
@@ -47,8 +54,8 @@ type Flow struct {
 }
 
 // CostQuery ...
-func (flow *Flow) CostQuery(count int) error {
-	log.Printf("DEBUG!!! Flow getRemaining = %v", flow.remaining())
+func (flow *FlowImpl) CostQuery(count int) error {
+	log.Printf("DEBUG!!! Flow getRemaining = %v", flow.Remaining())
 	exceeded := false
 	for _, idx := range flow.queryIndex {
 		e, err := flow.limiters[idx].cost(flow.u, count)
@@ -64,8 +71,8 @@ func (flow *Flow) CostQuery(count int) error {
 }
 
 // CostMut ...
-func (flow *Flow) CostMut(count int) error {
-	log.Printf("DEBUG!!! Flow getRemaining = %v", flow.remaining())
+func (flow *FlowImpl) CostMut(count int) error {
+	log.Printf("DEBUG!!! Flow getRemaining = %v", flow.Remaining())
 	exceeded := false
 	for _, idx := range flow.mutIndex {
 		e, err := flow.limiters[idx].cost(flow.u, count)
@@ -80,8 +87,8 @@ func (flow *Flow) CostMut(count int) error {
 	return nil
 }
 
-// remaining ...
-func (flow *Flow) remaining() string {
+// Remaining : ip-query, ip-mut[, email-query, email-mut]
+func (flow *FlowImpl) Remaining() string {
 	strs := []string{}
 	for _, l := range flow.limiters {
 		strs = append(strs, l.getRemaining())
@@ -89,19 +96,19 @@ func (flow *Flow) remaining() string {
 	return strings.Join(strs, ",")
 }
 
-func (flow *Flow) ipKey() string {
+func (flow *FlowImpl) ipKey() string {
 	return fmt.Sprintf("flow-ip-%s", flow.ip)
 }
 
-func (flow *Flow) emailKey() string {
+func (flow *FlowImpl) emailKey() string {
 	return fmt.Sprintf("flow-email-%s", flow.email)
 }
 
-func (flow *Flow) ipMutKey() string {
+func (flow *FlowImpl) ipMutKey() string {
 	return fmt.Sprintf("flow-ip-m-%s", flow.ip)
 }
 
-func (flow *Flow) emailMutKey() string {
+func (flow *FlowImpl) emailMutKey() string {
 	return fmt.Sprintf("flow-email-m-%s", flow.email)
 }
 
@@ -146,4 +153,29 @@ func (l *limiter) cost(u *Uexky, count int) (bool, error) {
 
 func (l *limiter) getRemaining() string {
 	return fmt.Sprint(l.remaining)
+}
+
+// FlowMock ...
+type FlowMock struct{}
+
+// NewMockFlow ...
+func NewMockFlow(u *Uexky) *FlowMock {
+	flow := &FlowMock{}
+	u.Flow = flow
+	return flow
+}
+
+// CostQuery ...
+func (flow *FlowMock) CostQuery(count int) error {
+	return nil
+}
+
+// CostMut ...
+func (flow *FlowMock) CostMut(count int) error {
+	return nil
+}
+
+// Remaining ...
+func (flow *FlowMock) Remaining() string {
+	return "∞"
 }

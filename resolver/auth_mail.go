@@ -8,7 +8,7 @@ import (
 
 	mailgun "github.com/mailgun/mailgun-go"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
@@ -18,9 +18,9 @@ var mailClient mailgun.Mailgun
 // Init ...
 func Init() {
 	mailClient = mailgun.NewMailgun(
-		mgmt.Config.Mail.Domain,
-		mgmt.Config.Mail.PrivateKey,
-		mgmt.Config.Mail.PublicKey,
+		config.Config.Mail.Domain,
+		config.Config.Mail.PrivateKey,
+		config.Config.Mail.PublicKey,
 	)
 }
 
@@ -40,7 +40,6 @@ func isValidateEmail(mail string) bool {
 	return false
 }
 
-//TODO: should not be here
 func authEmail(u *uexky.Uexky, email string) (string, error) {
 	if !isValidateEmail(email) {
 		return "", errors.New("Invalid Email Address")
@@ -53,12 +52,12 @@ func authEmail(u *uexky.Uexky, email string) (string, error) {
 	if _, err := u.Redis.Do("SET", code, email, "EX", 1200); err != nil {
 		return "", errors.Wrap(err, "set code to redis")
 	}
-	return fmt.Sprintf("%s/auth/?code=%s", mgmt.APIURLPrefix(), code), nil
+	return fmt.Sprintf("%s/auth/?code=%s", config.APIURLPrefix(), code), nil
 }
 
 func sendAuthMail(url, to string) error {
 	msg := mailClient.NewMessage(
-		fmt.Sprintf("auth@%s", mgmt.Config.Mail.Domain),
+		fmt.Sprintf("auth@%s", config.Config.Mail.Domain),
 		"点击登入 Abyss!",
 		fmt.Sprintf("点击此链接进入 Abyss：%s", url),
 		to,

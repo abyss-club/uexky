@@ -7,7 +7,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/model"
 	"gitlab.com/abyss.club/uexky/uexky"
 )
@@ -33,35 +33,56 @@ func withUexky(handle httprouter.Handle) httprouter.Handle {
 // Attach AuthInfo and Flow
 func withAuthAndFlow(handle httprouter.Handle) httprouter.Handle {
 	return func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
-		tokenCookie, err := req.Cookie("token")
-		ip := req.Header.Get(remoteIPHeader)
-		log.Printf("find token cookie %v", tokenCookie)
-		if err != nil { // err must be ErrNoCookie, non-login user, do nothing
-			handle(w, req, p)
-			return
-		}
+		// check if signed in
 		u := uexky.Pop(req.Context())
-
-		// refresh expire
-		cookie, err := refreshToken(u, tokenCookie.Value)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		http.SetCookie(w, cookie)
-		email, err := authToken(u, tokenCookie.Value)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
+		isSignedIn := false
+		tokenCookie, err := req.Cookie("token")
+		log.Printf("find token cookie %v", tokenCookie)
+		if err == nil {
+			isSignedIn = true
+		} else if err != http.ErrNoCookie { // err must be ErrNoCookie
+			httpError(w, http.StatusInternalServerError, err)
 			return
+		}
+
+		// refresh cookie expire
+		if isSignedIn {
+			cookie, err := refreshToken(u, tokenCookie.Value)
+			if err != nil {
+				httpError(w, http.StatusInternalServerError, err)
+				return
+			}
+			http.SetCookie(w, cookie)
+		}
+
+		// auth
+		email := ""
+		if isSignedIn {
+			email, err = authToken(u, tokenCookie.Value)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusForbidden)
+				return
+			}
 		}
 		model.NewUexkyAuth(u, email)
-		uexky.NewUexkyFlow(u, ip, email)
+
+		// flow
+		ipHeader := config.Config.RateLimit.HTTPHeader
+		if ipHeader == "" {
+			uexky.NewMockFlow(u)
+		} else {
+			ip := req.Header.Get(ipHeader)
+			uexky.NewUexkyFlow(u, ip, email)
+		}
 
 		handle(w, req, p)
+
+		// after
+		w.Header().Set("Flow-Remaining", u.Flow.Remaining())
 	}
 }
 
 const (
-	remoteIPHeader = "Remote-IP"
 	tokenCookieAge = 7 * 86400
 )
 
@@ -73,11 +94,11 @@ func refreshToken(u *uexky.Uexky, token string) (*http.Cookie, error) {
 		Name:     "token",
 		Value:    token,
 		Path:     "/",
-		Domain:   mgmt.Config.Domain.WEB,
+		Domain:   config.Config.Domain.WEB,
 		MaxAge:   tokenCookieAge,
 		HttpOnly: true,
 	}
-	if mgmt.Config.Proto == "https" {
+	if config.Config.Proto == "https" {
 		cookie.Secure = true
 	}
 	return cookie, nil

@@ -8,7 +8,7 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/uexky"
 )
 
@@ -34,7 +34,7 @@ type TagTreeNode struct {
 const tagTreeCacheKey = "cache:tagtree"
 
 func isMainTag(tag string) bool {
-	for _, mt := range mgmt.Config.MainTags {
+	for _, mt := range config.Config.MainTags {
 		if mt == tag {
 			return true
 		}
@@ -79,7 +79,7 @@ func GetTagTree(u *uexky.Uexky, query string) (*TagTree, error) {
 	}
 
 	tree = &TagTree{}
-	for _, mTag := range mgmt.Config.MainTags {
+	for _, mTag := range config.Config.MainTags {
 		log.Printf("start fetch subTags for '%s'", mTag)
 		newest, err := getNewestSubTags(u, mTag, query)
 		if err != nil {

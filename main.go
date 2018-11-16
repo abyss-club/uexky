@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/view"
 )
 
@@ -24,7 +24,7 @@ func loadConfig() {
 	if configFile == "" {
 		log.Fatal("Must specified config file")
 	}
-	mgmt.LoadConfig(configFile)
+	config.LoadConfig(configFile)
 }
 
 func main() {

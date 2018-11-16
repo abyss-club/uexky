@@ -7,14 +7,14 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 )
 
 // NewRedisPool ...
 func NewRedisPool() *redis.Pool {
 	return &redis.Pool{
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.DialURL(mgmt.Config.RedisURL)
+			c, err := redis.DialURL(config.Config.RedisURL)
 			if err != nil {
 				log.Fatal(errors.Wrap(err, "Connect to redis"))
 			}

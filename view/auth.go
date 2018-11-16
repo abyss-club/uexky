@@ -7,7 +7,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
@@ -29,7 +29,7 @@ func AuthHandle(w http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	u.Redis.Do("DEL", code) // delete after use
 	cookie := newTokenCookie(token)
 	http.SetCookie(w, cookie)
-	w.Header().Set("Location", mgmt.WebURLPrefix())
+	w.Header().Set("Location", config.WebURLPrefix())
 	w.Header().Set("Cache-Control", "no-cache, no-store")
 	w.WriteHeader(http.StatusFound)
 }
@@ -68,11 +68,11 @@ func newTokenCookie(token string) *http.Cookie {
 		Name:     "token",
 		Value:    token,
 		Path:     "/",
-		Domain:   mgmt.Config.Domain.WEB,
+		Domain:   config.Config.Domain.WEB,
 		MaxAge:   tokenCookieAge,
 		HttpOnly: true,
 	}
-	if mgmt.Config.Proto == "https" {
+	if config.Config.Proto == "https" {
 		cookie.Secure = true
 	}
 	return cookie

@@ -3,7 +3,7 @@ package resolver
 import (
 	"context"
 
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/model"
 	"gitlab.com/abyss.club/uexky/uexky"
 )
@@ -22,12 +22,12 @@ type TagResolver struct{}
 
 // MainTags ...
 func (tr *TagResolver) MainTags(ctx context.Context) ([]string, error) {
-	return mgmt.Config.MainTags, nil
+	return config.Config.MainTags, nil
 }
 
 // Recommended ...
 func (tr *TagResolver) Recommended(ctx context.Context) ([]string, error) {
-	return mgmt.Config.MainTags, nil // TODO
+	return config.Config.MainTags, nil // TODO
 }
 
 // Tree ...

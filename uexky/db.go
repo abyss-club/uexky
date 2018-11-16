@@ -5,7 +5,7 @@ import (
 
 	"github.com/globalsign/mgo"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
+	"gitlab.com/abyss.club/uexky/config"
 )
 
 // Mongo ...
@@ -15,7 +15,7 @@ type Mongo struct {
 
 // ConnectMongodb ...
 func ConnectMongodb() *Mongo {
-	session, err := mgo.Dial(mgmt.Config.Mongo.URL)
+	session, err := mgo.Dial(config.Config.Mongo.URL)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "connect to mongodb"))
 	}
@@ -34,10 +34,10 @@ func (m *Mongo) Close() {
 
 // DB ...
 func (m *Mongo) DB() *mgo.Database {
-	return m.session.DB(mgmt.Config.Mongo.DB)
+	return m.session.DB(config.Config.Mongo.DB)
 }
 
 // C return collection
 func (m *Mongo) C(name string) *mgo.Collection {
-	return m.session.DB(mgmt.Config.Mongo.DB).C(name)
+	return m.session.DB(config.Config.Mongo.DB).C(name)
 }

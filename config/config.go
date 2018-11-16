@@ -1,4 +1,4 @@
-package mgmt
+package config
 
 import (
 	"encoding/json"
@@ -29,10 +29,11 @@ var Config struct {
 		PublicKey  string `json:"public_key"`
 	} `json:"mail"`
 	RateLimit struct {
-		QueryLimit     int `json:"query_limit"`
-		QueryResetTime int `json:"query_reset_time"`
-		MutLimit       int `json:"mut_limit"`
-		MutResetTime   int `json:"mut_reset_time"`
+		HTTPHeader     string `json:"http_header"`
+		QueryLimit     int    `json:"query_limit"`
+		QueryResetTime int    `json:"query_reset_time"`
+		MutLimit       int    `json:"mut_limit"`
+		MutResetTime   int    `json:"mut_reset_time"`
 		Cost           struct {
 			CreateUser int `json:"create_user"`
 			PubThread  int `json:"pub_thread"`
