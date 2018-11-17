@@ -68,15 +68,18 @@ Default Value is:
     },
     "mail": {
         "domain": "mail.abyss.club"
-    }
+    },
     "rate_limit": {
         "query_limit": 300,
         "query_reset_time": 3600,
         "mut_limit": 30,
         "mut_reset_time": 3600,
-        "pub_thread_count": 10,
-        "pub_post_count": 1,
-        "create_count": 30,
+        "cost": {
+            "pub_thread_count": 10,
+            "pub_post_count": 1,
+            "create_count": 30
+        }
+    }
 }
 ```
 
