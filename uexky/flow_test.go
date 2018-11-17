@@ -177,6 +177,7 @@ func TestFlow_CostQuery(t *testing.T) {
 			for _, idx := range tt.want.queryIndex {
 				tt.want.limiters[idx].count = 0
 				tt.want.limiters[idx].remaining -= 2
+				tt.want.limiters[idx].set = true
 			}
 			if diff := diffFlow(tt.want, tt.flow); diff != "" {
 				t.Fatalf("tt.want %v, diff = %v", tt.want, diff)
@@ -229,6 +230,7 @@ func TestFlow_CostMut(t *testing.T) {
 			tt.flow.CostMut(5)
 			for _, idx := range tt.want.mutIndex {
 				tt.want.limiters[idx].remaining -= 5
+				tt.want.limiters[idx].set = true
 			}
 			if diff := diffFlow(tt.want, tt.flow); diff != "" {
 				t.Fatalf("tt.want %v, diff = %v", tt.want, diff)

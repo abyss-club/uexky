@@ -76,9 +76,6 @@ func withAuthAndFlow(handle httprouter.Handle) httprouter.Handle {
 		}
 
 		handle(w, req, p)
-
-		// after
-		w.Header().Set("Flow-Remaining", u.Flow.Remaining())
 	}
 }
 

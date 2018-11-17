@@ -19,9 +19,8 @@ type ModelB struct {
 
 func TestCache(t *testing.T) {
 	pool := NewRedisPool()
-	conn := pool.Get()
+	u := &Uexky{Redis: NewRedis(pool)}
 
-	u := &Uexky{Redis: conn}
 	m := &ModelB{"test", &ModelA{12, "test", true}}
 	want := &ModelB{"test", &ModelA{12, "test", false}}
 

@@ -23,7 +23,6 @@ func NewUexkyFlow(u *Uexky, ip, email string) *FlowImpl {
 	u.Flow = flow
 
 	cfg := &config.Config.RateLimit
-	log.Printf("DEBUG!!! ratelimit cfg is %+v", cfg)
 	flow.limiters = []*limiter{
 		newLimiter(flow.ipKey(), cfg.QueryLimit, cfg.QueryResetTime, 10),
 		newLimiter(flow.ipMutKey(), cfg.MutLimit, cfg.MutResetTime, 1),
@@ -55,7 +54,6 @@ type FlowImpl struct {
 
 // CostQuery ...
 func (flow *FlowImpl) CostQuery(count int) error {
-	log.Printf("DEBUG!!! Flow getRemaining = %v", flow.Remaining())
 	exceeded := false
 	for _, idx := range flow.queryIndex {
 		e, err := flow.limiters[idx].cost(flow.u, count)
@@ -72,7 +70,6 @@ func (flow *FlowImpl) CostQuery(count int) error {
 
 // CostMut ...
 func (flow *FlowImpl) CostMut(count int) error {
-	log.Printf("DEBUG!!! Flow getRemaining = %v", flow.Remaining())
 	exceeded := false
 	for _, idx := range flow.mutIndex {
 		e, err := flow.limiters[idx].cost(flow.u, count)
@@ -120,12 +117,13 @@ type limiter struct {
 	expire int
 
 	// runtime
+	set       bool
 	count     int // count of not-dealed
 	remaining int
 }
 
 func newLimiter(key string, limit, expire, ratio int) *limiter {
-	return &limiter{key, limit, ratio, expire, 0, limit}
+	return &limiter{key, limit, ratio, expire, false, 0, limit}
 }
 
 // bool: return true if rate limit exceeded
@@ -137,11 +135,19 @@ func (l *limiter) cost(u *Uexky, count int) (bool, error) {
 
 	cost := l.count / l.ratio
 	l.count -= cost * l.ratio
-	if _, err := u.Redis.Do("SET", l.key, l.limit, "EX", l.expire, "NX"); err != nil {
-		return false, errors.Wrap(err, "set rate limit")
+
+	// set default
+	if !l.set {
+		if _, err := u.Redis.Do("SET", l.key, l.limit, "EX", l.expire, "NX"); err != nil {
+			return false, errors.Wrap(err, "set rate limit")
+		}
+		l.set = true
 	}
+
+	log.Printf("u.Redis do: DECRBY %v %v", l.key, cost)
 	remaining, err := redis.Int(u.Redis.Do("DECRBY", l.key, cost))
 	if err != nil {
+		log.Printf("decrby failed: %s", err)
 		return false, errors.Wrap(err, "cost flow control")
 	}
 	l.remaining = remaining

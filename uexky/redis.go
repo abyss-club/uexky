@@ -30,8 +30,25 @@ func NewRedisPool() *redis.Pool {
 		MaxIdle:     128,
 		MaxActive:   1024,
 		Wait:        true,
-		IdleTimeout: time.Second * 60,
+		IdleTimeout: time.Second * 240,
 	}
+}
+
+// Redis ...
+type Redis struct {
+	pool *redis.Pool
+}
+
+// NewRedis ...
+func NewRedis(pool *redis.Pool) *Redis {
+	return &Redis{pool: pool}
+}
+
+// Do ...
+func (r *Redis) Do(commandName string, args ...interface{}) (reply interface{}, err error) {
+	conn := r.pool.Get()
+	defer conn.Close()
+	return conn.Do(commandName, args...)
 }
 
 // SetCache ...

@@ -38,11 +38,12 @@ var Config struct {
         PublicKey  string `json:"public_key"`
     } `json:"mail"`
     RateLimit struct {
-        QueryLimit        int `json:"query_limit"`
-        QueryResetTime    int `json:"query_reset_time"`
-        MutLimit     int `json:"mut_limit"`
-        MutResetTime int `json:"mut_reset_time"`
-        Cost              struct {
+        HTTPHeader     string `json:"http_header"`
+        QueryLimit     int    `json:"query_limit"`
+        QueryResetTime int    `json:"query_reset_time"`
+        MutLimit       int    `json:"mut_limit"`
+        MutResetTime   int    `json:"mut_reset_time"`
+        Cost           struct {
             CreateUser int `json:"create_user"`
             PubThread  int `json:"pub_thread"`
             PubPost    int `json:"pub_post"`
@@ -149,3 +150,25 @@ type SliceInfo {
 包含了代表返回值 threads 中第一个和最后一个对象的游标。可以基于此游标开始下一次查询。
 
 ### 流量控制
+
+#### 策略
+
+采用了和 Github 一样的流量计算方法，参见：[Github GraphQL resource limitations]
+(https://developer.github.com/v4/guides/resource-limitations/)
+
+特别地。对于 query 而言，按上述方法计算得分之后，除以 10 ，向下取整即为最终的消耗。
+对于 mutation 而言，其限额为 `Config.RateLimit.Cost` 所配置的值。
+
+#### 交互
+
+配置中 `Config.RateLimit.HTTPHeader` 如果有值，即开启此功能；此时收到的请求，必须添加等于此值的 Header，Header 的值为 client 的 IP 地址。比如 `Config.RateLimit.HTTPHeader = "Remote-IP`，应当添加类似的头部：
+
+```
+Remote-IP: 192.168.1.1
+```
+
+返回值将在头部写上此 IP 及此用户剩余的配额，形如（如果没有登陆就没有后两项）：
+
+```
+Flow-Remaining: <ip-query>,<ip-mut>[,<user-query>,<user-mut>]
+```

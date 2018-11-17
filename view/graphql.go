@@ -7,6 +7,7 @@ import (
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/julienschmidt/httprouter"
 	"gitlab.com/abyss.club/uexky/resolver"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // GraphQLHandle ...
@@ -27,8 +28,12 @@ func GraphQLHandle() httprouter.Handle {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
 		w.Header().Set("Content-Type", "application/json")
+
+		// flow contraol
+		u := uexky.Pop(req.Context())
+		w.Header().Set("Flow-Remaining", u.Flow.Remaining())
+
 		w.Write(responseJSON)
 	}
 }

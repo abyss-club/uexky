@@ -23,9 +23,10 @@ func InitPool() *Pool {
 
 // NewUexky Make a new Uexky
 func (p *Pool) NewUexky() *Uexky {
+	log.Print("New Uexky!!!")
 	u := &Uexky{
 		Mongo: p.mongoPool.Copy(),
-		Redis: p.redisPool.Get(),
+		Redis: NewRedis(p.redisPool),
 	}
 	return u
 }
@@ -56,7 +57,7 @@ const (
 // Uexky is context for http request
 type Uexky struct {
 	Mongo *Mongo
-	Redis redis.Conn
+	Redis *Redis
 	Auth  Auth
 	Flow  Flow
 }
@@ -64,9 +65,6 @@ type Uexky struct {
 // Close ...
 func (u *Uexky) Close() {
 	u.Mongo.Close()
-	u.Redis.Close()
-	u.Auth = nil
-	u.Flow = nil
 }
 
 // Auth ...
