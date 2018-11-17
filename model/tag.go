@@ -1,7 +1,6 @@
 package model
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"time"
@@ -9,8 +8,8 @@ import (
 	"github.com/globalsign/mgo"
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mgmt"
-	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // Tag ...
@@ -32,10 +31,10 @@ type TagTreeNode struct {
 	SubTags []string `json:"sub_tags"`
 }
 
-const tagTreeCacheKey = "mw:tagtree"
+const tagTreeCacheKey = "cache:tagtree"
 
 func isMainTag(tag string) bool {
-	for _, mt := range mgmt.Config.MainTags {
+	for _, mt := range config.Config.MainTags {
 		if mt == tag {
 			return true
 		}
@@ -44,8 +43,8 @@ func isMainTag(tag string) bool {
 }
 
 // UpsertTags after insert thread...
-func UpsertTags(ctx context.Context, mainTag string, tagStrings []string) error {
-	c := mw.GetMongo(ctx).C(colleTag)
+func UpsertTags(u *uexky.Uexky, mainTag string, tagStrings []string) error {
+	c := u.Mongo.C(colleTag)
 	c.EnsureIndex(mgo.Index{
 		Key:        []string{"name"},
 		Unique:     true,
@@ -69,20 +68,20 @@ func UpsertTags(ctx context.Context, mainTag string, tagStrings []string) error 
 }
 
 // GetTagTree ...
-func GetTagTree(ctx context.Context, query string) (*TagTree, error) {
+func GetTagTree(u *uexky.Uexky, query string) (*TagTree, error) {
 	// try cache
 	key := fmt.Sprintf("%s:%s", tagTreeCacheKey, query)
 	tree := &TagTree{}
-	if ok, err := mw.GetCache(ctx, key, tree); err != nil {
+	if ok, err := uexky.GetCache(u, key, tree); err != nil {
 		return nil, err
 	} else if ok {
 		return tree, nil
 	}
 
 	tree = &TagTree{}
-	for _, mTag := range mgmt.Config.MainTags {
+	for _, mTag := range config.Config.MainTags {
 		log.Printf("start fetch subTags for '%s'", mTag)
-		newest, err := getNewestSubTags(ctx, mTag, query)
+		newest, err := getNewestSubTags(u, mTag, query)
 		if err != nil {
 			return nil, err
 		}
@@ -90,14 +89,18 @@ func GetTagTree(ctx context.Context, query string) (*TagTree, error) {
 	}
 
 	// set cache
-	if err := mw.SetCache(ctx, key, tree, 600); err != nil {
+	if err := uexky.SetCache(u, key, tree, 600); err != nil {
 		return nil, err
 	}
 	return tree, nil
 }
 
-func getNewestSubTags(ctx context.Context, mainTag string, query string) ([]string, error) {
-	c := mw.GetMongo(ctx).C(colleTag)
+func getNewestSubTags(u *uexky.Uexky, mainTag string, query string) ([]string, error) {
+	queryCount := 10
+	if err := u.Flow.CostQuery(queryCount); err != nil {
+		return nil, nil
+	}
+	c := u.Mongo.C(colleTag)
 	c.EnsureIndexKey("main_tags")
 	c.EnsureIndexKey("-updated_time", "-_id")
 
@@ -106,7 +109,7 @@ func getNewestSubTags(ctx context.Context, mainTag string, query string) ([]stri
 	if query != "" {
 		find["name"] = bson.M{"$regex": query}
 	}
-	if err := c.Find(find).Sort("-updated_time", "-_id").Limit(10).All(&tags); err != nil {
+	if err := c.Find(find).Sort("-updated_time", "-_id").Limit(queryCount).All(&tags); err != nil {
 		return nil, errors.Wrapf(err, "find newest sub tag for '%s'", mainTag)
 	}
 	var tagStrings []string

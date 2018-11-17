@@ -1,12 +1,12 @@
 package model
 
 import (
-	"context"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/mw"
+	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uuid64"
 )
 
@@ -42,7 +42,7 @@ type ThreadInput struct {
 }
 
 // ParseThead ...
-func (ti *ThreadInput) ParseThead(ctx context.Context, user *User) (*Thread, error) {
+func (ti *ThreadInput) ParseThead(u *uexky.Uexky, user *User) (*Thread, error) {
 	if !isMainTag(ti.MainTag) {
 		return nil, errors.Errorf("Can't set main tag '%s'", ti.MainTag)
 	}
@@ -79,7 +79,7 @@ func (ti *ThreadInput) ParseThead(ctx context.Context, user *User) (*Thread, err
 	thread.ID = threadID
 
 	if ti.Anonymous {
-		author, err := user.AnonymousID(ctx, thread.ID, true)
+		author, err := user.AnonymousID(u, thread.ID, true)
 		if err != nil {
 			return nil, err
 		}
@@ -98,31 +98,34 @@ func (ti *ThreadInput) ParseThead(ctx context.Context, user *User) (*Thread, err
 }
 
 // NewThread init new thread and insert to db
-func NewThread(ctx context.Context, input *ThreadInput) (*Thread, error) {
-	user, err := requireSignIn(ctx)
+func NewThread(u *uexky.Uexky, input *ThreadInput) (*Thread, error) {
+	if err := u.Flow.CostMut(config.Config.RateLimit.Cost.PubThread); err != nil {
+		return nil, err
+	}
+	user, err := GetSignedInUser(u)
 	if err != nil {
 		return nil, err
 	}
 
-	thread, err := input.ParseThead(ctx, user)
+	thread, err := input.ParseThead(u, user)
 	if err != nil {
 		return nil, err
 	}
 
-	c := mw.GetMongo(ctx).C(colleThread)
+	c := u.Mongo.C(colleThread)
 	if err := c.Insert(thread); err != nil {
 		return nil, err
 	}
 
 	// Set Tag info
-	if err := UpsertTags(ctx, thread.MainTag, thread.SubTags); err != nil {
+	if err := UpsertTags(u, thread.MainTag, thread.SubTags); err != nil {
 		return nil, errors.Wrap(err, "set tag info")
 	}
 	return thread, nil
 }
 
 // GetThreadsByTags ...
-func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
+func GetThreadsByTags(u *uexky.Uexky, tags []string, sq *SliceQuery) (
 	[]*Thread, *SliceInfo, error,
 ) {
 	mainTags := []string{}
@@ -150,20 +153,20 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 		queryObj["sub_tags"] = bson.M{"$in": subTags}
 	}
 
-	c := mw.GetMongo(ctx).C(colleThread)
+	c := u.Mongo.C(colleThread)
 	c.EnsureIndexKey("main_tag")
 	c.EnsureIndexKey("sub_tags")
 	c.EnsureIndexKey("update_time")
 
 	var threads []*Thread
-	if err := sq.Find(ctx, colleThread, "update_time", queryObj, &threads); err != nil {
+	if err := sq.Find(u, colleThread, "update_time", queryObj, &threads); err != nil {
 		return nil, nil, err
 	}
 	if len(threads) == 0 {
 		return threads, &SliceInfo{}, nil
 	}
 	if !sq.Desc {
-		reverseThreads(threads)
+		ReverseSlice(threads)
 	}
 	return threads, &SliceInfo{
 		FirstCursor: threads[0].genCursor(),
@@ -172,8 +175,11 @@ func GetThreadsByTags(ctx context.Context, tags []string, sq *SliceQuery) (
 }
 
 // FindThread by id
-func FindThread(ctx context.Context, ID string) (*Thread, error) {
-	c := mw.GetMongo(ctx).C(colleThread)
+func FindThread(u *uexky.Uexky, ID string) (*Thread, error) {
+	if err := u.Flow.CostQuery(1); err != nil {
+		return nil, err
+	}
+	c := u.Mongo.C(colleThread)
 	c.EnsureIndexKey("id")
 
 	var th Thread
@@ -189,8 +195,11 @@ func FindThread(ctx context.Context, ID string) (*Thread, error) {
 	return &th, nil
 }
 
-func isThreadExist(ctx context.Context, threadID string) (bool, error) {
-	c := mw.GetMongo(ctx).C(colleThread)
+func isThreadExist(u *uexky.Uexky, threadID string) (bool, error) {
+	if err := u.Flow.CostQuery(1); err != nil {
+		return false, err
+	}
+	c := u.Mongo.C(colleThread)
 	c.EnsureIndexKey("id")
 
 	count, err := c.Find(bson.M{"id": threadID}).Count()
@@ -201,8 +210,8 @@ func isThreadExist(ctx context.Context, threadID string) (bool, error) {
 }
 
 // GetReplies ...
-func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *SliceInfo, error) {
-	c := mw.GetMongo(ctx).C(collePost)
+func (t *Thread) GetReplies(u *uexky.Uexky, sq *SliceQuery) ([]*Post, *SliceInfo, error) {
+	c := u.Mongo.C(collePost)
 	c.EnsureIndexKey("thread_id")
 
 	queryObj, err := sq.GenQueryByObjectID()
@@ -212,14 +221,14 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 	queryObj["thread_id"] = t.ID
 
 	var posts []*Post
-	if err := sq.Find(ctx, collePost, "_id", queryObj, &posts); err != nil {
+	if err := sq.Find(u, collePost, "_id", queryObj, &posts); err != nil {
 		return nil, nil, err
 	}
 	if len(posts) == 0 {
 		return posts, &SliceInfo{}, nil
 	}
 	if sq.Desc {
-		reversePosts(posts)
+		ReverseSlice(posts)
 	}
 	si := &SliceInfo{
 		FirstCursor: posts[0].ObjectID.Hex(),
@@ -229,8 +238,11 @@ func (t *Thread) GetReplies(ctx context.Context, sq *SliceQuery) ([]*Post, *Slic
 }
 
 // ReplyCount ...
-func (t *Thread) ReplyCount(ctx context.Context) (int, error) {
-	c := mw.GetMongo(ctx).C(collePost)
+func (t *Thread) ReplyCount(u *uexky.Uexky) (int, error) {
+	if err := u.Flow.CostQuery(1); err != nil {
+		return 0, err
+	}
+	c := u.Mongo.C(collePost)
 	c.EnsureIndexKey("thread_id")
 
 	return c.Find(bson.M{"thread_id": t.ID}).Count()
@@ -239,18 +251,4 @@ func (t *Thread) ReplyCount(ctx context.Context) (int, error) {
 // return unix time of update time in millisecond(ms)
 func (t *Thread) genCursor() string {
 	return genTimeCursor(t.UpdateTime)
-}
-
-func reverseThreads(threads []*Thread) {
-	l := len(threads)
-	for i := 0; i != l/2; i++ {
-		threads[i], threads[l-i-1] = threads[l-i-1], threads[i]
-	}
-}
-
-func reversePosts(posts []*Post) {
-	l := len(posts)
-	for i := 0; i != l/2; i++ {
-		posts[i], posts[l-i-1] = posts[l-i-1], posts[i]
-	}
 }

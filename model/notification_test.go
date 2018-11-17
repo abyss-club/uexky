@@ -12,7 +12,6 @@ func TestTriggerNotifForPost(t *testing.T) {
 	// prepare
 	receiver := mockUsers[1]
 	author := mockUsers[2]
-	ctx := ctxWithUser(author)
 	thread := &Thread{
 		ID:         "NotiTestThread",
 		UserID:     receiver.ID,
@@ -36,23 +35,22 @@ func TestTriggerNotifForPost(t *testing.T) {
 	}
 
 	// publish test post
-	if err := TriggerNotifForPost(ctx, thread, post, quotes); err != nil {
+	if err := TriggerNotifForPost(mu[2], thread, post, quotes); err != nil {
 		t.Fatalf("TriggerNotifForPost() error = %v", err)
 	}
 
 	// check unread count
-	ctx = ctxWithUser(receiver)
-	if c, err := GetUnreadNotificationCount(ctx, NotiTypeSystem); err != nil {
+	if c, err := GetUnreadNotificationCount(mu[1], NotiTypeSystem); err != nil {
 		t.Fatalf("GetUnreadNotificationCount(System) error = %v", err)
 	} else if c != 0 {
 		t.Fatalf("GetUnreadNotificationCount(System) = %v, want = %v", c, 0)
 	}
-	if c, err := GetUnreadNotificationCount(ctx, NotiTypeReplied); err != nil {
+	if c, err := GetUnreadNotificationCount(mu[1], NotiTypeReplied); err != nil {
 		t.Fatalf("GetUnreadNotificationCount(Replied) error = %v", err)
 	} else if c != 1 {
 		t.Fatalf("GetUnreadNotificationCount(Replied) = %v, want = %v", c, 1)
 	}
-	if c, err := GetUnreadNotificationCount(ctx, NotiTypeQuoted); err != nil {
+	if c, err := GetUnreadNotificationCount(mu[1], NotiTypeQuoted); err != nil {
 		t.Fatalf("GetUnreadNotificationCount(Quoted) error = %v", err)
 	} else if c != 1 {
 		t.Fatalf("GetUnreadNotificationCount(Quoted) = %v, want = %v", c, 1)
@@ -61,7 +59,7 @@ func TestTriggerNotifForPost(t *testing.T) {
 	// check notification
 	sq := &SliceQuery{Limit: 10, Desc: true, Cursor: genTimeCursor(time.Now())}
 	{
-		noti, slice, err := GetNotification(ctx, NotiTypeSystem, sq)
+		noti, slice, err := GetNotification(mu[1], NotiTypeSystem, sq)
 		if err != nil {
 			t.Fatalf("GetNotification(System) error = %v", err)
 		}
@@ -73,7 +71,7 @@ func TestTriggerNotifForPost(t *testing.T) {
 		}
 	}
 	{
-		noti, slice, err := GetNotification(ctx, NotiTypeReplied, sq)
+		noti, slice, err := GetNotification(mu[1], NotiTypeReplied, sq)
 		if err != nil {
 			t.Fatalf("GetNotification(Replied) error = %v", err)
 		}
@@ -101,7 +99,7 @@ func TestTriggerNotifForPost(t *testing.T) {
 		}
 	}
 	{
-		noti, slice, err := GetNotification(ctx, NotiTypeQuoted, sq)
+		noti, slice, err := GetNotification(mu[1], NotiTypeQuoted, sq)
 		if err != nil {
 			t.Fatalf("GetNotification(Quoted) error = %v", err)
 		}
@@ -133,15 +131,14 @@ func TestTriggerNotifForPost(t *testing.T) {
 }
 
 func TestSendSystemNotification(t *testing.T) {
-	ctx := ctxWithUser(mockUsers[2])
 	title := "Test!"
 	content := `This is a *markdown* Notification`
-	if err := SendSystemNotification(ctx, title, content); err != nil {
+	if err := SendSystemNotification(mu[2], title, content); err != nil {
 		t.Fatalf("SendSystemNotification() error = %v", err)
 	}
 	t.Log("check unread count")
 	{
-		if c, err := GetUnreadNotificationCount(ctx, NotiTypeSystem); err != nil {
+		if c, err := GetUnreadNotificationCount(mu[2], NotiTypeSystem); err != nil {
 			t.Fatalf("GetUnreadNotificationCount(System) error = %v", err)
 		} else if c != 1 {
 			t.Fatalf("GetUnreadNotificationCount(System) = %v, want = 1", c)
@@ -150,7 +147,7 @@ func TestSendSystemNotification(t *testing.T) {
 	t.Log("check noti content")
 	{
 		sq := &SliceQuery{Limit: 10, Desc: true, Cursor: genTimeCursor(time.Now())}
-		noti, slice, err := GetNotification(ctx, NotiTypeSystem, sq)
+		noti, slice, err := GetNotification(mu[2], NotiTypeSystem, sq)
 		if err != nil {
 			t.Fatalf("GetNotification(System) error = %v", err)
 		}

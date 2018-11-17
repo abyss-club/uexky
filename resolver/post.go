@@ -5,6 +5,7 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"gitlab.com/abyss.club/uexky/model"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 // queries:
@@ -13,7 +14,8 @@ import (
 func (r *Resolver) Post(
 	ctx context.Context, args struct{ ID string },
 ) (*PostResolver, error) {
-	post, err := model.FindPost(ctx, args.ID)
+	u := uexky.Pop(ctx)
+	post, err := model.FindPost(u, args.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +34,8 @@ func (r *Resolver) PubPost(
 ) (
 	*PostResolver, error,
 ) {
-	post, err := model.NewPost(ctx, args.Post)
+	u := uexky.Pop(ctx)
+	post, err := model.NewPost(u, args.Post)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +92,8 @@ func (pr *PostResolver) CreateTime(ctx context.Context) (graphql.Time, error) {
 
 // Quotes ...
 func (pr *PostResolver) Quotes(ctx context.Context) (*[]*PostResolver, error) {
-	quotes, err := pr.Post.QuotePosts(ctx)
+	u := uexky.Pop(ctx)
+	quotes, err := pr.Post.QuotePosts(u)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +109,7 @@ func (pr *PostResolver) Quotes(ctx context.Context) (*[]*PostResolver, error) {
 
 // QuoteCount ...
 func (pr *PostResolver) QuoteCount(ctx context.Context) (int32, error) {
-	count, err := pr.Post.QuoteCount(ctx)
+	u := uexky.Pop(ctx)
+	count, err := pr.Post.QuoteCount(u)
 	return int32(count), err
 }

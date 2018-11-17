@@ -1,4 +1,4 @@
-package mgmt
+package config
 
 import (
 	"encoding/json"
@@ -28,6 +28,18 @@ var Config struct {
 		PrivateKey string `json:"private_key"`
 		PublicKey  string `json:"public_key"`
 	} `json:"mail"`
+	RateLimit struct {
+		HTTPHeader     string `json:"http_header"`
+		QueryLimit     int    `json:"query_limit"`
+		QueryResetTime int    `json:"query_reset_time"`
+		MutLimit       int    `json:"mut_limit"`
+		MutResetTime   int    `json:"mut_reset_time"`
+		Cost           struct {
+			CreateUser int `json:"create_user"`
+			PubThread  int `json:"pub_thread"`
+			PubPost    int `json:"pub_post"`
+		} `json:"cost"`
+	} `json:"rate_limit"`
 }
 
 func setDefaultConfig() {
@@ -38,6 +50,15 @@ func setDefaultConfig() {
 	Config.Domain.WEB = "abyss.club"
 	Config.Domain.API = "api.abyss.club"
 	Config.Mail.Domain = "mail.abyss.club"
+
+	// rate limit
+	Config.RateLimit.QueryLimit = 300
+	Config.RateLimit.QueryResetTime = 3600
+	Config.RateLimit.MutLimit = 30
+	Config.RateLimit.MutResetTime = 3600
+	Config.RateLimit.Cost.PubPost = 1
+	Config.RateLimit.Cost.PubThread = 10
+	Config.RateLimit.Cost.CreateUser = 30
 }
 
 // ReplaceConfigByEnv ...
