@@ -44,7 +44,7 @@ type SystemNoti {
     hasRead: Boolean!
     # Notification title.
     title: String!
-    # Notification content.
+    # Markdown formatted notification content.
     content: String!
 }
 
