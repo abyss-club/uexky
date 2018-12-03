@@ -23,9 +23,9 @@ func TestAuthInfo(t *testing.T) {
 		if ai.Email() != "" {
 			t.Errorf("Email should be empty, but get %s", ai.Email())
 		}
-		if ai.CheckPriority("") == true {
-			t.Error("CheckPriority must be false", ai.CheckPriority(""))
-		}
+		// if ai.CheckPriority("") == true {
+		// 	t.Error("CheckPriority must be false", ai.CheckPriority(""))
+		// }
 		if _, err := ai.GetUser(); err == nil {
 			t.Error("GetUser should be error")
 		}
@@ -45,9 +45,9 @@ func TestAuthInfo(t *testing.T) {
 		if email := ai.Email(); email != mockUsers[0].Email {
 			t.Errorf("Email() = %s, want %s", email, mockUsers[0].Email)
 		}
-		if ai.CheckPriority("") == true {
-			t.Error("CheckPriority must be false", ai.CheckPriority(""))
-		}
+		// if ai.CheckPriority("") == true {
+		// 	t.Error("CheckPriority must be false", ai.CheckPriority(""))
+		// }
 		if user, err := ai.GetUser(); err != nil {
 			t.Errorf("GetUser shouldn't be error, but get %s", err)
 		} else if user.ID != mockUsers[0].ID {

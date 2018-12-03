@@ -61,7 +61,7 @@ func TestGetTagTree(t *testing.T) {
 	}
 	t.Log("insert threads")
 	for _, subTags := range subTagsList {
-		if _, err := NewThread(mu[2], &ThreadInput{
+		if _, err := InsertThread(mu[2], &ThreadInput{
 			Anonymous: true,
 			Content:   "content",
 			MainTag:   config.Config.MainTags[2],

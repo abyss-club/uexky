@@ -106,6 +106,51 @@ func (r *Resolver) DelSubbedTags(
 	return &UserResolver{User: user}, nil
 }
 
+// BanUser ...
+func (r *Resolver) BanUser(
+	ctx context.Context, args struct{ PostID string },
+) error {
+	u := uexky.Pop(ctx)
+	return model.BanUser(u, args.PostID)
+}
+
+// BlockPost ...
+func (r *Resolver) BlockPost(
+	ctx context.Context, args struct{ PostID string },
+) error {
+	u := uexky.Pop(ctx)
+	return model.BlockPost(u, args.PostID)
+}
+
+// LockThread ...
+func (r *Resolver) LockThread(
+	ctx context.Context, args struct{ ThreadID string },
+) error {
+	u := uexky.Pop(ctx)
+	return model.LockThread(u, args.ThreadID)
+}
+
+// BlockThread ...
+func (r *Resolver) BlockThread(
+	ctx context.Context, args struct{ ThreadID string },
+) error {
+	u := uexky.Pop(ctx)
+	return model.BlockThread(u, args.ThreadID)
+}
+
+// EditTags ...
+func (r *Resolver) EditTags(
+	ctx context.Context,
+	args struct {
+		ThreadID string
+		MainTag  string
+		SubTags  []string
+	},
+) error {
+	u := uexky.Pop(ctx)
+	return model.EditTags(u, args.ThreadID, args.MainTag, args.SubTags)
+}
+
 // types:
 
 // UserResolver for graphql

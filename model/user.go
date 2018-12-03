@@ -33,6 +33,10 @@ type User struct {
 		Replied time.Time `bson:"replied"`
 		Quoted  time.Time `bson:"quoted"`
 	} `bson:"read_noti_time"`
+	Role struct {
+		Type  RoleType `bson:"type"`
+		Range []string `bson:"range"`
+	} `bson:"role"`
 }
 
 // GetSignedInUser in uexky

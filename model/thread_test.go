@@ -36,7 +36,7 @@ func TestNewThread(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewThread(mu[0], tt.input)
+			got, err := InsertThread(mu[0], tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewThread() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -89,7 +89,7 @@ func TestGetThreadsByTags(t *testing.T) {
 			MainTag:   config.Config.MainTags[0],
 			SubTags:   &subTags,
 		}
-		thread, err := NewThread(mu[1], input)
+		thread, err := InsertThread(mu[1], input)
 		if err != nil {
 			t.Fatal(errors.Wrap(err, "create thread"))
 		}
@@ -156,7 +156,7 @@ func TestGetThreadsByTags(t *testing.T) {
 		})
 	}
 	{
-		thread, err := FindThread(mu[1], threads[0].ID)
+		thread, err := FindThreadByID(mu[1], threads[0].ID)
 		if err != nil {
 			t.Errorf("FindThread(%v) error = %v", thread, err)
 		}
@@ -165,7 +165,7 @@ func TestGetThreadsByTags(t *testing.T) {
 		}
 	}
 	{
-		thread, err := FindThread(mu[1], "AA")
+		thread, err := FindThreadByID(mu[1], "AA")
 		if err == nil {
 			t.Errorf("FindThread(%v) should be error, found %v", err, thread)
 		}
@@ -178,7 +178,7 @@ func TestThread_GetReplies(t *testing.T) {
 		Anonymous: true,
 		MainTag:   config.Config.MainTags[0],
 	}
-	thread, err := NewThread(mu[1], input)
+	thread, err := InsertThread(mu[1], input)
 	if err != nil {
 		t.Errorf("FindThread(%v) should be error, found %v", err, thread)
 	}

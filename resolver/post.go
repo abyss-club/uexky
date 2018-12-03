@@ -82,7 +82,15 @@ func (pr *PostResolver) Author(ctx context.Context) (string, error) {
 
 // Content ...
 func (pr *PostResolver) Content(ctx context.Context) (string, error) {
+	if pr.Post.Blocked {
+		return "blocked!", nil
+	}
 	return pr.Post.Content, nil
+}
+
+// Blocked ...
+func (pr *PostResolver) Blocked(ctx context.Context) (bool, error) {
+	return pr.Post.Blocked, nil
 }
 
 // CreateTime ...

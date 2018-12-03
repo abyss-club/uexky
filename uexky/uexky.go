@@ -72,5 +72,5 @@ type Auth interface {
 	IsSignedIn() bool
 	RequireSignedIn() error
 	Email() string
-	CheckPriority(action string) bool
+	CheckPriority(action, target string) (bool, error)
 }

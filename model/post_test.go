@@ -10,7 +10,7 @@ import (
 
 func TestPost(t *testing.T) {
 	user := mockUsers[0]
-	thread, err := NewThread(mu[0], &ThreadInput{
+	thread, err := InsertThread(mu[0], &ThreadInput{
 		Content: "thread!", MainTag: config.Config.MainTags[0], Anonymous: true,
 	})
 	if err != nil {
@@ -100,7 +100,7 @@ func TestPost(t *testing.T) {
 	}
 
 	t.Log("checkout thread update time")
-	nThread, err := FindThread(mu[0], thread.ID)
+	nThread, err := FindThreadByID(mu[0], thread.ID)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "find thread"))
 	}

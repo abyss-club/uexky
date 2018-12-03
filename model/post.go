@@ -20,6 +20,7 @@ type Post struct {
 	Author     string        `bson:"author"`
 	UserID     bson.ObjectId `bson:"user_id"`
 	CreateTime time.Time     `bson:"create_time"`
+	Blocked    bool          `bson:"blocked"`
 
 	ThreadID string   `bson:"thread_id"`
 	Content  string   `bson:"content"`
@@ -38,12 +39,20 @@ type PostInput struct {
 func (pi *PostInput) ParsePost(u *uexky.Uexky, user *User) (
 	*Post, *Thread, []*Post, error,
 ) {
+	if user.Role.Type == Banned {
+		return nil, nil, nil, errors.New("permitted error, you are banned")
+	}
 	if pi.Content == "" {
 		return nil, nil, nil, errors.New("required params missed")
 	}
-	thread, err := FindThread(u, pi.ThreadID)
+	thread, err := FindThreadByID(u, pi.ThreadID)
 	if err != nil {
 		return nil, nil, nil, err
+	}
+	if thread.Banned || thread.Blocked {
+		return nil, nil, nil, errors.New(
+			"permitted error, thread is locked or blocked",
+		)
 	}
 
 	post := &Post{

@@ -171,7 +171,7 @@ type RepliedNotiResolver struct {
 // Thread ...
 func (n *RepliedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error) {
 	u := uexky.Pop(ctx)
-	thread, err := model.FindThread(u, n.noti.Replied.ThreadID)
+	thread, err := model.FindThreadByID(u, n.noti.Replied.ThreadID)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +191,7 @@ type QuotedNotiResolver struct {
 // Thread ...
 func (n *QuotedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error) {
 	u := uexky.Pop(ctx)
-	thread, err := model.FindThread(u, n.noti.Quoted.ThreadID)
+	thread, err := model.FindThreadByID(u, n.noti.Quoted.ThreadID)
 	if err != nil {
 		return nil, err
 	}

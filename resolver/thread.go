@@ -46,7 +46,7 @@ func (r *Resolver) Thread(
 	ctx context.Context, args struct{ ID string },
 ) (*ThreadResolver, error) {
 	u := uexky.Pop(ctx)
-	th, err := model.FindThread(u, args.ID)
+	th, err := model.FindThreadByID(u, args.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (r *Resolver) PubThread(
 	*ThreadResolver, error,
 ) {
 	u := uexky.Pop(ctx)
-	thread, err := model.NewThread(u, args.Thread)
+	thread, err := model.InsertThread(u, args.Thread)
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +169,5 @@ func (tr *ThreadResolver) Replies(ctx context.Context, args struct {
 
 // ReplyCount ...
 func (tr *ThreadResolver) ReplyCount(ctx context.Context) (int32, error) {
-	u := uexky.Pop(ctx)
-	count, err := tr.Thread.ReplyCount(u)
-	return int32(count), err
+	return int32(tr.Thread.ReplyCount()), nil
 }

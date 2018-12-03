@@ -14,6 +14,13 @@ mutations = '''
     addSubbedTags(tags: [String!]!): User!
     # Delete tags subscribed by user.
     delSubbedTags(tags: [String!]!): User!
+
+    # for managers' apis:
+    banUser(postId: String!)
+    blockPost(postId: String!)
+    lockThread(threadId: String!)
+    blockThread(threadId: String!)
+    editTags(threadId: String!, mainTag: String!, subTags: [String!]!)
 '''
 
 types = '''

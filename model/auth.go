@@ -46,8 +46,12 @@ func (ai *AuthInfo) Email() string {
 }
 
 // CheckPriority ...
-func (ai *AuthInfo) CheckPriority(action string) bool {
-	return false
+func (ai *AuthInfo) CheckPriority(action, target string) (bool, error) {
+	user, err := ai.GetUser()
+	if err != nil {
+		return false, err
+	}
+	return user.CheckPriority(ai.uexky, action, target)
 }
 
 // GetUser who signed in
