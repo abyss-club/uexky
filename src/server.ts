@@ -1,6 +1,8 @@
+import { ApolloServer, gql } from 'apollo-server-koa';
 import * as Koa from 'koa';
 import * as Router from 'koa-router';
-import { ApolloServer, gql } from 'apollo-server-koa';
+import * as mongoose from 'mongoose';
+import * as schema from './schema';
 
 const app = new Koa();
 
@@ -18,20 +20,22 @@ const resolvers = {
   },
 };
 
+console.log(schema);
+
 const server = new ApolloServer({ typeDefs, resolvers });
 
 server.applyMiddleware({ app });
 
 app.use(async (ctx, next) => {
     // Log the request to the console
-    console.log('Url:', ctx.url);
+  console.log('Url:', ctx.url);
     // Pass the request to the next middleware function
-    await next();
+  await next();
 });
 
 const router = new Router();
 router.get('/*', async (ctx) => {
-    ctx.body = 'Hello World!';
+  ctx.body = 'Hello World!';
 });
 app.use(router.routes());
 
