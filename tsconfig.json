@@ -1,12 +1,20 @@
 {
-    "compilerOptions": {
-        "module": "commonjs",
-        "target": "es2017",
-        "noImplicitAny": true,
-        "outDir": "./dist",
-        "sourceMap": true
-    },
-    "include": [
-        "./src/**/*"
+  "compilerOptions": {
+    "module": "commonjs",
+    "lib": ["es2017"],
+    "target": "es2017",
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "outDir": "./dist",
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "plugins": [
+      {
+        "name": "typescript-tslint-plugin"
+      }
     ]
+  },
+  "include": [
+    "./src/**/*"
+  ]
 }
