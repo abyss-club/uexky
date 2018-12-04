@@ -1,6 +1,7 @@
 package model
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/globalsign/mgo/bson"
@@ -23,30 +24,24 @@ type Thread struct {
 	Anonymous  bool          `bson:"anonymous"`
 	Author     string        `bson:"author"`
 	UserID     bson.ObjectId `bson:"user_id"` // not display in front
-	CreateTime time.Time     `bson:"created_time"`
-	UpdateTime time.Time     `bson:"update_time"`
+	MainTag    string        `bson:"main_tag"`
+	SubTags    []string      `bson:"sub_tags"`
+	Tags       []string      `bson:"tags"`
+	Title      string        `bson:"title"`
+	Content    string        `bson:"content"`
 	Blocked    bool          `bson:"blocked"`
 	Banned     bool          `bson:"banned"`
-
-	MainTag string   `bson:"main_tag"`
-	SubTags []string `bson:"sub_tags"`
-	Tags    []string `bson:"tags"`
-	Title   string   `bson:"title"`
-	Content string   `bson:"content"`
-
-	Posts []struct {
-		PostID string        `bson:"post_id"`
-		UserID string        `bson:"user_id"`
-		Author bson.ObjectId `bson:"author"`
-	} `bson:"posts"`
+	CreateTime time.Time     `bson:"created_time"`
+	UpdateTime time.Time     `bson:"update_time"`
+	Posts      []PostBase    `bson:"posts"`
 }
 
-//
+// ----
 // Model Operations
-//
+// ----
 
-// InsertThread init new thread and insert to db
-func InsertThread(u *uexky.Uexky, input *ThreadInput) (*Thread, error) {
+// NewThread init new thread and insert to db
+func NewThread(u *uexky.Uexky, input *ThreadInput) (*Thread, error) {
 	if err := u.Flow.CostMut(config.Config.RateLimit.Cost.PubThread); err != nil {
 		return nil, err
 	}
@@ -75,11 +70,6 @@ func InsertThread(u *uexky.Uexky, input *ThreadInput) (*Thread, error) {
 	return thread, nil
 }
 
-// UpdateThread ...
-func UpdateThread(u *uexky.Uexky, selector, query bson.M) error {
-	return u.Mongo.C(colleThread).Update(selector, query)
-}
-
 // FindThread ...
 func FindThread(u *uexky.Uexky, selector interface{}) (*Thread, error) {
 	thread := &Thread{}
@@ -91,8 +81,7 @@ func FindThread(u *uexky.Uexky, selector interface{}) (*Thread, error) {
 
 // FindThreads ...
 func FindThreads(u *uexky.Uexky, selector bson.M, sq *SliceQuery) ([]*Thread, *SliceInfo, error) {
-	sliceKey := "update_time"
-	qry, err := sq.GenQueryByTime(sliceKey)
+	qry, err := sq.GenQueryByTime("update_time")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,14 +91,11 @@ func FindThreads(u *uexky.Uexky, selector bson.M, sq *SliceQuery) ([]*Thread, *S
 	qry["blocked"] = false
 
 	var threads []*Thread
-	if err := sq.Find(u, colleThread, sliceKey, qry, &threads); err != nil {
+	if err := sq.Find(u, colleThread, "-update_time", qry, &threads); err != nil {
 		return nil, nil, err
 	}
 	if len(threads) == 0 {
 		return threads, &SliceInfo{}, nil
-	}
-	if !sq.Desc {
-		ReverseSlice(threads)
 	}
 	return threads, &SliceInfo{
 		FirstCursor: threads[0].genCursor(),
@@ -121,6 +107,10 @@ func FindThreads(u *uexky.Uexky, selector bson.M, sq *SliceQuery) ([]*Thread, *S
 func CountThreads(u *uexky.Uexky, selector bson.M) (int, error) {
 	return u.Mongo.C(colleThread).Find(selector).Count()
 }
+
+// ----
+// for resolver
+// ----
 
 // ThreadInput ...
 type ThreadInput struct {
@@ -190,52 +180,62 @@ func (ti *ThreadInput) ParseThead(u *uexky.Uexky, user *User) (*Thread, error) {
 	return thread, nil
 }
 
-// GetThreadsByTags ...
-func GetThreadsByTags(u *uexky.Uexky, tags []string, sq *SliceQuery) (
+// GetThreadSlice ...
+func GetThreadSlice(u *uexky.Uexky, tags []string, sq *SliceQuery) (
 	[]*Thread, *SliceInfo, error,
 ) {
 	return FindThreads(u, bson.M{"tags": bson.M{"$in": tags}}, sq)
 }
 
-// FindThreadByID by id
+// FindThreadByID ...
 func FindThreadByID(u *uexky.Uexky, id string) (*Thread, error) {
 	return FindThread(u, bson.M{"id": id})
 }
 
-// FindThreadByPostID ...
-func FindThreadByPostID(u *uexky.Uexky, id string) (*Thread, error) {
-	return FindThread(u, bson.M{"posts.post_id": id})
-}
-
-func isThreadExist(u *uexky.Uexky, threadID string) (bool, error) {
-	count, err := CountThreads(u, bson.M{"id": threadID})
-	return count != 0, err
-}
-
 // GetReplies ...
-func (t *Thread) GetReplies(u *uexky.Uexky, sq *SliceQuery) ([]*Post, *SliceInfo, error) {
+func (t *Thread) GetReplies(
+	u *uexky.Uexky, sq *SliceQuery,
+) ([]*Post, *SliceInfo, error) {
+	var start, end int
+	var err error
+	if sq.GT != "" {
+		start, err = strconv.Atoi(sq.GT)
+		if err != nil {
+			return nil, nil, err
+		}
+		end = start + sq.Limit - 1
+	} else {
+		end, err = strconv.Atoi(sq.LT)
+		if err != nil {
+			return nil, nil, err
+		}
+		start = end - sq.Limit + 1
+	}
+	startOID := t.Posts[start-1].ObjectID
+	endOID := t.Posts[end-1].ObjectID
 	c := u.Mongo.C(collePost)
 	c.EnsureIndexKey("thread_id")
-
-	queryObj, err := sq.GenQueryByObjectID()
-	if err != nil {
-		return nil, nil, err
-	}
-	queryObj["thread_id"] = t.ID
-
 	var posts []*Post
-	if err := sq.Find(u, collePost, "_id", queryObj, &posts); err != nil {
+	if err := c.Find(bson.M{
+		"_id":       bson.M{"$gte": startOID, "$lte": endOID},
+		"thread_id": t.ID,
+	}).Sort("_id").All(posts); err != nil {
 		return nil, nil, err
 	}
+
 	if len(posts) == 0 {
 		return posts, &SliceInfo{}, nil
 	}
-	if sq.Desc {
-		ReverseSlice(posts)
+	index := start
+	for _, p := range posts {
+		p.Index = index
+		index++
 	}
 	si := &SliceInfo{
 		FirstCursor: posts[0].ObjectID.Hex(),
 		LastCursor:  posts[len(posts)-1].ObjectID.Hex(),
+		HasPrev:     start != 1,
+		HasNext:     end != len(t.Posts),
 	}
 	return posts, si, nil
 }

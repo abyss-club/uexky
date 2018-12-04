@@ -10,7 +10,7 @@ import (
 
 func TestPost(t *testing.T) {
 	user := mockUsers[0]
-	thread, err := InsertThread(mu[0], &ThreadInput{
+	thread, err := NewThread(mu[0], &ThreadInput{
 		Content: "thread!", MainTag: config.Config.MainTags[0], Anonymous: true,
 	})
 	if err != nil {
@@ -91,7 +91,7 @@ func TestPost(t *testing.T) {
 	}
 
 	t.Log("Find post")
-	post4, err := FindPost(mu[0], post3.ID)
+	post4, err := FindPostByID(mu[0], post3.ID)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "find post"))
 	}

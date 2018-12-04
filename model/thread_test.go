@@ -36,7 +36,7 @@ func TestNewThread(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := InsertThread(mu[0], tt.input)
+			got, err := NewThread(mu[0], tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewThread() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -89,7 +89,7 @@ func TestGetThreadsByTags(t *testing.T) {
 			MainTag:   config.Config.MainTags[0],
 			SubTags:   &subTags,
 		}
-		thread, err := InsertThread(mu[1], input)
+		thread, err := NewThread(mu[1], input)
 		if err != nil {
 			t.Fatal(errors.Wrap(err, "create thread"))
 		}
@@ -135,7 +135,7 @@ func TestGetThreadsByTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, got1, err := GetThreadsByTags(mu[1], tt.args.tags, tt.args.sq)
+			got, got1, err := GetThreadSlice(mu[1], tt.args.tags, tt.args.sq)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetThreadsByTags() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -178,7 +178,7 @@ func TestThread_GetReplies(t *testing.T) {
 		Anonymous: true,
 		MainTag:   config.Config.MainTags[0],
 	}
-	thread, err := InsertThread(mu[1], input)
+	thread, err := NewThread(mu[1], input)
 	if err != nil {
 		t.Errorf("FindThread(%v) should be error, found %v", err, thread)
 	}
@@ -234,10 +234,7 @@ func TestThread_GetReplies(t *testing.T) {
 		})
 	}
 	{
-		c, err := thread.ReplyCount(mu[1])
-		if err != nil {
-			t.Fatalf("Thread.CountOfReplies() error = %v", err)
-		}
+		c := thread.ReplyCount()
 		if c != postCount {
 			t.Fatalf("Thread.CountOfReplies() = %v, want %v", c, postCount)
 		}

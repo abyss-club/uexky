@@ -28,7 +28,7 @@ func (r *Resolver) ThreadSlice(ctx context.Context, args struct {
 		tags = *(args.Tags)
 	}
 
-	threads, sliceInfo, err := model.GetThreadsByTags(u, tags, sq)
+	threads, sliceInfo, err := model.GetThreadSlice(u, tags, sq)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (r *Resolver) PubThread(
 	*ThreadResolver, error,
 ) {
 	u := uexky.Pop(ctx)
-	thread, err := model.InsertThread(u, args.Thread)
+	thread, err := model.NewThread(u, args.Thread)
 	if err != nil {
 		return nil, err
 	}

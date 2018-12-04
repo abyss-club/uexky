@@ -12,19 +12,24 @@ import (
 
 const quoteLimit = 3
 
+// PostBase ...
+type PostBase struct {
+	ObjectID bson.ObjectId `bson:"_id"`
+	ID       string        `bson:"id"`
+	UserID   bson.ObjectId `bson:"user_id"`
+}
+
 // Post ...
 type Post struct {
-	ObjectID   bson.ObjectId `bson:"_id"`
-	ID         string        `bson:"id"`
-	Anonymous  bool          `bson:"anonymous"`
-	Author     string        `bson:"author"`
-	UserID     bson.ObjectId `bson:"user_id"`
-	CreateTime time.Time     `bson:"create_time"`
-	Blocked    bool          `bson:"blocked"`
-
-	ThreadID string   `bson:"thread_id"`
-	Content  string   `bson:"content"`
-	Quotes   []string `bson:"quotes,omitempty"`
+	PostBase
+	ThreadID   string    `bson:"thread_id"`
+	Anonymous  bool      `bson:"anonymous"`
+	Author     string    `bson:"author"`
+	CreateTime time.Time `bson:"create_time"`
+	Blocked    bool      `bson:"blocked"`
+	Index      int       `bson:"-"`
+	Quotes     []string  `bson:"quotes,omitempty"`
+	Content    string    `bson:"content"`
 }
 
 // PostInput ...
@@ -56,9 +61,11 @@ func (pi *PostInput) ParsePost(u *uexky.Uexky, user *User) (
 	}
 
 	post := &Post{
-		ObjectID:   bson.NewObjectId(),
+		PostBase: PostBase{
+			ObjectID: bson.NewObjectId(),
+			UserID:   user.ID,
+		},
 		Anonymous:  pi.Anonymous,
-		UserID:     user.ID,
 		CreateTime: time.Now(),
 
 		ThreadID: pi.ThreadID,
@@ -91,7 +98,7 @@ func (pi *PostInput) ParsePost(u *uexky.Uexky, user *User) (
 			return nil, nil, nil, fmt.Errorf("Count of Quotes can't greater than 5")
 		}
 		for _, r := range quotes {
-			p, err := FindPost(u, r)
+			p, err := FindPostByID(u, r)
 			if err != nil {
 				return nil, nil, nil, errors.Wrap(err, "find quote posts")
 			}
@@ -122,7 +129,10 @@ func NewPost(u *uexky.Uexky, input *PostInput) (*Post, error) {
 	}
 	if err := u.Mongo.C(colleThread).Update(
 		bson.M{"id": post.ThreadID},
-		bson.M{"$set": bson.M{"update_time": post.CreateTime}},
+		bson.M{
+			"$set":  bson.M{"update_time": post.CreateTime},
+			"$push": bson.M{"posts": post.PostBase},
+		},
 	); err != nil {
 		return nil, errors.Wrapf(err, "update thread %s", post.ThreadID)
 	}
@@ -133,8 +143,8 @@ func NewPost(u *uexky.Uexky, input *PostInput) (*Post, error) {
 	return post, nil
 }
 
-// FindPost ...
-func FindPost(u *uexky.Uexky, ID string) (*Post, error) {
+// FindPostByID ...
+func FindPostByID(u *uexky.Uexky, ID string) (*Post, error) {
 	if err := u.Flow.CostQuery(1); err != nil {
 		return nil, err
 	}
@@ -157,7 +167,7 @@ func FindPost(u *uexky.Uexky, ID string) (*Post, error) {
 func (p *Post) QuotePosts(u *uexky.Uexky) ([]*Post, error) {
 	var quotes []*Post
 	for _, id := range p.Quotes {
-		post, err := FindPost(u, id)
+		post, err := FindPostByID(u, id)
 		if err != nil {
 			return nil, err
 		}

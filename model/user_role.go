@@ -55,13 +55,13 @@ func (a *User) CheckPriority(
 	if len(a.Role.Range) == 0 {
 		return false, nil
 	}
-	var findThread func(*uexky.Uexky, string) (*Thread, error)
+	var qry bson.M
 	if action == "block_post" || action == "ban_user" {
-		findThread = FindThreadByPostID
+		qry = bson.M{"posts.post_id": target}
 	} else {
-		findThread = FindThreadByID
+		qry = bson.M{"id": target}
 	}
-	thread, err := findThread(u, target)
+	thread, err := FindThread(u, qry)
 	if err != nil {
 		return false, err
 	}
@@ -80,7 +80,7 @@ func BanUser(u *uexky.Uexky, postID string) error {
 	} else if !ok {
 		return errors.New("Permitted Error")
 	}
-	post, err := FindPost(u, postID)
+	post, err := FindPostByID(u, postID)
 	if err != nil {
 		return err
 	}

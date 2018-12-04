@@ -15,7 +15,7 @@ func (r *Resolver) Post(
 	ctx context.Context, args struct{ ID string },
 ) (*PostResolver, error) {
 	u := uexky.Pop(ctx)
-	post, err := model.FindPost(u, args.ID)
+	post, err := model.FindPostByID(u, args.ID)
 	if err != nil {
 		return nil, err
 	}

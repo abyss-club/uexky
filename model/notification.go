@@ -139,7 +139,7 @@ func GetNotification(
 
 	var noti []*Notification
 	now := time.Now()
-	err = sq.Find(u, colleNotification, "event_time", query, &noti)
+	err = sq.Find(u, colleNotification, "-event_time", query, &noti)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -151,8 +151,6 @@ func GetNotification(
 	if len(noti) == 0 {
 		return noti, &SliceInfo{}, nil
 	}
-
-	ReverseSlice(noti)
 	return noti, &SliceInfo{
 		FirstCursor: noti[0].genCursor(),
 		LastCursor:  noti[len(noti)-1].genCursor(),

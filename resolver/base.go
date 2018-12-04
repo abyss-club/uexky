@@ -40,16 +40,18 @@ func (sq *SliceQuery) Parse(reverse bool) (*model.SliceQuery, error) {
 		(sq.Before != nil && sq.After != nil) {
 		return nil, errors.New("Invalid query")
 	}
+	msq := &model.SliceQuery{Limit: int(sq.Limit)}
 	if sq.Before != nil {
-		return &model.SliceQuery{
-			Limit:  int(sq.Limit),
-			Desc:   !reverse,
-			Cursor: *(sq.Before),
-		}, nil
+		if reverse {
+			msq.GT = *(sq.Before)
+		}
+		msq.LT = *(sq.After)
 	}
-	return &model.SliceQuery{
-		Limit:  int(sq.Limit),
-		Desc:   reverse,
-		Cursor: *(sq.After),
-	}, nil
+	if sq.After != nil {
+		if reverse {
+			msq.LT = *(sq.After)
+		}
+		msq.GT = *(sq.After)
+	}
+	return msq, nil
 }

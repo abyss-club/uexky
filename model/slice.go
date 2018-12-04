@@ -3,7 +3,6 @@ package model
 import (
 	"fmt"
 	"log"
-	"reflect"
 	"strconv"
 	"time"
 
@@ -16,47 +15,88 @@ import (
 type SliceInfo struct {
 	FirstCursor string
 	LastCursor  string
+	HasPrev     bool
+	HasNext     bool
 }
 
 // SliceQuery ...
 type SliceQuery struct {
-	Limit  int
-	Desc   bool
-	Cursor string
+	GT    string
+	LT    string
+	Limit int
 }
 
 // GenQueryByObjectID ...
 func (sq *SliceQuery) GenQueryByObjectID() (bson.M, error) {
-	if sq.Cursor == "" {
+	qry := bson.M{}
+	if sq.GT != "" {
+		id, err := parseObjectID(sq.GT)
+		if err != nil {
+			return nil, err
+		}
+		qry["$gt"] = id
+	}
+	if sq.LT != "" {
+		id, err := parseObjectID(sq.LT)
+		if err != nil {
+			return nil, err
+		}
+		qry["$lt"] = id
+	}
+	if len(qry) == 0 {
 		return bson.M{}, nil
 	}
-	if !bson.IsObjectIdHex(sq.Cursor) {
-		return nil, errors.New("Invalid cursor")
-	}
-	id := bson.ObjectIdHex(sq.Cursor)
-	if sq.Desc {
-		return bson.M{"_id": bson.M{"$lt": id}}, nil
-	}
-	return bson.M{"_id": bson.M{"$gt": id}}, nil
+	return bson.M{"_id": qry}, nil
 }
 
 // GenQueryByTime in milliSeconds
 func (sq *SliceQuery) GenQueryByTime(field string) (bson.M, error) {
-	if sq.Cursor == "" {
+	qry := bson.M{}
+	if sq.GT != "" {
+		time, err := parseTimeCursor(sq.GT)
+		if err != nil {
+			return nil, err
+		}
+		qry["$gt"] = time
+	}
+	if sq.LT != "" {
+		time, err := parseTimeCursor(sq.LT)
+		if err != nil {
+			return nil, err
+		}
+		qry["$lt"] = time
+	}
+	if len(qry) == 0 {
 		return bson.M{}, nil
 	}
-	cursorTime, err := parseTimeCursor(sq.Cursor)
-	if err != nil {
-		return bson.M{}, err
+	return bson.M{field: qry}, nil
+}
+
+// Find ...
+func (sq *SliceQuery) Find(
+	u *uexky.Uexky, collection, sort string,
+	queryObj bson.M, result interface{},
+) error {
+	if sq.Limit <= 0 {
+		return errors.New("limit must greater than 0")
 	}
-	if sq.Desc {
-		return bson.M{field: bson.M{"$lt": cursorTime}}, nil
+	if err := u.Flow.CostQuery(sq.Limit); err != nil {
+		return err
 	}
-	return bson.M{field: bson.M{"$gt": cursorTime}}, nil
+	log.Printf("slice do query '%+v'", queryObj)
+	query := u.Mongo.C(collection).Find(queryObj).Limit(sq.Limit).Sort(sort)
+	return query.All(result)
 }
 
 func genTimeCursor(t time.Time) string {
 	return fmt.Sprint(t.UnixNano() / 1000 / 1000)
+}
+
+func parseObjectID(s string) (bson.ObjectId, error) {
+	if !bson.IsObjectIdHex(s) {
+		return "", errors.New("invalid ObjectId")
+	}
+	return bson.ObjectIdHex(s), nil
 }
 
 func parseTimeCursor(s string) (time.Time, error) {
@@ -67,35 +107,4 @@ func parseTimeCursor(s string) (time.Time, error) {
 	}
 	t = time.Unix(0, ms*1000*1000)
 	return t, nil
-}
-
-// Find ...
-func (sq *SliceQuery) Find(
-	u *uexky.Uexky, collection, field string,
-	queryObj bson.M, result interface{},
-) error {
-	if sq.Limit <= 0 {
-		return errors.New("limit must greater than 0")
-	}
-	if err := u.Flow.CostQuery(sq.Limit); err != nil {
-		return err
-	}
-	log.Printf("slice do query '%+v'", queryObj)
-	query := u.Mongo.C(collection).Find(queryObj).Limit(sq.Limit)
-	if sq.Desc {
-		query = query.Sort(fmt.Sprintf("-%s", field))
-	} else {
-		query = query.Sort(field)
-	}
-	return query.All(result)
-}
-
-// ReverseSlice ...
-func ReverseSlice(slice interface{}) {
-	swapper := reflect.Swapper(slice)
-	length := reflect.ValueOf(slice).Len()
-	for i := 0; i < length/2; i++ {
-		j := length - i - 1
-		swapper(i, j)
-	}
 }

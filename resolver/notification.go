@@ -201,7 +201,7 @@ func (n *QuotedNotiResolver) Thread(ctx context.Context) (*ThreadResolver, error
 // Post ...
 func (n *QuotedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
 	u := uexky.Pop(ctx)
-	post, err := model.FindPost(u, n.noti.Quoted.PostID)
+	post, err := model.FindPostByID(u, n.noti.Quoted.PostID)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func (n *QuotedNotiResolver) Post(ctx context.Context) (*PostResolver, error) {
 // QuotedPost ...
 func (n *QuotedNotiResolver) QuotedPost(ctx context.Context) (*PostResolver, error) {
 	u := uexky.Pop(ctx)
-	post, err := model.FindPost(u, n.noti.Quoted.QuotedPostID)
+	post, err := model.FindPostByID(u, n.noti.Quoted.QuotedPostID)
 	if err != nil {
 		return nil, err
 	}
