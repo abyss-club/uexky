@@ -10,7 +10,14 @@ const threadMutations = `
   pubThread(thread: ThreadInput!): Thread!
 `;
 
-const threadTypes = `
+const typeDef = `
+  extend type Query {
+    # A slice of thread.
+    threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
+    # A thread object.
+    thread(id: String!): Thread!
+  }
+
   # Construct a new thread.
   input ThreadInput {
       # Toggle anonymousness. If true, a new ID will be generated in each thread.
@@ -49,7 +56,4 @@ const threadTypes = `
   }
 `;
 
-export { threadMutations, threadQueries, threadTypes };
-export default `${threadMutations}
-${threadQueries}
-${threadTypes}`;
+export { typeDef };

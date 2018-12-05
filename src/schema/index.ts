@@ -1,25 +1,26 @@
 import { gql } from 'apollo-server-koa';
+import { makeExecutableSchema } from 'graphql-tools';
 
-import { base } from './base';
-import { notificationQueries, notificationTypes } from './notification';
-import { postMutations, postQueries, postTypes } from './post';
-import { tagQueries, tagTypes } from './tag';
-import { threadQueries } from './thread';
-import { userMutations, userTypes } from './user';
+import { typeDef as Base } from './base';
+import { typeDef as Notification } from './notification';
+import { typeDef as Post } from './post';
+import { typeDef as Tag } from './tag';
+import { typeDef as Thread } from './thread';
+import { typeDef as User } from './user';
 
-export default gql`${base}
-${notificationTypes}
-${postTypes}
-${tagTypes}
-${userTypes}
+const Query = `
   type Query {
-    ${notificationQueries}
-    ${postQueries}
-    ${tagQueries}
-    ${threadQueries}
-  }
-  type Mutation {
-    ${postMutations}
-    ${userMutations}
+    _empty: String
   }
 `;
+
+const resolvers = {
+  Query: {
+    test: () => 'Hello world!',
+  },
+};
+
+export const schema = makeExecutableSchema({
+  resolvers,
+  typeDefs: [Query, Base, Notification, Post, Tag, Thread, User],
+});

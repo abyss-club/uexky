@@ -9,7 +9,12 @@ const postMutations = `
   pubPost(post: PostInput!): Post!
 `;
 
-const postTypes = `
+const typeDef = `
+  extend type Query {
+    # A post object.
+    post(id: String!): Post!
+  }
+
   # Input object describing a Post to be published.
   input PostInput {
       threadID: String!
@@ -37,7 +42,4 @@ const postTypes = `
   }
 `;
 
-export { postMutations, postQueries, postTypes };
-export default `${postMutations}
-${postQueries}
-${postTypes}`;
+export { typeDef };

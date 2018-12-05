@@ -17,7 +17,12 @@ const userMutations = `
   delSubbedTags(tags: [String!]!): User!
 `;
 
-const userTypes = `
+const typeDef = `
+  extend type Query {
+    # A user profile object.
+    profile: User!
+    test: String,
+  }
   type User {
     email: String!
     # The Name of user. Required when not posting anonymously.
@@ -27,7 +32,4 @@ const userTypes = `
   }
 `;
 
-export { userMutations, userQueries, userTypes };
-export default `${userMutations}
-${userQueries}
-${userTypes}`;
+export { typeDef };
