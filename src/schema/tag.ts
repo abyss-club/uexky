@@ -24,4 +24,3 @@ const typeDef = `
 `;
 
 export { typeDef };
-
