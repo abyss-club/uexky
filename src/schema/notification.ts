@@ -1,16 +1,16 @@
 /* tslint:disable:max-line-length */
-const notificationQueries = `
-  # The count of unread notifications.
-  unreadNotiCount: UnreadNotiCount!
-  # Notifications for current user.
-  notification(
-    # One of 'system', 'replied' or 'quoted'.
-    type: String!,
-    query: SliceQuery!,
-  ): NotiSlice!
-`;
+const typeDef = `
+  extend type Query {
+    # The count of unread notifications.
+    unreadNotiCount: UnreadNotiCount!
+    # Notifications for current user.
+    notification(
+      # One of 'system', 'replied' or 'quoted'.
+      type: String!,
+      query: SliceQuery!,
+    ): NotiSlice!
+  }
 
-const notificationTypes = `
   # Count of different types of unread notifications.
   type UnreadNotiCount {
     # Announcement messages from server.
@@ -85,6 +85,4 @@ const notificationTypes = `
   }
 `;
 
-export { notificationQueries, notificationTypes };
-export default `${notificationQueries}
-${notificationTypes}`;
+export { typeDef };

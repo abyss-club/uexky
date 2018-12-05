@@ -4,7 +4,7 @@ import * as Koa from 'koa';
 import * as Router from 'koa-router';
 import * as mongoose from 'mongoose';
 
-import schema from './schema';
+import { schema } from './schema';
 
 const app = new Koa();
 
@@ -17,18 +17,9 @@ const typeDefs = gql`
   }
 `;
 
-console.log(schema);
-
-// Provide resolver functions for your schema fields
-const resolvers = {
-  Query: {
-    profile: () => 'Hello world!',
-  },
-};
-
 // console.log(schema);
 
-const server = new ApolloServer({ schema, resolvers });
+const server = new ApolloServer({ schema });
 
 server.applyMiddleware({ app });
 
