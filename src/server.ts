@@ -8,7 +8,7 @@ import schema from './schema';
 
 const app = new Koa();
 
-mongoose.connect('mongodb://localhost:27017/testing');
+mongoose.connect('mongodb://localhost:27017/testing', { useNewUrlParser: true });
 
 // Construct a schema, using GraphQL schema language
 const typeDefs = gql`
