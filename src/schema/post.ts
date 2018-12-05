@@ -38,3 +38,6 @@ const postTypes = `
 `;
 
 export { postMutations, postQueries, postTypes };
+export default `${postMutations}
+${postQueries}
+${postTypes}`;

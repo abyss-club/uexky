@@ -50,3 +50,6 @@ const threadTypes = `
 `;
 
 export { threadMutations, threadQueries, threadTypes };
+export default `${threadMutations}
+${threadQueries}
+${threadTypes}`;
