@@ -1,7 +1,7 @@
 /* tslint:disable:max-line-length */
 const notificationQueries = `
   # The count of unread notifications.
-  unreadNotiCount(): UnreadNotiCount!
+  unreadNotiCount: UnreadNotiCount!
   # Notifications for current user.
   notification(
     # One of 'system', 'replied' or 'quoted'.

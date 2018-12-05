@@ -1,6 +1,6 @@
 const tagQueries = `
   # Containing mainTags and tagTree.
-  tags(): Tags!
+  tags: Tags!
 `;
 
 const tagTypes = `
