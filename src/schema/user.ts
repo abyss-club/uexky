@@ -28,3 +28,6 @@ const userTypes = `
 `;
 
 export { userMutations, userQueries, userTypes };
+export default `${userMutations}
+${userQueries}
+${userTypes}`;

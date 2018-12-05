@@ -86,3 +86,5 @@ const notificationTypes = `
 `;
 
 export { notificationQueries, notificationTypes };
+export default `${notificationQueries}
+${notificationTypes}`;

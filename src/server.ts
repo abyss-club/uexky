@@ -1,10 +1,14 @@
 import { ApolloServer, gql } from 'apollo-server-koa';
+import { makeExecutableSchema } from 'graphql-tools';
 import * as Koa from 'koa';
 import * as Router from 'koa-router';
 import * as mongoose from 'mongoose';
-import * as schema from './schema';
+
+import schema from './schema';
 
 const app = new Koa();
+
+mongoose.connect('mongodb://localhost:27017/testing');
 
 // Construct a schema, using GraphQL schema language
 const typeDefs = gql`
@@ -13,6 +17,8 @@ const typeDefs = gql`
   }
 `;
 
+console.log(schema);
+
 // Provide resolver functions for your schema fields
 const resolvers = {
   Query: {
@@ -20,9 +26,9 @@ const resolvers = {
   },
 };
 
-console.log(schema);
+// console.log(schema);
 
-const server = new ApolloServer({ typeDefs, resolvers });
+const server = new ApolloServer({ schema, resolvers });
 
 server.applyMiddleware({ app });
 

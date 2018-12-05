@@ -21,3 +21,4 @@ const base = `
   }
 `;
 export { base };
+export default base;
