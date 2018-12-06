@@ -14,7 +14,7 @@
 		"docs/*"
 	],
 	"events": {
-		"restart": "echo \"[Warning] Remember run npm run test b4 push to dev branch !\""
+		"restart": "echo \"[Warning] Restarting...\""
 	},
 	"watch": ["./src"],
 	"ext": "ts, gql, json",
