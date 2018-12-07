@@ -1,0 +1,20 @@
+image: node:11.3-stretch
+
+stages:
+  - test
+
+# install deps
+before_script:
+  - cd ${CI_PROJECT_DIR}
+  - yarn
+
+test:
+  tags:
+    - docker
+  services:
+    - mongo
+  variables:
+    MONGO_URL: "mongodb://mongo"
+  stage: test
+  script:
+    - yarn test
