@@ -7,7 +7,7 @@ import * as cors from '@koa/cors';
 
 import { schema } from './schema';
 
-mongoose.connect('mongodb://localhost:27017/testing', { useNewUrlParser: true });
+// mongoose.connect('mongodb://localhost:27017/testing', { useNewUrlParser: true });
 
 // Construct a schema, using GraphQL schema language
 const typeDefs = gql`
