@@ -186,4 +186,7 @@ module.exports = {
 
   // Whether to use watchman for file crawling
   // watchman: true,
+  globalSetup: './test_utils/setup_mongo.js',
+  globalTeardown: './test_utils/teardown_mongo.js',
+  testEnvironment: './test_utils/mongo_env.js',
 };
