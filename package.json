@@ -8,12 +8,13 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "tsc && node dist/server.js",
+    "start": "tsc && node -r dotenv/config dist/server.js",
     "dev": "nodemon --config nodemon-config.json",
     "test": "jest --detectOpenHandles"
   },
   "dependencies": {
     "apollo-server-koa": "^2.0.0-rc.12",
+    "dotenv": "^6.2.0",
     "graphql": "^14.0.2",
     "graphql-tools": "^4.0.3",
     "koa": "^2.6.2",
