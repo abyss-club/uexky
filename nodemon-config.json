@@ -1,7 +1,7 @@
 {
 	"verbose": true,
 	"debug": false,
-	"exec": "cross-env node --inspect -r ts-node/register ./src/server.ts",
+	"exec": "cross-env node --inspect -r ts-node/register -r dotenv/config ./src/server.ts",
 	"ignore": [
 		"mochawesome-report",
 		"node_modules",

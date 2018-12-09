@@ -7,7 +7,8 @@ import * as cors from '@koa/cors';
 
 import { schema } from './schema';
 
-// mongoose.connect('mongodb://localhost:27017/testing', { useNewUrlParser: true });
+const { DB_PORT, DB_HOST, DB_NAME } = process.env;
+mongoose.connect(`mongodb://${DB_HOST}:${DB_PORT}/${DB_NAME}`, { useNewUrlParser: true });
 
 // Construct a schema, using GraphQL schema language
 const typeDefs = gql`
