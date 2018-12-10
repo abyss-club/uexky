@@ -4,8 +4,7 @@ module.exports = {
     "no-use-before-define": [0, {}],
     "no-underscore-dangle": ["error", {"allow": ["__MONGO__"]}],
     "strict": 0,
-  },
-  "settings": {
+    "node/no-unsupported-features/es-syntax": 0,
   },
   "env": {
     "es6": true,
