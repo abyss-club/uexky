@@ -1,11 +1,10 @@
 module.exports = {
-  "extends": ["eslint:recommended", "plugin:node/recommended", "airbnb-base"],
+  "extends": ["eslint:recommended", "plugin:node/recommended", "plugin:jest/recommended", "airbnb-base"],
   "rules": {
     "no-use-before-define": [0, {}],
     "no-underscore-dangle": ["error", {"allow": ["__MONGO__"]}],
     "strict": 0,
-  },
-  "settings": {
+    "node/no-unsupported-features/es-syntax": 0,
   },
   "env": {
     "es6": true,
