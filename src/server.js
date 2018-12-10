@@ -1,4 +1,4 @@
-import * as mongoose from 'mongoose';
+import mongoose from 'mongoose';
 import app from './app';
 
 const { DB_PORT, DB_HOST, DB_NAME } = process.env;
