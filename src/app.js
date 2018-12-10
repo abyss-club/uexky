@@ -1,8 +1,8 @@
 import { ApolloServer, gql } from 'apollo-server-koa';
-import * as Koa from 'koa';
-import * as Router from 'koa-router';
+import Koa from 'koa';
+import Router from 'koa-router';
 
-import * as cors from '@koa/cors';
+import cors from '@koa/cors';
 
 import { schema } from './schema';
 
