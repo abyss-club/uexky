@@ -2,7 +2,6 @@
 // https://jestjs.io/docs/en/configuration.html
 
 module.exports = {
-  preset: "ts-jest",
   // All imported modules in your tests should be mocked automatically
   // automock: false,
 
@@ -24,7 +23,7 @@ module.exports = {
   // An array of glob patterns indicating a set of files for which coverage information should be collected
   // collectCoverageFrom: null,
   collectCoverageFrom: [
-    "**/*.{ts,js}",
+    "**/*.js",
     "!**/node_modules/**",
     "!**/build/**",
     "!**/coverage/**"
