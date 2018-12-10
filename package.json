@@ -11,7 +11,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "node --experimental-modules -r dotenv/config dist/server.js",
+    "start": "babel-node src/server.js",
     "dev": "nodemon --config nodemon-config.json",
     "test": "jest --detectOpenHandles"
   },
@@ -25,8 +25,13 @@
     "mongoose": "^5.3.14"
   },
   "devDependencies": {
+    "@babel/cli": "^7.2.0",
+    "@babel/core": "^7.2.0",
+    "@babel/node": "^7.2.0",
+    "@babel/preset-env": "^7.2.0",
     "@koa/cors": "2",
     "babel-eslint": "8",
+    "babel-plugin-inline-dotenv": "^1.2.0",
     "cross-env": "^5.2.0",
     "eslint": "4.x",
     "eslint-config-airbnb-base": "^13.1.0",
