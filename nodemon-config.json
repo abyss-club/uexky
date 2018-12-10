@@ -1,7 +1,7 @@
 {
 	"verbose": true,
 	"debug": false,
-	"exec": "cross-env node --experimental-modules --inspect -r dotenv/config ./src/server.js",
+	"exec": "cross-env babel-node --inspect ./src/server.js",
 	"ignore": [
 		"mochawesome-report",
 		"node_modules",
