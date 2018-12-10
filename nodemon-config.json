@@ -1,14 +1,11 @@
 {
 	"verbose": true,
 	"debug": false,
-	"exec": "cross-env node --inspect -r ts-node/register -r dotenv/config ./src/server.ts",
+	"exec": "cross-env node --experimental-modules --inspect -r dotenv/config ./src/server.js",
 	"ignore": [
 		"mochawesome-report",
 		"node_modules",
 		"./test",
-		"**/*.d.ts",
-		"*.test.ts",
-		"*.spec.ts",
 		"fixtures/*",
 		"test/**/*",
 		"docs/*"
@@ -17,6 +14,6 @@
 		"restart": "echo \"[Warning] Restarting...\""
 	},
 	"watch": ["./src"],
-	"ext": "ts, gql, json",
+	"ext": "js, gql, json",
 	"inspect": true
 }
