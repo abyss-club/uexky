@@ -1,5 +1,6 @@
 // For a detailed explanation regarding each configuration property, visit:
 // https://jestjs.io/docs/en/configuration.html
+/* eslint-disable max-len, quotes */
 
 module.exports = {
   // All imported modules in your tests should be mocked automatically
@@ -26,7 +27,7 @@ module.exports = {
     "**/*.js",
     "!**/node_modules/**",
     "!**/build/**",
-    "!**/coverage/**"
+    "!**/coverage/**",
   ],
 
   // The directory where Jest should output its coverage files

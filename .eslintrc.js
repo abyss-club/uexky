@@ -1,5 +1,5 @@
 module.exports = {
-  "extends": ["eslint:recommended", "plugin:node/recommended", "airbnb-base"],
+  "extends": ["eslint:recommended", "plugin:node/recommended", "plugin:jest/recommended", "airbnb-base"],
   "rules": {
     "no-use-before-define": [0, {}],
     "no-underscore-dangle": ["error", {"allow": ["__MONGO__"]}],
