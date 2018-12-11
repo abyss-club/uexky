@@ -19,6 +19,7 @@
     "$": "src"
   },
   "dependencies": {
+    "@koa/cors": "2",
     "apollo-server-koa": "^2.0.0-rc.12",
     "dotenv": "^6.2.0",
     "graphql": "^14.0.2",
@@ -34,7 +35,6 @@
     "@babel/core": "^7.2.0",
     "@babel/node": "^7.2.0",
     "@babel/preset-env": "^7.2.0",
-    "@koa/cors": "2",
     "babel-core": "^7.0.0-bridge.0",
     "babel-eslint": "8",
     "babel-jest": "^23.6.0",
