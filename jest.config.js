@@ -148,9 +148,10 @@ module.exports = {
   // ],
 
   // An array of regexp pattern strings that are matched against all test paths, matched tests are skipped
-  // testPathIgnorePatterns: [
-  //   "/node_modules/"
-  // ],
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/__tests__/__utils__",
+  ],
 
   // The regexp pattern Jest uses to detect test files
   // testRegex: "",
@@ -186,7 +187,7 @@ module.exports = {
 
   // Whether to use watchman for file crawling
   // watchman: true,
-  globalSetup: './test_utils/setup_mongo.js',
-  globalTeardown: './test_utils/teardown_mongo.js',
-  testEnvironment: './test_utils/mongo_env.js',
+  // globalSetup: './__tests__/__utils__/setup_mongo.js',
+  // globalTeardown: './__tests__/__utils__/teardown_mongo.js',
+  // testEnvironment: './__tests__/__utils__/mongo_env.js',
 };

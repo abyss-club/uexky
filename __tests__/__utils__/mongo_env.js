@@ -9,10 +9,6 @@ const fs = require('fs');
 const globalConfigPath = path.join(__dirname, 'globalConfig.json');
 
 module.exports = class MongoEnvironment extends NodeEnvironment {
-  constructor(config) {
-    super(config);
-  }
-
   async setup() {
     console.log('Setup MongoDB Test Environment');
 
@@ -33,4 +29,4 @@ module.exports = class MongoEnvironment extends NodeEnvironment {
   runScript(script) {
     return super.runScript(script);
   }
-}
+};
