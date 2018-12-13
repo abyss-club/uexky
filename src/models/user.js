@@ -47,6 +47,12 @@ UserSchema.methods.onPubPost = async function onPubPost(thread, post) {
     $set: { updatedAt: Date() },
   });
 };
+UserSchema.methods.posts = async function posts() {
+  // TODO: use slice query
+  const userPosts = await UserPostsModel.find({ userId: this._id })
+    .sort({ updatedAt: -1 }).limit(10).exec();
+  return userPosts;
+};
 
 // MODEL: UserAID
 //        used for save anonymousId for user in threads.
