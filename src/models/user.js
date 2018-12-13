@@ -1,6 +1,10 @@
 import mongoose from 'mongoose';
 import { encode } from './uuid';
 
+const SchemaObjectId = mongoose.Schema.Types.ObjectId;
+
+// MODEL: User
+//        storage user info.
 const UserSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   name: { type: String, unique: true },
@@ -22,15 +26,34 @@ UserSchema.methods.anonymousId = async function anonymousId(threadId) {
   const aid = await UserAIDModel.findOne(obj);
   return aid.anonymousId;
 };
+UserSchema.methods.posts = async function posts() {
+  // TODO: use slice query
+  const userPosts = await UserPostsModel.find({ userId: this._id })
+    .sort({ updatedAt: -1 }).limit(10).exec();
+  return userPosts;
+};
 
+// MODEL: UserAID
+//        used for save anonymousId for user in threads.
 const UserAIDSchema = new mongoose.Schema({
-  userId: mongoose.Schema.Types.ObjectId,
-  threadId: mongoose.Schema.Types.ObjectId,
+  userId: SchemaObjectId,
+  threadId: SchemaObjectId,
 });
 const UserAIDModel = mongoose.model('UserAID', UserAIDSchema);
+
 UserAIDSchema.methods.anonymousId = function anonymousId() {
   return encode(this.ObjectId);
 };
+
+// MODEL: UserPosts
+//        used for querying user's posts grouped by thread.
+const UserPostsSchema = mongoose.Schema({
+  userId: SchemaObjectId,
+  threadId: SchemaObjectId,
+  posts: [SchemaObjectId],
+  updatedAt: Date(),
+});
+const UserPostsModel = mongoose.model('UserPosts', UserPostsSchema);
 
 export default UserModel;
 export { UserAIDModel };
