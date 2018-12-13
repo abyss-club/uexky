@@ -6,8 +6,14 @@ const SchemaObjectId = mongoose.Schema.Types.ObjectId;
 // MODEL: User
 //        storage user info.
 const UserSchema = new mongoose.Schema({
-  email: { type: String, unique: true },
-  name: { type: String, unique: true },
+  email: { type: String, require: true, unique: true },
+  name: {
+    type: String,
+    index: {
+      unique: true,
+      partialFilterExpression: { name: { $type: 'string' } },
+    },
+  },
   tags: [String],
   read_noti_time: {
     system: Date,
