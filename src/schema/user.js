@@ -32,4 +32,4 @@ const typeDef = `
   }
 `;
 
-export { typeDef };
+export { userQueries, userMutations, typeDef };
