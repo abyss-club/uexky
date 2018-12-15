@@ -63,4 +63,14 @@ const decode = (uuid) => {
   return ObjectId(idStr);
 };
 
-export { encode, decode };
+const genRandomStr = (length) => {
+  if (Number.isNaN(length) || length < 1) throw new Error('Invalid length');
+  const str = [];
+  const getRandomInt = () => Math.floor(Math.random() * Math.floor(code.length));
+  for (let i = 0; i < length; i += 1) {
+    str.push(code[getRandomInt()]);
+  }
+  return str.join('');
+};
+
+export { encode, decode, genRandomStr };
