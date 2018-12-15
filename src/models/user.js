@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
-import { encode } from './uuid';
+import { encode } from '../utils/uuid';
 
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
 
 // MODEL: User
 //        storage user info.
 const UserSchema = new mongoose.Schema({
-  email: { type: String, require: true, unique: true },
+  email: { type: String, required: true, unique: true },
   name: {
     type: String,
     index: {
@@ -82,5 +82,18 @@ const UserPostsSchema = mongoose.Schema({
 });
 const UserPostsModel = mongoose.model('UserPosts', UserPostsSchema);
 
+async function getUserByEmail(email) {
+  try {
+    const user = await UserModel.findOne({ email });
+    if (user) return user;
+    // const newUser = new UserModel({ email });
+    const res = await UserModel.create({ email });
+    return res;
+  } catch (e) {
+    console.log(e);
+    throw new Error(e);
+  }
+}
+
 export default UserModel;
-export { UserAIDModel };
+export { UserAIDModel, getUserByEmail };
