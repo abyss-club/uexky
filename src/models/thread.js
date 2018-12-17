@@ -45,7 +45,7 @@ ThreadSchema.statics.pubThread = async function pubThread(ctx, input) {
     }
     thread.author = user.name;
   }
-  await thread.save();
+  await ThreadModel(thread).save();
   return thread;
 };
 
@@ -55,6 +55,11 @@ ThreadSchema.methods.id = function id() {
 // TODO: replies
 ThreadSchema.methods.replyCount = function replyCount() {
   return this.catalog.length;
+};
+ThreadSchema.methods.addPost = async function addPost(post, opt) {
+  await ThreadModel.update({ _id: this._id }, {
+    $push: { catalog: { postId: post._id, createdAt: post.createdAt } },
+  }, opt);
 };
 
 export default ThreadModel;
