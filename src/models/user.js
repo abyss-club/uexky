@@ -20,17 +20,32 @@ const UserSchema = new mongoose.Schema({
   },
 });
 const UserModel = mongoose.model('User', UserSchema);
-UserSchema.methods.anonymousId = async function anonymousId(threadId) {
-  const obj = { userId: this.ObjectId, threadId };
-  await UserAIDModel.update(obj, obj, { upsert: true });
-  const aid = await UserAIDModel.findOne(obj);
-  return aid.anonymousId;
+UserSchema.methods.author = async function author(threadId, anonymous) {
+  if (anonymous) {
+    const obj = { userId: this.ObjectId, threadId };
+    await UserAIDModel.update(obj, obj, { upsert: true });
+    const aid = await UserAIDModel.findOne(obj);
+    return aid.anonymousId;
+  }
+  if ((this.name || '') === '') {
+    throw new Error('you must set name first');
+  }
+  return this.name;
 };
 UserSchema.methods.posts = async function posts() {
   // TODO: use slice query
   const userPosts = await UserPostsModel.find({ userId: this._id })
     .sort({ updatedAt: -1 }).limit(10).exec();
   return userPosts;
+};
+UserSchema.methods.addPost = async function addPost(thread, post) {
+  await UserPostsModel.update({
+    userId: this._id,
+    threadId: thread._id,
+  }, {
+    $push: { posts: post._id },
+    $set: { updatedAt: Date() },
+  });
 };
 
 // MODEL: UserAID
