@@ -78,7 +78,7 @@ const UserPostsSchema = mongoose.Schema({
   userId: SchemaObjectId,
   threadId: SchemaObjectId,
   posts: [SchemaObjectId],
-  updatedAt: Date(),
+  updatedAt: Date,
 });
 const UserPostsModel = mongoose.model('UserPosts', UserPostsSchema);
 
