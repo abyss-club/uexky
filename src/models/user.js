@@ -66,6 +66,12 @@ UserSchema.statics.profile = async function profile(ctx) {
   return this.findOne({ email: user.email });
 };
 
+UserSchema.statics.profile = async function profile(ctx) {
+  console.log(ctx);
+  const { user } = ctx;
+  return this.findOne({ email: user.email });
+};
+
 // MODEL: UserAID
 //        used for save anonymousId for user in threads.
 const UserAIDSchema = new mongoose.Schema({
