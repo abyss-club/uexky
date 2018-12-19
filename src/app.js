@@ -9,43 +9,39 @@ import { schema } from './schema';
 import { genRandomStr } from './utils/uuid';
 import { getUserByEmail } from './models/user';
 import { addToAuth, getEmailByCode } from './models/auth';
-import { getTokenByEmail } from './models/token';
+import { genNewToken, getEmailByToken } from './models/token';
 
 const server = new ApolloServer({
   schema,
-  context: ({ req }) => {
-    // get the user token from the headers
-    const token = req.headers.authorization || '';
-    console.log(req);
-    // try to retrieve a user with the token
-    const user = getUser(token);
-    // add the user to the context
-    return { user };
+  context: ({ ctx }) => {
+    console.log('ctxuser', ctx.user);
+    return { user: ctx.user };
   },
 });
 
-const app = new Koa();
-server.applyMiddleware({ app });
-
-app.use(async (ctx, next) => {
-  // Log the request to the console
-  console.log('Url:', ctx.url);
-  // Pass the request to the next middleware function
-  await next();
-});
+function authMiddleware() {
+  return async (ctx, next) => {
+    const token = ctx.cookies.get('token');
+    try {
+      const email = await getEmailByToken(token);
+      const user = await getUserByEmail(email);
+      app.context.user = user;
+    } catch (e) {
+      app.context.user = {};
+      console.log(e);
+    }
+    await next();
+  };
+}
 
 const router = new Router();
-router.get('/', async (ctx) => {
-  ctx.body = 'Hello World!';
-});
+// router.use('/graphql', authMiddleware());
 router.get('/auth', async (ctx, next) => {
   try {
-    console.log(ctx.query.code);
     const email = await getEmailByCode(ctx.query.code);
-    const token = await getTokenByEmail(email);
+    const token = await genNewToken(email);
     const expiry = new Date(token.createdAt);
     expiry.setDate(expiry.getDate() + 20);
-    console.log(expiry);
     ctx.body = token;
     ctx.cookies.set('token', token.authToken, {
       path: '/',
@@ -60,8 +56,11 @@ router.get('/auth', async (ctx, next) => {
   await next();
 });
 
+const app = new Koa();
 app.use(router.routes());
+app.use(authMiddleware());
 app.use(cors({ allowMethods: ['GET', 'OPTION', 'POST'] }));
+server.applyMiddleware({ app });
 // mailguntest();
 
 export default app;
