@@ -1,13 +1,19 @@
 import mongoose from 'mongoose';
-import { encode } from './uuid';
+import { encode } from '../utils/uuid';
 
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
 
 // MODEL: User
 //        storage user info.
 const UserSchema = new mongoose.Schema({
-  email: { type: String, unique: true },
-  name: { type: String, unique: true },
+  email: { type: String, required: true, unique: true },
+  name: {
+    type: String,
+    index: {
+      unique: true,
+      partialFilterExpression: { name: { $type: 'string' } },
+    },
+  },
   tags: [String],
   read_noti_time: {
     system: Date,
@@ -47,6 +53,18 @@ UserSchema.methods.onPubPost = async function onPubPost(thread, post) {
     $set: { updatedAt: Date() },
   });
 };
+UserSchema.methods.posts = async function posts() {
+  // TODO: use slice query
+  const userPosts = await UserPostsModel.find({ userId: this._id })
+    .sort({ updatedAt: -1 }).limit(10).exec();
+  return userPosts;
+};
+
+UserSchema.statics.profile = async function profile(ctx) {
+  console.log(ctx);
+  const { user } = ctx;
+  return this.findOne({ email: user.email });
+};
 
 // MODEL: UserAID
 //        used for save anonymousId for user in threads.
@@ -66,9 +84,21 @@ const UserPostsSchema = mongoose.Schema({
   userId: SchemaObjectId,
   threadId: SchemaObjectId,
   posts: [SchemaObjectId],
-  updatedAt: Date(),
+  updatedAt: Date,
 });
 const UserPostsModel = mongoose.model('UserPosts', UserPostsSchema);
 
+async function getUserByEmail(email) {
+  try {
+    const user = await UserModel.findOne({ email });
+    if (user) return user;
+    // const newUser = new UserModel({ email });
+    const res = await UserModel.create({ email });
+    return res;
+  } catch (e) {
+    throw new Error(e);
+  }
+}
+
 export default UserModel;
-export { UserAIDModel };
+export { UserAIDModel, getUserByEmail };
