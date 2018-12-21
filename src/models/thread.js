@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import { encode } from './uuid';
 
+import TagModel from './tag';
+
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
 
 const ThreadSchema = mongoose.Schema({
@@ -45,7 +47,11 @@ ThreadSchema.statics.pubThread = async function pubThread(ctx, input) {
     }
     thread.author = user.name;
   }
-  await ThreadModel(thread).save();
+  const session = await mongoose.startSession();
+  await ThreadModel(thread, { session }).save();
+  await user.onPubThread(thread, { session });
+  await TagModel.onPubThread(thread, { session });
+  await session.commitTransaction();
   return thread;
 };
 
@@ -56,7 +62,7 @@ ThreadSchema.methods.id = function id() {
 ThreadSchema.methods.replyCount = function replyCount() {
   return this.catalog.length;
 };
-ThreadSchema.methods.addPost = async function addPost(post, opt) {
+ThreadSchema.methods.onPubPost = async function onPubPost(post, opt) {
   await ThreadModel.update({ _id: this._id }, {
     $push: { catalog: { postId: post._id, createdAt: post.createdAt } },
   }, opt);

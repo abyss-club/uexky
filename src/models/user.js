@@ -38,7 +38,7 @@ UserSchema.methods.posts = async function posts() {
     .sort({ updatedAt: -1 }).limit(10).exec();
   return userPosts;
 };
-UserSchema.methods.addPost = async function addPost(thread, post) {
+UserSchema.methods.onPubPost = async function onPubPost(thread, post) {
   await UserPostsModel.update({
     userId: this._id,
     threadId: thread._id,
