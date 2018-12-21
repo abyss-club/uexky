@@ -37,12 +37,17 @@
     "cross-env": "^5.2.0",
     "eslint": "4.x",
     "eslint-config-airbnb-base": "^13.1.0",
+    "eslint-import-resolver-alias": "^1.1.2",
     "eslint-plugin-import": "^2.14.0",
     "eslint-plugin-jest": "^22.1.2",
     "eslint-plugin-node": "^8.0.0",
     "jest": "^23.6.0",
+    "module-alias": "^2.1.0",
     "mongodb-memory-server": "^2.8.0",
     "nodemon": "^1.18.7",
     "supertest": "^3.3.0"
+  },
+  "_moduleAliases": {
+    "~": "."
   }
 }
