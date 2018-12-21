@@ -20,39 +20,45 @@ const typeDef = `
 
   # Construct a new thread.
   input ThreadInput {
-      # Toggle anonymousness. If true, a new ID will be generated in each thread.
-      anonymous: Boolean!
-      content: String!
-      # Required. Only one mainTag is allowed.
-      mainTag: String!
-      # Optional, maximum of 4.
-      subTags: [String!]
-      # Optional. If not set, the title will be '无题'.
-      title: String
+    # Toggle anonymousness. If true, a new ID will be generated in each thread.
+    anonymous: Boolean!
+    content: String!
+    # Required. Only one mainTag is allowed.
+    mainTag: String!
+    # Optional, maximum of 4.
+    subTags: [String!]
+    # Optional. If not set, the title will be '无题'.
+    title: String
   }
 
   type Thread {
-      # UUID with 8 chars in length, and will increase to 9 after 30 years.
-      id: String!
-      # Thread was published anonymously or not.
-      anonymous: Boolean!
-      # Same format as id if anonymous, name of User otherwise.
-      author: String!
-      content: String!
-      createTime: Time!
-      # Only one mainTag is allowed.
-      mainTag: String!
-      # Optional, maximum of 4.
-      subTags: [String!]
-      # Default to '无题'.
-      title: String
-      replies(query: SliceQuery!): PostSlice!
-      replyCount: Int!
+    # UUID with 8 chars in length, and will increase to 9 after 30 years.
+    id: String!
+    # Thread was published anonymously or not.
+    anonymous: Boolean!
+    # Same format as id if anonymous, name of User otherwise.
+    author: String!
+    content: String!
+    createdAt: Time!
+    # Only one mainTag is allowed.
+    mainTag: String!
+    # Optional, maximum of 4.
+    subTags: [String!]
+    # Default to '无题'.
+    title: String
+    replies(query: SliceQuery!): PostSlice!
+    replyCount: Int!
+    catalog: [ThreadCatalogItem!]
+  }
+
+  type ThreadCatalogItem {
+    postId: [String!]
+    createdAt: Time!
   }
 
   type ThreadSlice {
-      threads: [Thread]!
-      sliceInfo: SliceInfo!
+    threads: [Thread]!
+    sliceInfo: SliceInfo!
   }
 `;
 
