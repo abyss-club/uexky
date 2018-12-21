@@ -1,3 +1,4 @@
+import 'module-alias/register';
 import { ApolloServer, gql } from 'apollo-server-koa';
 import Koa from 'koa';
 import Router from 'koa-router';
