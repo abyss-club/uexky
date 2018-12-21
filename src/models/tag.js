@@ -8,12 +8,13 @@ const TagSchema = mongoose.Schema({
 });
 const TagModel = mongoose.Model('Tag', TagSchema);
 
-TagSchema.statics.onPubThread = async function onPubThread(thread) {
+TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
+  const option = { ...opt, upsert: true };
   thread.subTags.forEach(async (tag) => {
     await TagModel.update({ name: tag }, {
       $addToSet: { mainTags: thread.mainTag },
       $set: { updatedAt: new Date() },
-    }, { upsert: true });
+    }, option);
   });
 };
 TagSchema.statics.getTree = async function getTree(limit) {

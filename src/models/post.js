@@ -52,10 +52,12 @@ PostSchema.statics.pubPost = async function pubPost(ctx, input) {
   }
   const session = await mongoose.startSession();
   await PostModel.create(post, { session });
-  await thread.addPost(post, { session });
-  await user.addPost(thread, post);
+  await thread.onPubPost(post, { session });
+  await user.onPubPost(thread, post);
+  await NotificationModel.sendRepliedNoti(post, thread, { session });
   await NotificationModel.sendQuotedNoti(post, thread, quotedPosts, { session });
   await session.commitTransaction();
+  return post;
 };
 
 PostSchema.methods.id = function id() {

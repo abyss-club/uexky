@@ -39,6 +39,28 @@ NotificationSchema.methods.body = function body() {
       return null;
   }
 };
+NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
+  post, thread, opt,
+) {
+  const option = { ...opt, upsert: true };
+  await NotificationModel.update({
+    id: `replied:${thread.id()}`,
+  }, {
+    $setOnInsert: {
+      id: `replied:${thread.id()}`,
+      type: 'replied',
+      sendTo: thread.userId,
+      'replied.threadId': thread._id,
+    },
+    $set: {
+      eventTime: post.createdAt,
+    },
+    $addToSet: {
+      'replied.repliers': post.author,
+      'replied.repliersIds': post.userId,
+    },
+  }, option);
+};
 NotificationSchema.statics.sendQuotedNoti = async function sendQuotedNoti(
   post, thread, quotedPosts, opt,
 ) {
