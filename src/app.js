@@ -2,31 +2,65 @@ import 'module-alias/register';
 import { ApolloServer, gql } from 'apollo-server-koa';
 import Koa from 'koa';
 import Router from 'koa-router';
-
 import cors from '@koa/cors';
 
+import mailguntest from './mailgun';
 import { schema } from './schema';
+import { genRandomStr } from './utils/uuid';
+import { getUserByEmail } from './models/user';
+import { addToAuth, getEmailByCode } from './models/auth';
+import { genNewToken, getEmailByToken } from './models/token';
 
 const server = new ApolloServer({
   schema,
+  context: ({ ctx }) => {
+    console.log('ctxuser', ctx.user);
+    return { user: ctx.user };
+  },
 });
 
-const app = new Koa();
-server.applyMiddleware({ app });
+function authMiddleware() {
+  return async (ctx, next) => {
+    const token = ctx.cookies.get('token');
+    try {
+      const email = await getEmailByToken(token);
+      const user = await getUserByEmail(email);
+      app.context.user = user;
+    } catch (e) {
+      app.context.user = {};
+      console.log(e);
+    }
+    await next();
+  };
+}
 
-app.use(async (ctx, next) => {
-  // Log the request to the console
-  console.log('Url:', ctx.url);
-  // Pass the request to the next middleware function
+const router = new Router();
+// router.use('/graphql', authMiddleware());
+router.get('/auth', async (ctx, next) => {
+  try {
+    const email = await getEmailByCode(ctx.query.code);
+    const token = await genNewToken(email);
+    const expiry = new Date(token.createdAt);
+    expiry.setDate(expiry.getDate() + 20);
+    ctx.body = token;
+    ctx.cookies.set('token', token.authToken, {
+      path: '/',
+      domain: process.env.API_DOMAIN,
+      httpOnly: true,
+      overwrite: true,
+      expires: expiry,
+    });
+  } catch (e) {
+    ctx.throw(401, e);
+  }
   await next();
 });
 
-const router = new Router();
-router.get('/', async (ctx) => {
-  ctx.body = 'Hello World!';
-});
-
+const app = new Koa();
 app.use(router.routes());
+app.use(authMiddleware());
 app.use(cors({ allowMethods: ['GET', 'OPTION', 'POST'] }));
+server.applyMiddleware({ app });
+// mailguntest();
 
 export default app;

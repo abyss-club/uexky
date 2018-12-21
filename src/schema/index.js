@@ -8,6 +8,8 @@ import { typeDef as Tag } from './tag';
 import { typeDef as Thread } from './thread';
 import { typeDef as User } from './user';
 
+import UserResolver, { profile } from '../resolvers/user';
+
 const Query = `
   type Query {
     _empty: String
@@ -17,6 +19,7 @@ const Query = `
 const resolvers = {
   Query: {
     test: () => 'Hello world!',
+    profile: (root, args, ctx) => profile(ctx),
   },
 };
 
