@@ -12,8 +12,6 @@ const typeDef = `
   type Tags {
     # Main tags are predefined manually.
     mainTags: [String!]!
-    # Recommended tags are picked manually.
-    recommended: [String!]!
     tree(query: String): [TagTreeNode!]
   }
 

@@ -17,11 +17,11 @@ const typeDef = `
 
   # Input object describing a Post to be published.
   input PostInput {
-      threadID: String!
+      threadId: String!
       anonymous: Boolean!
       content: String!
       # Set quoting PostIDs.
-      quotes: [String!]
+      quoteIds: [String!]
   }
 
   # Object describing a Post.

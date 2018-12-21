@@ -4,16 +4,19 @@
   "engines": {
     "node": ">=11.3.0"
   },
-  "description": "uexky written in node",
+  "description": "backend of abyss.club",
   "main": "index.js",
-  "repository": "https://gitlab.com/abyss.club/uexky-next",
-  "author": "OrcaXS Suen",
-  "license": "MIT",
+  "repository": "https://gitlab.com/abyss.club/uexky",
+  "author": "abyss.club",
+  "license": "AGPLv3",
   "private": true,
   "scripts": {
     "start": "babel-node src/server.js",
     "dev": "nodemon --config nodemon-config.json",
     "test": "jest --detectOpenHandles"
+  },
+  "_moduleAliases": {
+    "$": "src"
   },
   "dependencies": {
     "apollo-server-koa": "^2.0.0-rc.12",
@@ -22,6 +25,7 @@
     "graphql-tools": "^4.0.3",
     "koa": "^2.6.2",
     "koa-router": "^7.4.0",
+    "module-alias": "^2.1.0",
     "mongoose": "^5.3.14"
   },
   "devDependencies": {
@@ -48,6 +52,6 @@
     "supertest": "^3.3.0"
   },
   "_moduleAliases": {
-    "~": "."
+    "~": "./src"
   }
 }
