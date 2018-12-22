@@ -31,4 +31,4 @@ async function getEmailByToken(authToken) {
 }
 
 export default TokenModel;
-export { genNewToken, getEmailByToken };
+export { TokenSchema, genNewToken, getEmailByToken };
