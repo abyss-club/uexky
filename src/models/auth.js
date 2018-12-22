@@ -36,4 +36,4 @@ async function getEmailByCode(authCode) {
 }
 
 export default AuthModel;
-export { addToAuth, getEmailByCode };
+export { AuthSchema, addToAuth, getEmailByCode };

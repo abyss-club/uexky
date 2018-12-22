@@ -107,4 +107,4 @@ async function getUserByEmail(email) {
 }
 
 export default UserModel;
-export { UserAIDModel, getUserByEmail };
+export { UserSchema, UserAIDModel, getUserByEmail };
