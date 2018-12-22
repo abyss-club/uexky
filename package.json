@@ -15,9 +15,6 @@
     "dev": "nodemon --config nodemon-config.json",
     "test": "jest --detectOpenHandles"
   },
-  "_moduleAliases": {
-    "$": "src"
-  },
   "dependencies": {
     "@koa/cors": "2",
     "apollo-server-koa": "^2.0.0-rc.12",
@@ -28,7 +25,7 @@
     "koa-router": "^7.4.0",
     "mailgun-js": "^0.22.0",
     "module-alias": "^2.1.0",
-    "mongoose": "^5.3.14"
+    "mongoose": "^5.3.14",
     "validator": "^10.9.0"
   },
   "devDependencies": {
