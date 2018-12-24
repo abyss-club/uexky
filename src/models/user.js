@@ -95,4 +95,4 @@ async function getUserByEmail(email) {
 }
 
 export default UserModel;
-export { UserSchema, UserAIDModel, getUserByEmail };
+export { UserAIDModel, getUserByEmail };
