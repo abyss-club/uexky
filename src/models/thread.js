@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { encode } from './uuid';
+import { encode } from '~/utils/uuid';
 
 import TagModel from './tag';
 
