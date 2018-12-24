@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-import { encode, decode } from './uuid';
+import { encode, decode } from '~/utils/uuid';
 import ThreadModel from './thread';
 import NotificationModel from './notification';
 
