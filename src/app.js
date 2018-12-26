@@ -22,13 +22,15 @@ const server = new ApolloServer({
 function authMiddleware() {
   return async (ctx, next) => {
     const token = ctx.cookies.get('token');
-    try {
-      const email = await getEmailByToken(token);
-      const user = await getUserByEmail(email);
-      app.context.user = user;
-    } catch (e) {
-      app.context.user = {};
-      console.log(e);
+    if (ctx.url === '/graphql') {
+      try {
+        const email = await getEmailByToken(token);
+        const user = await getUserByEmail(email);
+        app.context.user = user;
+      } catch (e) {
+        app.context.user = {};
+        console.log(e);
+      }
     }
     await next();
   };
@@ -37,21 +39,25 @@ function authMiddleware() {
 const router = new Router();
 // router.use('/graphql', authMiddleware());
 router.get('/auth', async (ctx, next) => {
-  try {
-    const email = await getEmailByCode(ctx.query.code);
-    const token = await genNewToken(email);
-    const expiry = new Date(token.createdAt);
-    expiry.setDate(expiry.getDate() + 20);
-    ctx.body = token;
-    ctx.cookies.set('token', token.authToken, {
-      path: '/',
-      domain: process.env.API_DOMAIN,
-      httpOnly: true,
-      overwrite: true,
-      expires: expiry,
-    });
-  } catch (e) {
-    ctx.throw(401, e);
+  if (!ctx.query.code || ctx.query.code.length !== 36) {
+    ctx.body = 'Incorrect authentication code';
+  } else {
+    try {
+      const email = await getEmailByCode(ctx.query.code);
+      const token = await genNewToken(email);
+      const expiry = new Date(token.createdAt);
+      expiry.setDate(expiry.getDate() + 20);
+      ctx.body = token;
+      ctx.cookies.set('token', token.authToken, {
+        path: '/',
+        domain: process.env.API_DOMAIN,
+        httpOnly: true,
+        overwrite: true,
+        expires: expiry,
+      });
+    } catch (e) {
+      ctx.throw(401, e);
+    }
   }
   await next();
 });

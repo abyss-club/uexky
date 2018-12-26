@@ -79,7 +79,7 @@ module.exports = {
 
   // A map from regular expressions to module names that allow to stub out resources with a single module
   moduleNameMapper: {
-    "~(.*)$": "<rootDir>/$1",
+    "~(.*)$": "<rootDir>/src/$1",
   },
 
   // An array of regexp pattern strings, matched against all module paths before considered 'visible' to the module loader
@@ -148,9 +148,10 @@ module.exports = {
   // ],
 
   // An array of regexp pattern strings that are matched against all test paths, matched tests are skipped
-  // testPathIgnorePatterns: [
-  //   "/node_modules/"
-  // ],
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/__tests__/__utils__",
+  ],
 
   // The regexp pattern Jest uses to detect test files
   // testRegex: "",
@@ -186,4 +187,7 @@ module.exports = {
 
   // Whether to use watchman for file crawling
   // watchman: true,
+  // globalSetup: './__tests__/__utils__/setup_mongo.js',
+  // globalTeardown: './__tests__/__utils__/teardown_mongo.js',
+  // testEnvironment: './__tests__/__utils__/mongo_env.js',
 };
