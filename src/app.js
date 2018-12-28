@@ -1,5 +1,5 @@
 import 'module-alias/register';
-import { ApolloServer, gql } from 'apollo-server-koa';
+import { ApolloServer } from 'apollo-server-koa';
 import Koa from 'koa';
 import Router from 'koa-router';
 import cors from '@koa/cors';
@@ -14,7 +14,6 @@ import { genNewToken, getEmailByToken } from './models/token';
 const server = new ApolloServer({
   schema,
   context: ({ ctx }) => {
-    console.log('ctxuser', ctx.user);
     return { user: ctx.user };
   },
 });
@@ -28,8 +27,8 @@ function authMiddleware() {
         const user = await getUserByEmail(email);
         app.context.user = user;
       } catch (e) {
-        app.context.user = {};
-        console.log(e);
+        if (e.authFail) app.context.user = null;
+        else throw new Error(e);
       }
     }
     await next();

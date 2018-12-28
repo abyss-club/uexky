@@ -1,3 +1,4 @@
+import { AuthenticationError } from 'apollo-server-koa';
 import UserModel from '../models/user';
 import AuthModel from '../models/auth';
 
@@ -6,7 +7,7 @@ const resolvers = {
 
   Query: {
     profile: (_, __, ctx) => {
-      if (!ctx.user) return {};
+      if (!ctx.user) throw new AuthenticationError('Authentication needed.');
       const { email, name, tags } = ctx.user;
       return { email, name, tags };
     },
