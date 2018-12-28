@@ -1,17 +1,18 @@
 import UserModel from '../models/user';
+import AuthModel from '../models/auth';
 
-// const User = (user) => {
-//   profile: (obj, args, ctx, info) => {
-//     console.log('resolver ctx', ctx);
-//     return UserModel.profile(ctx);
-//   }
-// };
+const resolvers = {
+  User: profile => profile,
 
-const profile = (ctx) => {
-  console.log(ctx);
-  if (!ctx.user) return null;
-  return ctx.user;
+  Query: {
+    profile: (_, __, ctx) => {
+      if (!ctx.user) return null;
+      const { email, name, tags } = ctx.user;
+      return { email, name, tags };
+    },
+  },
 };
 
-// export default User;
-export { profile };
+// export default UserTypes;
+// export { profile };
+export default resolvers;
