@@ -12,7 +12,7 @@ const typeDef = `
   type Tags {
     # Main tags are predefined manually.
     mainTags: [String!]!
-    tree(query: String): [TagTreeNode!]
+    tree(query: String, limit: Int): [TagTreeNode!]
   }
 
   type TagTreeNode {
