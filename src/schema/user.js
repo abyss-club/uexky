@@ -21,7 +21,6 @@ const typeDef = `
   extend type Query {
     # A user profile object.
     profile: User!
-    test: String,
   }
   type User {
     email: String!
