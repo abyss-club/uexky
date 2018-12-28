@@ -20,13 +20,11 @@ async function genNewToken(email) {
   const newToken = { email, authToken, createdAt: new Date() };
   await TokenModel.update({ email }, newToken, { upsert: true });
   const result = await TokenModel.findOne({ email }).orFail(() => new Error('AuthToken not found'));
-  console.log(result);
   return result;
 }
 
 async function getEmailByToken(authToken) {
   const result = await TokenModel.findOne({ authToken }).orFail(() => new Error('Email not found'));
-  console.log(result);
   return result.email;
 }
 

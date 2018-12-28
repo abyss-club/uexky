@@ -23,9 +23,6 @@ async function addToAuth(email) {
   const authCode = genRandomStr(36);
   const newAuth = { email, authCode, createdAt: new Date() };
   await AuthModel.update({ email }, newAuth, { upsert: true });
-  const res = await AuthModel.findOne({ email }, 'authCode').orFail(() => new Error('AuthCode not found for the email'));
-  console.log(res);
-  return res;
 }
 
 async function getEmailByCode(authCode) {

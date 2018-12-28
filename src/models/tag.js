@@ -21,7 +21,8 @@ TagSchema.statics.getTree = async function getTree(limit) {
   const tagTrees = config.mainTags.map(async (mainTag) => {
     const subTags = await TagModel.find({ mainTags: mainTag })
       .sort({ updatedAt: -1 })
-      .limit(limit || defaultLimit).exec();
+      .limit(limit || defaultLimit)
+      .exec();
     return {
       mainTag,
       subTags: subTags.map(tag => tag.subTag),
