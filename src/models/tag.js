@@ -10,9 +10,10 @@ const TagSchema = mongoose.Schema({
 TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
   const option = { ...opt, upsert: true };
   thread.subTags.forEach(async (tag) => {
+    console.log(tag);
     await TagModel.update({ subTag: tag }, {
       $addToSet: { mainTags: thread.mainTag },
-      $set: { updatedAt: new Date() },
+      $set: { updateAt: new Date() },
     }, option);
   });
 };
