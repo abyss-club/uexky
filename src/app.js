@@ -7,8 +7,9 @@ import cors from '@koa/cors';
 import mailguntest from './mailgun';
 import { schema } from './schema';
 import { genRandomStr } from './utils/uuid';
+import AuthModel from './models/auth';
+import TagModel from './models/tag';
 import { getUserByEmail } from './models/user';
-import { addToAuth, getEmailByCode } from './models/auth';
 import { genNewToken, getEmailByToken } from './models/token';
 
 const server = new ApolloServer({
@@ -42,7 +43,7 @@ router.get('/auth', async (ctx, next) => {
     ctx.body = 'Incorrect authentication code';
   } else {
     try {
-      const email = await getEmailByCode(ctx.query.code);
+      const email = await AuthModel.getEmailByCode(ctx.query.code);
       const token = await genNewToken(email);
       const expiry = new Date(token.createdAt);
       expiry.setDate(expiry.getDate() + 20);
