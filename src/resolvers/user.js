@@ -12,6 +12,13 @@ const resolvers = {
       return { email, name, tags };
     },
   },
+
+  Mutation: {
+    auth: (obj, args, ctx, info) => {
+      AuthModel.addToAuth(args.email);
+      return true;
+    },
+  },
 };
 
 // export default UserTypes;

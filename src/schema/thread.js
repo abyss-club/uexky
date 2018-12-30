@@ -1,21 +1,14 @@
-const threadQueries = `
-  # A slice of thread.
-  threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
-  # A thread object.
-  thread(id: String!): Thread!
-`;
-
-const threadMutations = `
-  # Publish a new thread.
-  pubThread(thread: ThreadInput!): Thread!
-`;
-
-const typeDef = `
+export default `
   extend type Query {
     # A slice of thread.
     threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
     # A thread object.
     thread(id: String!): Thread!
+  }
+
+  extend type Mutation {
+    # Publish a new thread.
+    pubThread(thread: ThreadInput!): Thread!
   }
 
   # Construct a new thread.
@@ -61,5 +54,3 @@ const typeDef = `
     sliceInfo: SliceInfo!
   }
 `;
-
-export { typeDef };
