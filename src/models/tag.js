@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import config from '~/config';
 
-const TagSchema = mongoose.Schema({
+const TagSchema = new mongoose.Schema({
   subTag: { type: String, required: true, unique: true },
   mainTags: [String],
   updateAt: Date,
