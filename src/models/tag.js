@@ -17,6 +17,7 @@ TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
     }, option);
   });
 };
+
 TagSchema.statics.getTree = async function getTree(limit) {
   const defaultLimit = 10;
   const tagTrees = config.mainTags.map(async (mainTag) => {
@@ -29,7 +30,7 @@ TagSchema.statics.getTree = async function getTree(limit) {
       subTags: subTags.map(tag => tag.subTag),
     };
   });
-  return tagTrees;
+  return Promise.all(tagTrees);
 };
 
 const TagModel = mongoose.model('Tag', TagSchema);
