@@ -23,7 +23,7 @@ const ThreadSchema = mongoose.Schema({
     createdAt: Date,
   }],
 }, { id: false });
-const ThreadModel = mongoose.Model('Thread', ThreadSchema);
+const ThreadModel = mongoose.model('Thread', ThreadSchema);
 
 ThreadSchema.statics.pubThread = async function pubThread(ctx, input) {
   const user = { ctx };

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import AuthFail from '~/error';
 import { encode } from '../utils/uuid';
 
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
@@ -90,7 +91,7 @@ async function getUserByEmail(email) {
     const res = await UserModel.create({ email });
     return res;
   } catch (e) {
-    throw new Error(e);
+    throw new AuthFail(e);
   }
 }
 

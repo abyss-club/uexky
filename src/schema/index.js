@@ -10,18 +10,15 @@ import { typeDef as User } from './user';
 
 // import UserResolver, { profile } from '../resolvers/user';
 // import TagResolver, { tags } from '../resolvers/tag';
-import UserResolver from '../resolvers/user';
-import TagResolver from '../resolvers/tag';
 
-const Query = `
-  type Query {
-    _empty: String
-  }
-`;
+import resolvers from '../resolvers';
 
-const resolvers = {};
+// const Query = `
+//   type Query {
+//   }
+// `;
 
 export const schema = makeExecutableSchema({
-  resolvers: Object.assign(resolvers, UserResolver, TagResolver),
-  typeDefs: [Query, Base, Notification, Post, Tag, Thread, User],
+  resolvers,
+  typeDefs: [Base, Notification, Post, Tag, Thread, User],
 });
