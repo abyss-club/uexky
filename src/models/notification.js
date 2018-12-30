@@ -1,10 +1,14 @@
 import mongoose from 'mongoose';
 
+import findSlice from '~/models/base';
+
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
+const notiTypes = ['system', 'replied', 'quoted'];
+const isValidType = type => notiTypes.findIndex(t => t === type) !== -1;
 
 const NotificationSchema = mongoose.Schema({
   id: [String],
-  type: { type: String, enum: ['system', 'replied', 'quoted'] },
+  type: { type: String, enum: notiTypes },
   sendTo: SchemaObjectId,
   sendToGroup: { type: String, enum: ['all'] },
   eventTime: Date,
@@ -25,7 +29,6 @@ const NotificationSchema = mongoose.Schema({
     quoterId: SchemaObjectId,
   },
 }, { id: false });
-const NotificationModel = mongoose.Model('Notification', NotificationSchema);
 
 NotificationSchema.methods.body = function body() {
   switch (this.type) {
@@ -80,4 +83,23 @@ NotificationSchema.statics.sendQuotedNoti = async function sendQuotedNoti(
     }, opt);
   });
 };
+NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
+  user, type, sliceQuery,
+) {
+  if (!isValidType(type)) {
+    throw new Error(`invalid type: ${type}`);
+  }
+  const option = {
+    query: { $or: [{ sendTo: user._id }, { sendToGroup: 'all' }] },
+    desc: true,
+    field: 'eventTime',
+    sliceName: type,
+    parse: value => (new Date(value)),
+    toCursor: value => (value.toISOString()),
+  };
+  const result = await findSlice(sliceQuery, NotificationModel, option);
+  return result;
+};
+
+const NotificationModel = mongoose.Model('Notification', NotificationSchema);
 export default NotificationModel;

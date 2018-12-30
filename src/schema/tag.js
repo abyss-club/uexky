@@ -1,9 +1,4 @@
-const tagQueries = `
-  # Containing mainTags and tagTree.
-  tags: Tags!
-`;
-
-const typeDef = `
+export default`
   extend type Query {
     # Containing mainTags and tagTree.
     tags: Tags!
@@ -25,5 +20,3 @@ const typeDef = `
     subTags: [String!]
   }
 `;
-
-export { typeDef };

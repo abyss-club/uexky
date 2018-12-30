@@ -1,18 +1,12 @@
-/* tslint:disable:max-line-length */
-const postQueries = `
-  # A post object.
-  post(id: String!): Post!
-`;
-
-const postMutations = `
-  # Publish a new post.
-  pubPost(post: PostInput!): Post!
-`;
-
-const typeDef = `
+export default `
   extend type Query {
     # A post object.
     post(id: String!): Post!
+  }
+
+  extend type Mutation {
+    # Publish a new post.
+    pubPost(post: PostInput!): Post!
   }
 
   # Input object describing a Post to be published.
@@ -35,11 +29,10 @@ const typeDef = `
       quoteCount: Int!
   }
 
-  # PostSlice object is for selecting specific 'slice' of Post objects to return. Affects the returning SliceInfo.
+  # PostSlice object is for selecting specific 'slice' of Post objects to
+  # return. Affects the returning SliceInfo.
   type PostSlice {
       posts: [Post]!
       sliceInfo: SliceInfo!
   }
 `;
-
-export { typeDef };

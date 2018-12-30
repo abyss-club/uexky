@@ -16,7 +16,7 @@ const UserSchema = new mongoose.Schema({
     },
   },
   tags: [String],
-  read_noti_time: {
+  readNotiTime: {
     system: Date,
     replied: Date,
     quoted: Date,
