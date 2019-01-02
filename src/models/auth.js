@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
-import isEmail from 'validator/lib/isEmail';
-import { encode, decode, genRandomStr } from '../utils/uuid';
+import { genRandomStr } from '../utils/uuid';
 
 const AuthSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },

@@ -1,7 +1,9 @@
 import mongoose from 'mongoose';
-import { encode } from '~/utils/uuid';
 
+import { encode, decode } from '~/utils/uuid';
+import findSlice from '~/models/base';
 import TagModel from './tag';
+import PostModel from './post';
 
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
 
@@ -23,7 +25,6 @@ const ThreadSchema = mongoose.Schema({
     createdAt: Date,
   }],
 }, { id: false });
-const ThreadModel = mongoose.model('Thread', ThreadSchema);
 
 ThreadSchema.statics.pubThread = async function pubThread(ctx, input) {
   const user = { ctx };
@@ -54,11 +55,35 @@ ThreadSchema.statics.pubThread = async function pubThread(ctx, input) {
   await session.commitTransaction();
   return thread;
 };
+ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
+  tags = [], sliceQuery,
+) {
+  const option = {
+    query: tags.length > 0 ? { tags: { $in: tags } } : {},
+    desc: true,
+    field: '_id',
+    sliceName: 'threads',
+    parse: decode,
+    toCursor: encode,
+  };
+  const result = await findSlice(sliceQuery, ThreadModel, option);
+  return result;
+};
 
 ThreadSchema.methods.id = function id() {
   return encode(this._id);
 };
-// TODO: replies
+ThreadSchema.methods.replies = async function replies(query) {
+  const option = {
+    query: { threadId: this._id },
+    field: '_id',
+    sliceName: 'posts',
+    parse: decode,
+    toCursor: encode,
+  };
+  const result = await findSlice(query, PostModel, option);
+  return result;
+};
 ThreadSchema.methods.replyCount = function replyCount() {
   return this.catalog.length;
 };
@@ -68,4 +93,5 @@ ThreadSchema.methods.onPubPost = async function onPubPost(post, opt) {
   }, opt);
 };
 
+const ThreadModel = mongoose.model('Thread', ThreadSchema);
 export default ThreadModel;

@@ -24,7 +24,7 @@ export default `
       anonymous: Boolean!
       author: String!
       content: String!
-      createTime: Time!
+      createdAt: Time!
       quotes: [Post!]
       quoteCount: Int!
   }

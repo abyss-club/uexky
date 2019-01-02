@@ -17,6 +17,10 @@ const Time = new GraphQLScalarType({
   },
 });
 
+// Default Types Resolvers:
+//   SliceInfo:
+//     firstCursor, lastCursor, hasNext
+
 
 export default {
   Time,

@@ -1,7 +1,11 @@
 import { merge } from 'lodash';
-import UserResolver from './user';
-import TagResolver from './tag';
 
-// const resolvers = Object.assign({}, UserResolver, TagResolver);
-const resolvers = merge(UserResolver, TagResolver);
+import Base from './base';
+import Notification from './notification';
+import Post from './post';
+import Tag from './tag';
+import Thread from './thread';
+import User from './user';
+
+const resolvers = merge(Base, Notification, Post, Tag, Thread, User);
 export default resolvers;

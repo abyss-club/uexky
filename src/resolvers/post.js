@@ -1,27 +1,26 @@
-import PostModel from '../models/post';
+import PostModel from '~/models/post';
 
-const PostTypes {
-  Post: {
-    id: () => {},
-    anonymous: () => {},
-    author: () => {},
-    content: () => {},
-    createTime: () => {},
-    quotes: () => {},
-    quoteCount: () => {},
+const Query = {
+  post: async (obj, { id }) => {
+    const post = await PostModel.findById(id).exec();
+    return post;
   },
-
-  PostSlice: {
-    posts: () => {},
-    sliceInfo: () => {},
-  }
-}
-
-const post = (ctx) => {
-  console.log(ctx);
-  if (!ctx.user) return null;
-  return ctx.user;
 };
 
-export default PostTypes;
-export { post };
+const Mutation = {
+  pubPost: async (obj, { post }, ctx) => {
+    const newPost = await PostModel.pubPost(ctx, post);
+    return newPost;
+  },
+};
+
+// Default Types Resolvers:
+//   Post:
+//     id， anonymous, author, content, createdAt, quotes, quoteCount
+//   PostSlice:
+//     posts, sliceInfo
+
+export default {
+  Query,
+  Mutation,
+};
