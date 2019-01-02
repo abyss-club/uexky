@@ -6,7 +6,7 @@ const SchemaObjectId = mongoose.Schema.Types.ObjectId;
 const notiTypes = ['system', 'replied', 'quoted'];
 const isValidType = type => notiTypes.findIndex(t => t === type) !== -1;
 
-const NotificationSchema = mongoose.Schema({
+const NotificationSchema = new mongoose.Schema({
   id: [String],
   type: { type: String, enum: notiTypes },
   sendTo: SchemaObjectId,
@@ -101,5 +101,5 @@ NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
   return result;
 };
 
-const NotificationModel = mongoose.Model('Notification', NotificationSchema);
+const NotificationModel = mongoose.model('Notification', NotificationSchema);
 export default NotificationModel;

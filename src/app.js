@@ -5,7 +5,7 @@ import Router from 'koa-router';
 import cors from '@koa/cors';
 
 import mailguntest from './mailgun';
-import { schema } from './schema';
+import schema from './schema';
 import { genRandomStr } from './utils/uuid';
 import AuthModel from './models/auth';
 import TagModel from './models/tag';
