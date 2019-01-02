@@ -1,42 +1,42 @@
-import ThreadModel from '../models/thread';
+import ThreadModel from '~/models/thread';
+import { decode } from '~/utils/uuid';
 
-const ThreadTypes = {
-  Thread: {
-    id: () => {},
-    anonymous: () => {},
-    author: () => {},
-    content: () => {},
-    createdAt: () => {},
-    mainTag: () => {},
-    subTags: () => {},
-    title: () => {},
-    replies: () => {},
-    replyCount: () => {},
-    catalog: () => {},
+const Query = {
+  threadSlice: async (obj, { tags, query }) => {
+    const threadSlice = await ThreadModel.getThreadSlice(tags, query);
+    return threadSlice;
   },
 
-  ThreadCatalogItem: {
-    postId: () => {},
-    createdAt: () => {},
-  },
-
-  ThreadSlice: {
-    threads: () => {},
-    sliceInfo: () => {},
+  thread: async (ctx, { id }) => {
+    const thread = await ThreadModel.findById(decode(id)).exec();
+    return thread;
   },
 };
 
-const threadSlice = (ctx) => {
-  console.log(ctx);
-  if (!ctx.user) return null;
-  return ctx.user;
+const Mutation = {
+  pubThread: async (obj, { thread }, ctx) => {
+    const newThread = await ThreadModel.pubThread(ctx, thread);
+    return newThread;
+  },
 };
 
-const thread = (ctx) => {
-  console.log(ctx);
-  if (!ctx.user) return null;
-  return ctx.user;
+// Default Types resolvers:
+//   Thread:
+//     id, anonymous, author, content, createdAt, mainTag,
+//     subTags, title, replyCount, catelog
+//   CatelogItem:
+//     postId, createdAt,
+//   ThreadSlice:
+//     thread, sliceInfo
+const Thread = {
+  replies: async (thread, { query }) => {
+    const result = await thread.replies(query);
+    return result;
+  },
 };
 
-export default ThreadTypes;
-export { threadSlice, thread };
+export default {
+  Query,
+  Mutation,
+  Thread,
+};

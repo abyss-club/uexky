@@ -10,7 +10,6 @@ const TagSchema = new mongoose.Schema({
 TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
   const option = { ...opt, upsert: true };
   thread.subTags.forEach(async (tag) => {
-    console.log(tag);
     await TagModel.update({ subTag: tag }, {
       $addToSet: { mainTags: thread.mainTag },
       $set: { updateAt: new Date() },
@@ -18,10 +17,16 @@ TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
   });
 };
 
-TagSchema.statics.getTree = async function getTree(limit) {
+TagSchema.statics.getTree = async function getTree(limit, query = '') {
   const defaultLimit = 10;
+  const selector = (mainTag) => {
+    if (query === '') {
+      return { mainTags: mainTag };
+    }
+    return { subTag: { $regex: query }, mainTags: mainTag };
+  };
   const tagTrees = config.mainTags.map(async (mainTag) => {
-    const subTags = await TagModel.find({ mainTags: mainTag })
+    const subTags = await TagModel.find(selector(mainTag))
       .sort({ updatedAt: -1 })
       .limit(limit || defaultLimit)
       .exec();

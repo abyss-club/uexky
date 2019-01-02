@@ -1,23 +1,27 @@
-import UserModel from '../models/user';
 import TagModel from '../models/tag';
 import config from '~/config';
 
-const resolvers = {
-  Tags: {
-    mainTags: ({ mainTags }) => mainTags,
-    tree: async (_, { _query, limit = 10 }) => {
-      try {
-        const tree = await TagModel.getTree(limit);
-        return tree;
-      } catch (e) {
-        throw e;
-      }
-    },
-  },
+const Query = {
+  tags: () => ({ mainTags: config.mainTags }),
+};
 
-  Query: {
-    tags: () => ({ mainTags: config.mainTags }),
+// Default Types Resolvers:
+//   TagTreeNode:
+//     mainTag, subTags
+
+const Tags = {
+  mainTags: ({ mainTags }) => mainTags,
+  tree: async (obj, { query, limit = 10 }) => {
+    try {
+      const tree = await TagModel.getTree(limit, query);
+      return tree;
+    } catch (e) {
+      throw e;
+    }
   },
 };
 
-export default resolvers;
+export default {
+  Query,
+  Tags,
+};

@@ -25,8 +25,9 @@ const UnreadNotiCount = {
   quoted: user => getUnreadNotiCount(user, 'quoted'),
 };
 
-// Default Resolve Fields:
-// id, type, eventTime
+// Default Types resolvers:
+// SystemNoti, RepliedNoti, QuotedNoti:
+//     id, type, eventTime
 const baseNoti = {
   hasRead: (noti, args, ctx) => {
     const { user } = ctx;

@@ -6,6 +6,7 @@ export default `
   type SliceInfo {
     firstCursor: String!
     lastCursor: String!
+    hasNext: Boolean!
   }
 
   # SliceQuery object is for selecting specific 'slice' of an object to return.

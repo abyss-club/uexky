@@ -1,26 +1,39 @@
-import { AuthenticationError } from 'apollo-server-koa';
-import UserModel from '../models/user';
+import { ensureSignIn } from '../models/user';
 import AuthModel from '../models/auth';
 
-const resolvers = {
-  User: ({ email, name, tags }) => ({ email, name, tags }),
+const Query = {
+  profile: (_, __, ctx) => ensureSignIn(ctx),
+};
 
-  Query: {
-    profile: (_, __, ctx) => {
-      if (!ctx.user) throw new AuthenticationError('Authentication needed.');
-      const { email, name, tags } = ctx.user;
-      return { email, name, tags };
-    },
+const Mutation = {
+  auth: (obj, { email }, ctx) => {
+    if (ctx.user) throw new Error('already signed in!');
+    AuthModel.addToAuth(email);
+    return true;
   },
-
-  Mutation: {
-    auth: (obj, args, ctx, info) => {
-      AuthModel.addToAuth(args.email);
-      return true;
-    },
+  setName: (obj, { name }, ctx) => {
+    const user = ensureSignIn(ctx);
+    user.setName(name);
+  },
+  syncTags: (obj, { tags }, ctx) => {
+    const user = ensureSignIn(ctx);
+    user.syncTags(tags);
+  },
+  addSubbedTags: (obj, { tags }, ctx) => {
+    const user = ensureSignIn(ctx);
+    user.addSubbedTags(tags);
+  },
+  delSubbedTags: (obj, { tags }, ctx) => {
+    const user = ensureSignIn(ctx);
+    user.delSubbedTags(tags);
   },
 };
 
-// export default UserTypes;
-// export { profile };
-export default resolvers;
+// Default Types Resolver:
+//   User:
+//     email, name, tags
+
+export default {
+  Query,
+  Mutation,
+};
