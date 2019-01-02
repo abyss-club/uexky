@@ -70,6 +70,9 @@ PostSchema.methods.quotes = async function quotes() {
   }
   return qs;
 };
-PostSchema.methods.quoteCount({ quotes: this._id });
+PostSchema.methods.quoteCount = async function quoteCount() {
+  const count = await PostModel.find({ quotes: this._id }).count().exec();
+  return count;
+};
 
 export default PostModel;

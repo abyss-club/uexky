@@ -1,17 +1,39 @@
-import UserModel from '../models/user';
+import { ensureSignIn } from '../models/user';
+import AuthModel from '../models/auth';
 
-// const User = (user) => {
-//   profile: (obj, args, ctx, info) => {
-//     console.log('resolver ctx', ctx);
-//     return UserModel.profile(ctx);
-//   }
-// };
-
-const profile = (ctx) => {
-  console.log(ctx);
-  if (!ctx.user) return null;
-  return ctx.user;
+const Query = {
+  profile: (_, __, ctx) => ensureSignIn(ctx),
 };
 
-// export default User;
-export { profile };
+const Mutation = {
+  auth: (obj, { email }, ctx) => {
+    if (ctx.user) throw new Error('already signed in!');
+    AuthModel.addToAuth(email);
+    return true;
+  },
+  setName: (obj, { name }, ctx) => {
+    const user = ensureSignIn(ctx);
+    user.setName(name);
+  },
+  syncTags: (obj, { tags }, ctx) => {
+    const user = ensureSignIn(ctx);
+    user.syncTags(tags);
+  },
+  addSubbedTags: (obj, { tags }, ctx) => {
+    const user = ensureSignIn(ctx);
+    user.addSubbedTags(tags);
+  },
+  delSubbedTags: (obj, { tags }, ctx) => {
+    const user = ensureSignIn(ctx);
+    user.delSubbedTags(tags);
+  },
+};
+
+// Default Types Resolver:
+//   User:
+//     email, name, tags
+
+export default {
+  Query,
+  Mutation,
+};
