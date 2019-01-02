@@ -1,4 +1,7 @@
+import { AuthenticationError } from 'apollo-server-koa';
 import mongoose from 'mongoose';
+
+import AuthFail from '~/error';
 import { encode } from '../utils/uuid';
 
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
@@ -15,7 +18,7 @@ const UserSchema = new mongoose.Schema({
     },
   },
   tags: [String],
-  read_noti_time: {
+  readNotiTime: {
     system: Date,
     replied: Date,
     quoted: Date,
@@ -25,7 +28,6 @@ const UserSchema = new mongoose.Schema({
     range: [String],
   },
 });
-const UserModel = mongoose.model('User', UserSchema);
 UserSchema.methods.author = async function author(threadId, anonymous) {
   if (anonymous) {
     const obj = { userId: this.ObjectId, threadId };
@@ -53,11 +55,33 @@ UserSchema.methods.onPubPost = async function onPubPost(thread, post) {
     $set: { updatedAt: Date() },
   });
 };
-UserSchema.methods.posts = async function posts() {
-  // TODO: use slice query
-  const userPosts = await UserPostsModel.find({ userId: this._id })
-    .sort({ updatedAt: -1 }).limit(10).exec();
-  return userPosts;
+UserSchema.methods.setName = async function setName(name) {
+  // TODO: validate length
+  if ((this.name || '') !== '') {
+    throw new Error('already set name!');
+  }
+  await UserModel.update({ _id: this._id }, { $set: { name } }).exec();
+};
+UserSchema.methods.syncTags = async function syncTags(tags) {
+  await UserModel.update({ _id: this._id }, { tags: tags || [] });
+};
+UserSchema.methods.addSubbedTags = async function addSubbedTags(tags) {
+  if ((tags || []).length === 0) {
+    return;
+  }
+  await UserModel.update(
+    { _id: this._id },
+    { $addToSet: { tags: { $each: tags } } },
+  );
+};
+UserSchema.methods.delSubbedTags = async function delSubbedTags(tags) {
+  if ((tags || []).length === 0) {
+    return;
+  }
+  await UserModel.update(
+    { _id: this._id },
+    { $pull: { tags: { $in: tags } } },
+  );
 };
 
 // MODEL: UserAID
@@ -90,9 +114,15 @@ async function getUserByEmail(email) {
     const res = await UserModel.create({ email });
     return res;
   } catch (e) {
-    throw new Error(e);
+    throw new AuthFail(e);
   }
 }
 
+function ensureSignIn(ctx) {
+  if (!ctx.user) throw new AuthenticationError('Authentication needed.');
+  return ctx.user;
+}
+
+const UserModel = mongoose.model('User', UserSchema);
 export default UserModel;
-export { UserAIDModel, getUserByEmail };
+export { UserAIDModel, getUserByEmail, ensureSignIn };

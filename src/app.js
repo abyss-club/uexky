@@ -1,5 +1,5 @@
 import 'module-alias/register';
-import { ApolloServer, gql } from 'apollo-server-koa';
+import { ApolloServer } from 'apollo-server-koa';
 import Koa from 'koa';
 import Router from 'koa-router';
 import cors from '@koa/cors';
@@ -7,14 +7,14 @@ import cors from '@koa/cors';
 import mailguntest from './mailgun';
 import { schema } from './schema';
 import { genRandomStr } from './utils/uuid';
+import AuthModel from './models/auth';
+import TagModel from './models/tag';
 import { getUserByEmail } from './models/user';
-import { addToAuth, getEmailByCode } from './models/auth';
 import { genNewToken, getEmailByToken } from './models/token';
 
 const server = new ApolloServer({
   schema,
   context: ({ ctx }) => {
-    console.log('ctxuser', ctx.user);
     return { user: ctx.user };
   },
 });
@@ -28,8 +28,8 @@ function authMiddleware() {
         const user = await getUserByEmail(email);
         app.context.user = user;
       } catch (e) {
-        app.context.user = {};
-        console.log(e);
+        if (e.authFail) app.context.user = null;
+        else throw new Error(e);
       }
     }
     await next();
@@ -43,7 +43,7 @@ router.get('/auth', async (ctx, next) => {
     ctx.body = 'Incorrect authentication code';
   } else {
     try {
-      const email = await getEmailByCode(ctx.query.code);
+      const email = await AuthModel.getEmailByCode(ctx.query.code);
       const token = await genNewToken(email);
       const expiry = new Date(token.createdAt);
       expiry.setDate(expiry.getDate() + 20);
