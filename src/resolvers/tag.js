@@ -1,8 +1,8 @@
-import TagModel from '../models/tag';
-import config from '~/config';
+import TagModel from '~/models/tag';
+import ConfigModel from '~/models/config';
 
 const Query = {
-  tags: () => ({ mainTags: config.mainTags }),
+  tags: () => ({ mainTags: ConfigModel.getMainTags() }),
 };
 
 // Default Types Resolvers:
