@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-const { ObjectId } = mongoose.Schema.Types;
+const { ObjectId } = mongoose.Types;
 const code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
 // Convert 3-hex number to 2-codes base64 string
@@ -42,10 +42,10 @@ const encode = (objectId) => {
   if (idStr.length !== 24) {
     throw new Error('Invalid objectId');
   }
-  const hex = idStr.subString(9, 24) + idStr.subString(0, 9);
+  const hex = idStr.substring(9, 24) + idStr.substring(0, 9);
   const codes = [];
   for (let i = 0; i < hex.length; i += 3) {
-    codes.push(hex3ToBase64(hex.subString(i, i + 3)));
+    codes.push(hex3ToBase64(hex.substring(i, i + 3)));
   }
   return codes.join('');
 };
@@ -55,9 +55,9 @@ const decode = (uuid) => {
     throw new Error('Invalid uuid');
   }
   const ids = [];
-  const base64 = uuid.subString(3, 8) + uuid.subString(0, 3);
+  const base64 = uuid.substring(3, 8) + uuid.substring(0, 3);
   for (let i = 0; i < uuid.length; i += 2) {
-    ids.push(base64ToHex3(base64.subString(i, i + 2)));
+    ids.push(base64ToHex3(base64.substring(i, i + 2)));
   }
   const idStr = ids.join('');
   return ObjectId(idStr);
