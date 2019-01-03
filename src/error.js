@@ -8,14 +8,24 @@ class AuthError extends Error {
   }
 }
 
-class DataError extends Error {
+class ParamsError extends Error {
   constructor(...params) {
     super(...params);
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, DataError);
+      Error.captureStackTrace(this, ParamsError);
     }
-    this.dataError = true;
+    this.paramsError = true;
   }
 }
 
-export { AuthError, DataError };
+class InternalError extends Error {
+  constructor(...params) {
+    super(...params);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, InternalError);
+    }
+    this.internalError = true;
+  }
+}
+
+export { AuthError, ParamsError, InternalError };
