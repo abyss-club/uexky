@@ -62,7 +62,7 @@ PostSchema.statics.pubPost = async function pubPost(ctx, input) {
 PostSchema.methods.id = function id() {
   return encode(this._id);
 };
-PostSchema.methods.getQuotes = async function quotes() {
+PostSchema.methods.getQuotes = async function getQuotes() {
   let qs = [];
   if (this.quotes.length !== 0) {
     qs = await PostModel.find({ _id: { $in: this.quoteIds } }).all().exec();
