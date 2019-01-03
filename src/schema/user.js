@@ -1,7 +1,7 @@
 export default `
   extend type Query {
     # A user profile object.
-    profile(): User!
+    profile: User!
   }
 
   extend type Mutation {

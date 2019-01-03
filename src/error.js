@@ -1,11 +1,21 @@
-class AuthFail extends Error {
+class AuthError extends Error {
   constructor(...params) {
     super(...params);
     if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, AuthFail);
+      Error.captureStackTrace(this, AuthError);
     }
-    this.authFail = true;
+    this.authError = true;
   }
 }
 
-export default AuthFail;
+class DataError extends Error {
+  constructor(...params) {
+    super(...params);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, DataError);
+    }
+    this.dataError = true;
+  }
+}
+
+export { AuthError, DataError };

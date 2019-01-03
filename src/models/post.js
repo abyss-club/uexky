@@ -6,7 +6,7 @@ import NotificationModel from './notification';
 
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
 
-const PostSchema = mongoose.Schema({
+const PostSchema = new mongoose.Schema({
   userId: SchemaObjectId,
   threadId: SchemaObjectId,
   anonymous: Boolean,
@@ -17,7 +17,6 @@ const PostSchema = mongoose.Schema({
   quotes: [SchemaObjectId],
   content: String,
 }, { id: false });
-const PostModel = mongoose.Model('Post', PostSchema);
 
 PostSchema.statics.findById = async function findById(id) {
   const post = await PostModel.findOne({ _id: decode(id) }).exec();
@@ -63,7 +62,7 @@ PostSchema.statics.pubPost = async function pubPost(ctx, input) {
 PostSchema.methods.id = function id() {
   return encode(this._id);
 };
-PostSchema.methods.quotes = async function quotes() {
+PostSchema.methods.getQuotes = async function getQuotes() {
   let qs = [];
   if (this.quotes.length !== 0) {
     qs = await PostModel.find({ _id: { $in: this.quoteIds } }).all().exec();
@@ -74,5 +73,7 @@ PostSchema.methods.quoteCount = async function quoteCount() {
   const count = await PostModel.find({ quotes: this._id }).count().exec();
   return count;
 };
+
+const PostModel = mongoose.model('Post', PostSchema);
 
 export default PostModel;

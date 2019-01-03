@@ -14,6 +14,10 @@ const Mutation = {
   },
 };
 
+const Post = {
+  quotes: post => post.getQuotes(),
+};
+
 // Default Types Resolvers:
 //   Post:
 //     id， anonymous, author, content, createdAt, quotes, quoteCount
@@ -23,4 +27,5 @@ const Mutation = {
 export default {
   Query,
   Mutation,
+  Post,
 };
