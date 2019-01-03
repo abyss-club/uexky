@@ -28,7 +28,7 @@ function authMiddleware() {
         const user = await getUserByEmail(email);
         app.context.user = user;
       } catch (e) {
-        if (e.authFail) app.context.user = null;
+        if (e.authError) app.context.user = null;
         else throw new Error(e);
       }
     }
