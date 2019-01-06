@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import Joi from 'joi';
 import { InternalError, ParamsError } from '~/error';
 
 const ConfigSchema = new mongoose.Schema({
@@ -6,6 +7,32 @@ const ConfigSchema = new mongoose.Schema({
   optionValue: { type: String, required: true },
   autoload: { type: Boolean },
 });
+
+ConfigSchema.statics.getRateLimit = async function getRateLimit() {
+  const result = await ConfigModel.findOne({ optionName: 'rateLimit' }, 'optionValue').orFail(() => new InternalError('rateLimit not yet set.'));
+  return JSON.parse(result.optionValue);
+};
+
+ConfigSchema.statics.modifyRateLimit = async function modifyRateLimit(rateSettings) {
+  const costSchema = Joi.object().keys({
+    CreateUser: Joi.number().integer().min(0).default(30),
+    PubThread: Joi.number().integer().min(0).default(10),
+    PubPost: Joi.number().integer().min(0).default(1),
+  });
+  const rateSettingSchema = Joi.object().keys({
+    HTTPHeader: Joi.string().alphanum().default(''),
+    QueryLimit: Joi.number().integer().min(0).default(300),
+    QueryResetTime: Joi.number().integer().min(0).default(3600),
+    MutLimit: Joi.number().integer().min(0).default(30),
+    MutResetTime: Joi.number().integer().min(0).default(3600),
+    Cost: costSchema.default(costSchema.validate({}).value),
+  });
+  const { error, value } = Joi.validate(rateSettings, rateSettingSchema);
+  // console.log(error);
+  if (error) throw new ParamsError(`JSON validation failed, ${error}`);
+  const newRateLimit = { optionName: 'rateLimit', optionValue: JSON.stringify(value) };
+  await ConfigModel.updateOne({ optionName: 'rateLimit' }, newRateLimit, { upsert: true });
+};
 
 ConfigSchema.statics.getMainTags = async function getMainTags() {
   const result = await ConfigModel.findOne({ optionName: 'mainTags' }, 'optionValue').orFail(() => new InternalError('mainTags not yet set.'));
