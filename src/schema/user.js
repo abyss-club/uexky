@@ -16,6 +16,13 @@ export default `
     addSubbedTags(tags: [String!]!): User!
     # Delete tags subscribed by user.
     delSubbedTags(tags: [String!]!): User!
+
+    # admin's apis:
+    banUser(postId: String!)
+    blockPost(postId: String!)
+    lockThread(threadId: String!)
+    blockThread(threadId: String!)
+    editTags(threadId: String!, mainTag: String!, subTags: [String!]!)
   }
 
   type User {
@@ -24,5 +31,15 @@ export default `
     name: String
     # Tags saved by user.
     tags: [String!]
+    role: UserRole
+  }
+
+  # user roles:
+  # role: 'SuperAdmin': modify config, manage all tags.
+  #       'TagAdmin':   manage several mainTags.
+  #       None:         normal user. (won't have "role" field)
+  type UserRole {
+    role: String!
+    params: [String!]
   }
 `;

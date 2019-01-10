@@ -24,7 +24,7 @@ const UserSchema = new mongoose.Schema({
     quoted: Date,
   },
   role: {
-    type: String,
+    role: String,
     range: [String],
   },
 });
@@ -123,6 +123,41 @@ function ensureSignIn(ctx) {
   return ctx.user;
 }
 
+const ACTIONS = [
+  'BAN_USER', 'BLOCK_POST', 'LOCK_THREAD', 'BLOCK_THREAD',
+  'EDIT_TAG', 'PUB_POST', 'PUB_THREAD',
+];
+
+const ROLES = [
+  'SuperAdmin', 'TagAdmin', 'Blocked',
+];
+
+function ensurePermission(ctx, action, tag) {
+  if (!ctx.user) throw new Error('Premitted Error');
+  const role = (ctx.role && ctx.role.role) || '';
+  const tags = (ctx.role && ctx.role.tags) || [];
+
+  if (ACTIONS.findIndex(a => a === action) === -1) {
+    throw new Error('Params Error: unknown action');
+  }
+
+  // normal
+  if (ROLES.findIndex(r => r === role) === -1) {
+    throw new Error('Premitted Error');
+  }
+  if (role === 'Blocked') {
+    throw new Error('Premitted Error');
+  }
+  if (role === 'SuperAdmin') {
+    return;
+  }
+  if (tags.findIndex(t => t === tag) === -1) {
+    throw new Error('Premitted Error');
+  }
+}
+
 const UserModel = mongoose.model('User', UserSchema);
 export default UserModel;
-export { UserAIDModel, getUserByEmail, ensureSignIn };
+export {
+  UserAIDModel, getUserByEmail, ensureSignIn, ensurePermission,
+};
