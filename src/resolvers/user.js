@@ -27,6 +27,28 @@ const Mutation = {
     const user = ensureSignIn(ctx);
     user.delSubbedTags(tags);
   },
+
+  // admin's apis:
+  banUser: async (obj, { postId }, ctx) => {
+    const user = ensureSignIn(ctx);
+    await user.banUser(postId);
+  },
+  blockPost: async (obj, { postId }, ctx) => {
+    const user = ensureSignIn(ctx);
+    await user.blockPost(postId);
+  },
+  lockThread: async (obj, { threadId }, ctx) => {
+    const user = ensureSignIn(ctx);
+    await user.lockThread(threadId);
+  },
+  blockThread: async (obj, { threadId }, ctx) => {
+    const user = ensureSignIn(ctx);
+    await user.blockThread(threadId);
+  },
+  editTags: async (obj, { threadId, mainTag, subTags }, ctx) => {
+    const user = ensureSignIn(ctx);
+    await user.editTags(threadId, mainTag, subTags);
+  },
 };
 
 // Default Types Resolver:
