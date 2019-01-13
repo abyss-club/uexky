@@ -55,6 +55,10 @@ ThreadSchema.statics.pubThread = async function pubThread(ctx, input) {
   await session.commitTransaction();
   return thread;
 };
+ThreadSchema.statics.findById = async function findById(id) {
+  const thread = await PostModel.findOne({ _id: decode(id) }).exec();
+  return thread;
+};
 ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
   tags = [], sliceQuery,
 ) {
@@ -72,6 +76,9 @@ ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
 
 ThreadSchema.methods.id = function id() {
   return encode(this._id);
+};
+ThreadSchema.methods.getContent = function getContent() {
+  return this.blocked ? '' : this.content;
 };
 ThreadSchema.methods.replies = async function replies(query) {
   const option = {
