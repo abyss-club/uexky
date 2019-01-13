@@ -22,13 +22,14 @@ const Mutation = {
 
 // Default Types resolvers:
 //   Thread:
-//     id, anonymous, author, content, createdAt, mainTag,
+//     id, anonymous, author, createdAt, mainTag,
 //     subTags, title, replyCount, catelog
 //   CatelogItem:
 //     postId, createdAt,
 //   ThreadSlice:
 //     thread, sliceInfo
 const Thread = {
+  content: thread => thread.getContent(),
   replies: async (thread, { query }) => {
     const result = await thread.replies(query);
     return result;

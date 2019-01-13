@@ -29,7 +29,6 @@ PostSchema.statics.pubPost = async function pubPost(ctx, input) {
   const post = {
     _id: mongoose.Types.ObjectId(),
     userId: user._id,
-    threadId,
     anonymous,
     author: await user.author(threadId, anonymous),
     createdAt: now,
@@ -38,7 +37,11 @@ PostSchema.statics.pubPost = async function pubPost(ctx, input) {
     quoteIds: [],
     content,
   };
-  const thread = await ThreadModel.findOne({ _id: encode(threadId) }).exec();
+  const thread = await ThreadModel.findById(threadId).exec();
+  if (thread.locked) {
+    throw new Error('this thread is locked');
+  }
+  post.threadId = thread._id;
   let quotedPosts = [];
   if (input.quotes.length !== 0) {
     quotedPosts = await PostModel.find({
@@ -68,6 +71,9 @@ PostSchema.methods.getQuotes = async function getQuotes() {
     qs = await PostModel.find({ _id: { $in: this.quoteIds } }).all().exec();
   }
   return qs;
+};
+PostSchema.methods.getContent = async function getContent() {
+  return this.blocked ? '' : this.content;
 };
 PostSchema.methods.quoteCount = async function quoteCount() {
   const count = await PostModel.find({ quotes: this._id }).count().exec();

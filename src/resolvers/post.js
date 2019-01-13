@@ -15,12 +15,13 @@ const Mutation = {
 };
 
 const Post = {
+  content: post => post.getContent(),
   quotes: post => post.getQuotes(),
 };
 
 // Default Types Resolvers:
 //   Post:
-//     id， anonymous, author, content, createdAt, quotes, quoteCount
+//     id， anonymous, author, createdAt, quotes, quoteCount
 //   PostSlice:
 //     posts, sliceInfo
 
