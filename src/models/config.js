@@ -10,7 +10,7 @@ const ConfigSchema = new mongoose.Schema({
 
 ConfigSchema.statics.getRateLimit = async function getRateLimit() {
   const result = await ConfigModel.findOne({ optionName: 'rateLimit' }, 'optionValue').orFail(() => new InternalError('rateLimit not yet set.'));
-  return JSON.parse(result.optionValue);
+  return result.optionValue;
 };
 
 ConfigSchema.statics.modifyRateLimit = async function modifyRateLimit(rateSettings) {
@@ -32,6 +32,8 @@ ConfigSchema.statics.modifyRateLimit = async function modifyRateLimit(rateSettin
   if (error) throw new ParamsError(`JSON validation failed, ${error}`);
   const newRateLimit = { optionName: 'rateLimit', optionValue: JSON.stringify(value) };
   await ConfigModel.updateOne({ optionName: 'rateLimit' }, newRateLimit, { upsert: true });
+  const result = await this.getRateLimit();
+  return result;
 };
 
 ConfigSchema.statics.getMainTags = async function getMainTags() {
@@ -45,6 +47,8 @@ ConfigSchema.statics.modifyMainTags = async function modifyMainTags(tags) {
   }
   const newMainTags = { optionName: 'mainTags', optionValue: JSON.stringify(tags) };
   await ConfigModel.updateOne({ optionName: 'mainTags' }, newMainTags, { upsert: true });
+  const result = await this.getMainTags();
+  return result;
 };
 
 const ConfigModel = mongoose.model('Config', ConfigSchema);
