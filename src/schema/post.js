@@ -4,7 +4,7 @@ export default `
     post(id: String!): Post!
   }
 
-  type Mutation {
+  extend type Mutation {
     # Publish a new post.
     pubPost(post: PostInput!): Post!
   }

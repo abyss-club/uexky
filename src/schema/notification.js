@@ -1,5 +1,5 @@
 export default `
-  type Query {
+  extend type Query {
     # The count of unread notifications.
     unreadNotiCount: UnreadNotiCount!
     # Notifications for current user.
