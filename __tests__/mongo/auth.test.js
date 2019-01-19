@@ -2,8 +2,6 @@ import mongoose from 'mongoose';
 import MongoMemoryServer from 'mongodb-memory-server';
 import { genRandomStr } from '~/utils/uuid';
 import AuthModel from '~/models/auth';
-import TokenModel from '~/models/token';
-import UserModel from '~/models/user';
 
 // May require additional time for downloading MongoDB binaries
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;

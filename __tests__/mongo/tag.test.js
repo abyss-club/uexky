@@ -1,8 +1,7 @@
-import fs from 'fs';
 import mongoose from 'mongoose';
 import MongoMemoryServer from 'mongodb-memory-server';
 import TagModel from '~/models/tag';
-import ThreadModel from '~/models/thread';
+import ConfigModel from '~/models/config';
 
 // May require additional time for downloading MongoDB binaries
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
@@ -27,6 +26,7 @@ describe('Insert Tags', () => {
   const mockTags = { mainTag: 'MainA', subTags: ['SubA', 'SubB'] };
   it('add tags', async () => {
     const tags = mockTags;
+    await ConfigModel.modifyMainTags(['MainA']);
     // session.startTransaction();
 
     await TagModel.onPubThread(tags);

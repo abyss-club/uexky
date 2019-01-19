@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import config from '~/config';
+import ConfigModel from './config';
 
 const TagSchema = new mongoose.Schema({
   subTag: { type: String, required: true, unique: true },
@@ -10,7 +10,7 @@ const TagSchema = new mongoose.Schema({
 TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
   const option = { ...opt, upsert: true };
   thread.subTags.forEach(async (tag) => {
-    await TagModel.update({ subTag: tag }, {
+    await this.updateOne({ subTag: tag }, {
       $addToSet: { mainTags: thread.mainTag },
       $set: { updateAt: new Date() },
     }, option);
@@ -25,8 +25,9 @@ TagSchema.statics.getTree = async function getTree(limit, query = '') {
     }
     return { subTag: { $regex: query }, mainTags: mainTag };
   };
-  const tagTrees = config.mainTags.map(async (mainTag) => {
-    const subTags = await TagModel.find(selector(mainTag))
+  const mainTags = await ConfigModel.getMainTags();
+  const tagTrees = mainTags.map(async (mainTag) => {
+    const subTags = await this.find(selector(mainTag))
       .sort({ updatedAt: -1 })
       .limit(limit || defaultLimit)
       .exec();
