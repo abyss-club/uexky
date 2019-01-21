@@ -27,7 +27,7 @@
     "lodash": "^4.17.11",
     "mailgun-js": "^0.22.0",
     "module-alias": "^2.1.0",
-    "mongoose": "^5.3.14",
+    "mongoose": "^5.4.5",
     "validator": "^10.9.0"
   },
   "devDependencies": {
@@ -51,6 +51,7 @@
     "module-alias": "^2.1.0",
     "mongodb-memory-server": "^3.0.0",
     "nodemon": "^1.18.7",
+    "sleep-promise": "^8.0.1",
     "supertest": "^3.3.0"
   },
   "_moduleAliases": {
