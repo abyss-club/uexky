@@ -11,7 +11,7 @@ const Base64 = {
     for (let i = 0; i < 2; i += 1) {
       const index = this.code.indexOf(b64Str[i]);
       if (index < 0) {
-        throw new Error('Invalid uuid');
+        throw new Error(`Invalid base64 string ${b64Str}`);
       }
       num = num * 64 + index;
     }
@@ -20,7 +20,7 @@ const Base64 = {
   // Convert 3-hex number to 2-codes base64 string
   parseFromHex3(hexStr) {
     if (hexStr.length !== 3) {
-      throw new Error(`invalid params: ${hexStr}`);
+      throw new Error(`invalid hex string: ${hexStr}`);
     }
     const padTo = 2;
     let remaining = parseInt(hexStr, 16);
@@ -72,8 +72,8 @@ const reverseTimestamp = (hex) => {
   return chars.reverse().join();
 };
 
-const UID = {
-  async New() {
+const Uid = {
+  async newSuid() {
     const newId = await Generator.New();
     return newId;
   },
@@ -102,5 +102,5 @@ const UID = {
   },
 };
 
-export default UID;
+export default Uid;
 export { Base64 };
