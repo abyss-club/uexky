@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-import { encode, decode } from '~/utils/uuid';
+import Uid from '~/uid';
 import findSlice from '~/models/base';
 import TagModel from './tag';
 import PostModel from './post';
@@ -8,6 +8,7 @@ import PostModel from './post';
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
 
 const ThreadSchema = mongoose.Schema({
+  suid: String,
   anonymous: Boolean,
   author: String,
   userId: SchemaObjectId,
@@ -21,7 +22,7 @@ const ThreadSchema = mongoose.Schema({
   updatedAt: Date,
   content: String,
   catalog: [{
-    postId: SchemaObjectId,
+    postSuid: String,
     createdAt: Date,
   }],
 }, { id: false });
@@ -31,7 +32,6 @@ ThreadSchema.statics.pubThread = async function pubThread(ctx, input) {
   const now = new Date();
   const thread = {
     ...input,
-    _id: mongoose.Types.ObjectId(),
     userId: user._id,
     tags: [input.mainTag, ...(input.subTags || [])],
     locked: false,
@@ -39,24 +39,18 @@ ThreadSchema.statics.pubThread = async function pubThread(ctx, input) {
     createdAt: now,
     updatedAt: now,
   };
+  // TODO: validate main tag
+  thread.suid = await Uid.newSuid();
+  thread.author = await user.author(thread.suid);
 
-  if (input.anonymous) {
-    thread.author = await user.anonymousId(thread._id);
-  } else {
-    if ((user.name || '') === '') {
-      throw new Error('you must set name first');
-    }
-    thread.author = user.name;
-  }
   const session = await mongoose.startSession();
-  await ThreadModel(thread, { session }).save();
-  await user.onPubThread(thread, { session });
+  await ThreadModel.create(thread, { session }).save();
   await TagModel.onPubThread(thread, { session });
   await session.commitTransaction();
   return thread;
 };
-ThreadSchema.statics.findById = async function findById(id) {
-  const thread = await PostModel.findOne({ _id: decode(id) }).exec();
+ThreadSchema.statics.findById = async function findByUID(uid) {
+  const thread = await PostModel.findOne({ suid: Uid.encode(uid) }).exec();
   return thread;
 };
 ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
@@ -65,28 +59,28 @@ ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
   const option = {
     query: tags.length > 0 ? { tags: { $in: tags } } : {},
     desc: true,
-    field: '_id',
+    field: 'suid',
     sliceName: 'threads',
-    parse: decode,
-    toCursor: encode,
+    parse: Uid.encode,
+    toCursor: Uid.decode,
   };
   const result = await findSlice(sliceQuery, ThreadModel, option);
   return result;
 };
 
-ThreadSchema.methods.id = function id() {
-  return encode(this._id);
+ThreadSchema.methods.uid = function uid() {
+  return Uid.decode(this.suid);
 };
 ThreadSchema.methods.getContent = function getContent() {
   return this.blocked ? '' : this.content;
 };
 ThreadSchema.methods.replies = async function replies(query) {
   const option = {
-    query: { threadId: this._id },
+    query: { threadId: this.suid },
     field: '_id',
     sliceName: 'posts',
-    parse: decode,
-    toCursor: encode,
+    parse: Uid.encode,
+    toCursor: Uid.decode,
   };
   const result = await findSlice(query, PostModel, option);
   return result;
@@ -95,8 +89,8 @@ ThreadSchema.methods.replyCount = function replyCount() {
   return this.catalog.length;
 };
 ThreadSchema.methods.onPubPost = async function onPubPost(post, opt) {
-  await ThreadModel.update({ _id: this._id }, {
-    $push: { catalog: { postId: post._id, createdAt: post.createdAt } },
+  await ThreadModel.update({ suid: this.suid }, {
+    $push: { catalog: { postId: post.suid, createdAt: post.createdAt } },
   }, opt);
 };
 

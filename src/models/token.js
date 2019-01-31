@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
-import isEmail from 'validator/lib/isEmail';
 import { AuthError } from '~/error';
-import { encode, decode, genRandomStr } from '../utils/uuid';
+import { Base64 } from '~/uid';
 
 const TokenSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
@@ -17,7 +16,7 @@ const TokenSchema = new mongoose.Schema({
 const TokenModel = mongoose.model('Token', TokenSchema);
 
 async function genNewToken(email) {
-  const authToken = genRandomStr(24);
+  const authToken = Base64.randomString(24);
   const newToken = { email, authToken, createdAt: new Date() };
   await TokenModel.update({ email }, newToken, { upsert: true });
   const result = await TokenModel.findOne({ email }).orFail(() => new AuthError('AuthToken not found'));

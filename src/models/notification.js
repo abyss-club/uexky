@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
-
 import findSlice from '~/models/base';
+
+const { ObjectId } = mongoose.Types;
 
 const SchemaObjectId = mongoose.Schema.Types.ObjectId;
 const notiTypes = ['system', 'replied', 'quoted'];
@@ -46,14 +47,15 @@ NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
   post, thread, opt,
 ) {
   const option = { ...opt, upsert: true };
+  const threadUid = thread.uid();
   await NotificationModel.update({
-    id: `replied:${thread.id()}`,
+    id: `replied:${threadUid}`,
   }, {
     $setOnInsert: {
-      id: `replied:${thread.id()}`,
+      id: `replied:${threadUid}`,
       type: 'replied',
       sendTo: thread.userId,
-      'replied.threadId': thread._id,
+      'replied.threadId': threadUid,
     },
     $set: {
       eventTime: post.createdAt,
@@ -69,14 +71,14 @@ NotificationSchema.statics.sendQuotedNoti = async function sendQuotedNoti(
 ) {
   quotedPosts.forEach(async (qp) => {
     await NotificationModel.create({
-      id: `quoted:${post.id()}:${qp.id()}`,
+      id: `quoted:${post.uid()}:${qp.uid()}`,
       type: 'quoted',
       sendTo: qp.userId,
       eventTime: post.createdAt,
       quoted: {
-        threadId: thread._id,
-        postId: post._id,
-        quotedPostId: qp._id,
+        threadId: thread.uid(),
+        postId: post.uid(),
+        quotedPostId: qp.uid(),
         quoter: post.author,
         quoterId: post.userId,
       },
@@ -92,10 +94,10 @@ NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
   const option = {
     query: { $or: [{ sendTo: user._id }, { sendToGroup: 'all' }] },
     desc: true,
-    field: 'eventTime',
+    field: '_id',
     sliceName: type,
-    parse: value => (new Date(value)),
-    toCursor: value => (value.toISOString()),
+    parse: value => ObjectId(value),
+    toCursor: value => value.valueOf(),
   };
   const result = await findSlice(sliceQuery, NotificationModel, option);
   return result;
