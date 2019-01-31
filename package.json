@@ -17,9 +17,10 @@
   },
   "dependencies": {
     "@koa/cors": "2",
-    "apollo-server-koa": "^2.0.0-rc.12",
+    "apollo-server-koa": "^2.3.2",
     "dotenv": "^6.2.0",
     "graphql": "^14.0.2",
+    "graphql-tag": "^2.10.1",
     "graphql-tools": "^4.0.3",
     "joi": "^14.3.1",
     "koa": "^2.6.2",
