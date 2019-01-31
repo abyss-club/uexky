@@ -2,7 +2,7 @@ import { AuthenticationError } from 'apollo-server-koa';
 import mongoose from 'mongoose';
 
 import AuthFail from '~/error';
-import { encode } from '~/utils/uuid';
+import Uid from '~/uid';
 import PostModel from '~/models/post';
 import ThreadModel from '~/models/thread';
 
@@ -30,12 +30,10 @@ const UserSchema = new mongoose.Schema({
     range: [String],
   },
 });
-UserSchema.methods.author = async function author(threadId, anonymous) {
+UserSchema.methods.author = async function author(threadSuid, anonymous) {
   if (anonymous) {
-    const obj = { userId: this.ObjectId, threadId };
-    await UserAIDModel.update(obj, obj, { upsert: true });
-    const aid = await UserAIDModel.findOne(obj);
-    return aid.anonymousId;
+    const aid = await UserAidModel.getAid(this._id, threadSuid);
+    return aid;
   }
   if ((this.name || '') === '') {
     throw new Error('you must set name first');
@@ -52,14 +50,20 @@ UserSchema.methods.getRole = async function getRole() {
   const { role, tags } = this.role || {};
   return { role: role || 0, tags: tags || [] };
 };
-UserSchema.methods.onPubPost = async function onPubPost(thread, post) {
+UserSchema.methods.onPubPost = async function onPubPost(
+  thread, post, { session },
+) {
   await UserPostsModel.update({
     userId: this._id,
-    threadId: thread._id,
+    threadSuid: thread.suid,
   }, {
-    $push: { posts: post._id },
+    $setOnInsert: {
+      userId: this._id,
+      threadSuid: thread.suid,
+    },
     $set: { updatedAt: Date() },
-  });
+    $push: { posts: post.suid },
+  }, { session, upsert: true });
 };
 UserSchema.methods.setName = async function setName(name) {
   // TODO: validate length
@@ -108,9 +112,9 @@ UserSchema.methods.ensurePermission = function ensurePermission(
     throw new Error('Premitted Error');
   }
 };
-UserSchema.methods.banUser = async function banUser(postId) {
-  const post = await PostModel.findById(postId);
-  const thread = await ThreadModel.findById(post.threadId);
+UserSchema.methods.banUser = async function banUser(postUid) {
+  const post = await PostModel.findByUID(postUid);
+  const thread = await ThreadModel.findOne({ suid: post.threadSuid }).exec();
   const target = await UserModel.findOne({ _id: post.userId });
   this.ensurePermission(target, ACTIONS.BAN_USER, thread.mainTag);
   await UserModel.update(
@@ -118,29 +122,29 @@ UserSchema.methods.banUser = async function banUser(postId) {
     { $set: { 'role.role': ROLES.Banned } },
   );
 };
-UserSchema.methods.blockPost = async function blockPost(postId) {
-  const post = await PostModel.findById(postId);
-  const thread = await ThreadModel.findById(post.threadId);
+UserSchema.methods.blockPost = async function blockPost(postUid) {
+  const post = await PostModel.findByUID(postUid);
+  const thread = await ThreadModel.findOne({ suid: post.threadSuid });
   const target = await UserModel.findOne({ _id: post.userId });
   this.ensurePermission(target, ACTIONS.BLOCK_POST, thread.mainTag);
   await PostModel.update({ _id: post._id }, { $set: { blocked: true } });
 };
-UserSchema.methods.lockThread = async function lockThread(threadId) {
-  const thread = await ThreadModel.findById(threadId);
+UserSchema.methods.lockThread = async function lockThread(threadUid) {
+  const thread = await ThreadModel.findByUID(threadUid);
   const target = await UserModel.findOne({ _id: thread.userId });
   this.ensurePermission(target, ACTIONS.LOCK_THREAD, thread.mainTag);
   await ThreadModel.update({ _id: thread._id }, { $set: { locked: true } });
 };
-UserSchema.methods.blockThread = async function blockThread(threadId) {
-  const thread = await ThreadModel.findById(threadId);
+UserSchema.methods.blockThread = async function blockThread(threadUid) {
+  const thread = await ThreadModel.findById(threadUid);
   const target = await UserModel.findOne({ _id: thread.userId });
   this.ensurePermission(target, ACTIONS.BLOCK_THREAD, thread.mainTag);
   await ThreadModel.update({ _id: thread._id }, { $set: { blocked: true } });
 };
 UserSchema.methods.editTags = async function editTags(
-  threadId, mainTag, subTags,
+  threadUid, mainTag, subTags,
 ) {
-  const thread = await ThreadModel.findById(threadId);
+  const thread = await ThreadModel.findById(threadUid);
   const target = await UserModel.findOne({ _id: thread.userId });
   this.ensurePermission(target, ACTIONS.BLOCK_THREAD, thread.mainTag);
   await ThreadModel.update(
@@ -149,25 +153,41 @@ UserSchema.methods.editTags = async function editTags(
   );
 };
 
-// MODEL: UserAID
+// MODEL: UserAid
 //        used for save anonymousId for user in threads.
-const UserAIDSchema = new mongoose.Schema({
+const UserAidSchema = new mongoose.Schema({
   userId: SchemaObjectId,
-  threadId: SchemaObjectId,
+  threadSuid: String,
+  anonymousId: String, // format: Uid
 });
-const UserAIDModel = mongoose.model('UserAID', UserAIDSchema);
+const UserAidModel = mongoose.model('UserAid', UserAidSchema);
 
-UserAIDSchema.methods.anonymousId = function anonymousId() {
-  return encode(this.ObjectId);
+UserAidSchema.statics.getAid = async function getAid(userId, threadSuid) {
+  const aids = await UserAidModel.find({ userId, threadSuid }).exec();
+  if (aids.length !== 0) {
+    return aids[0].anonymousId;
+  }
+
+  const aid = Uid.decode(await Uid.newSuid());
+  await UserAidModel.create({
+    userId: this._id,
+    threadSuid,
+    anonymousId: aid,
+  });
+  return aid;
 };
 
 // MODEL: UserPosts
 //        used for querying user's posts grouped by thread.
 const UserPostsSchema = mongoose.Schema({
   userId: SchemaObjectId,
-  threadId: SchemaObjectId,
-  posts: [SchemaObjectId],
+  threadSuid: String,
   updatedAt: Date,
+  posts: [{
+    suid: String,
+    createdAt: Date,
+    anonymous: Boolean,
+  }],
 });
 const UserPostsModel = mongoose.model('UserPosts', UserPostsSchema);
 
@@ -215,5 +235,5 @@ const ROLES_ACTIONS = {
 const UserModel = mongoose.model('User', UserSchema);
 export default UserModel;
 export {
-  UserAIDModel, getUserByEmail, ensureSignIn,
+  UserAidModel, getUserByEmail, ensureSignIn,
 };

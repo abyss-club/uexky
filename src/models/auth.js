@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { genRandomStr } from '../utils/uuid';
+import { Base64 } from '~/uid';
 
 const AuthSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
@@ -12,7 +12,7 @@ const AuthSchema = new mongoose.Schema({
 });
 
 AuthSchema.statics.addToAuth = async function addToAuth(email, code) {
-  const authCode = code || genRandomStr(36);
+  const authCode = code || Base64.randomString(36);
   const newAuth = { email, authCode, createdAt: new Date() };
   await AuthModel.update({ email }, newAuth, { upsert: true });
 };
