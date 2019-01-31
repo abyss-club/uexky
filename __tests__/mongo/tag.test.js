@@ -27,15 +27,12 @@ describe('Insert Tags', () => {
   it('add tags', async () => {
     const tags = mockTags;
     await ConfigModel.modifyMainTags(['MainA']);
-    // session.startTransaction();
-
     await TagModel.onPubThread(tags);
-    // await session.commitTransaction();
   });
   it('validate tags', async () => {
     const result = await TagModel.getTree();
     const target = result.filter(tagObj => tagObj.mainTag === mockTags.mainTag)[0];
     expect(target.mainTag).toEqual(mockTags.mainTag);
-    expect(target.subTags).toEqual(mockTags.subTags);
+    expect(target.subTags.sort()).toEqual(mockTags.subTags.sort());
   });
 });
