@@ -7,25 +7,29 @@ const Query = {
 
 const Mutation = {
   auth: (obj, { email }, ctx) => {
-    if (ctx.user) throw new Error('already signed in!');
+    if (ctx.user) throw new Error('Already signed in.');
     AuthModel.addToAuth(email);
     return true;
   },
-  setName: (obj, { name }, ctx) => {
+  setName: async (obj, { name }, ctx) => {
     const user = ensureSignIn(ctx);
-    user.setName(name);
+    const result = await user.setName(name);
+    return result;
   },
-  syncTags: (obj, { tags }, ctx) => {
+  syncTags: async (obj, { tags }, ctx) => {
     const user = ensureSignIn(ctx);
-    user.syncTags(tags);
+    const result = await user.syncTags(tags);
+    return result;
   },
-  addSubbedTags: (obj, { tags }, ctx) => {
+  addSubbedTags: async (obj, { tags }, ctx) => {
     const user = ensureSignIn(ctx);
-    user.addSubbedTags(tags);
+    const result = await user.addSubbedTags(tags);
+    return result;
   },
-  delSubbedTags: (obj, { tags }, ctx) => {
+  delSubbedTags: async (obj, { tags }, ctx) => {
     const user = ensureSignIn(ctx);
-    user.delSubbedTags(tags);
+    const result = await user.delSubbedTags(tags);
+    return result;
   },
 
   // admin's apis:
