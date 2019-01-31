@@ -18,11 +18,11 @@ export default `
     delSubbedTags(tags: [String!]!): User!
 
     # admin's apis:
-    banUser(postId: String!)
-    blockPost(postId: String!)
-    lockThread(threadId: String!)
-    blockThread(threadId: String!)
-    editTags(threadId: String!, mainTag: String!, subTags: [String!]!)
+    banUser(postId: String!): User!
+    blockPost(postId: String!): Post!
+    lockThread(threadId: String!): Thread!
+    blockThread(threadId: String!): Thread!
+    editTags(threadId: String!, mainTag: String!, subTags: [String!]!): Tags!
   }
 
   type User {
