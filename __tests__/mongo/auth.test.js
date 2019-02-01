@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import MongoMemoryServer from 'mongodb-memory-server';
-import { genRandomStr } from '~/utils/uuid';
+
+import { Base64 } from '~/uid';
 import AuthModel from '~/models/auth';
 
 // May require additional time for downloading MongoDB binaries
@@ -23,7 +24,7 @@ afterAll(() => {
 });
 
 describe('Testing auth', () => {
-  const authCode = genRandomStr(36);
+  const authCode = Base64.randomString(36);
   const mockEmail = 'test@example.com';
   it('add user', async () => {
     const email = mockEmail;

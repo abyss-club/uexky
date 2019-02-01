@@ -1,7 +1,6 @@
 import { AuthenticationError } from 'apollo-server-koa';
 import mongoose from 'mongoose';
 
-import AuthFail from '~/error';
 import Uid from '~/uid';
 import PostModel from '~/models/post';
 import ThreadModel from '~/models/thread';
@@ -62,7 +61,25 @@ UserSchema.methods.onPubPost = async function onPubPost(
       threadSuid: thread.suid,
     },
     $set: { updatedAt: Date() },
-    $push: { posts: post.suid },
+    $push: {
+      posts: {
+        suid: post.suid,
+        createdAt: post.createdAt,
+        anonymous: post.anonymous,
+      },
+    },
+  }, { session, upsert: true });
+};
+UserSchema.methods.onPubThread = async function onPubThread(thread, { session }) {
+  await UserPostsModel.updateOne({
+    userId: this._id,
+    threadSuid: thread.suid,
+  }, {
+    $setOnInsert: {
+      userId: this._id,
+      threadSuid: thread.suid,
+    },
+    $set: { updatedAt: Date() },
   }, { session, upsert: true });
 };
 UserSchema.methods.setName = async function setName(name) {
@@ -160,22 +177,22 @@ const UserAidSchema = new mongoose.Schema({
   threadSuid: String,
   anonymousId: String, // format: Uid
 });
-const UserAidModel = mongoose.model('UserAid', UserAidSchema);
 
 UserAidSchema.statics.getAid = async function getAid(userId, threadSuid) {
-  const aids = await UserAidModel.find({ userId, threadSuid }).exec();
-  if (aids.length !== 0) {
-    return aids[0].anonymousId;
-  }
-
-  const aid = Uid.decode(await Uid.newSuid());
-  await UserAidModel.create({
-    userId: this._id,
-    threadSuid,
-    anonymousId: aid,
-  });
-  return aid;
+  const result = await UserAidModel.findOneAndUpdate({
+    userId, threadSuid,
+  }, {
+    $setOnInsert: {
+      userId,
+      threadSuid,
+      anonymousId: Uid.decode(await Uid.newSuid()),
+    },
+    $set: { updatedAt: Date() },
+  }, { new: true, upsert: true });
+  return result.anonymousId;
 };
+
+const UserAidModel = mongoose.model('UserAid', UserAidSchema);
 
 // MODEL: UserPosts
 //        used for querying user's posts grouped by thread.
@@ -235,5 +252,5 @@ const ROLES_ACTIONS = {
 const UserModel = mongoose.model('User', UserSchema);
 export default UserModel;
 export {
-  UserAidModel, getUserByEmail, ensureSignIn,
+  UserAidModel, UserPostsModel, ensureSignIn,
 };
