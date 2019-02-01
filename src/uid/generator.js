@@ -7,15 +7,16 @@ const timestamp = date => Math.floor((date.getTime() - timeZero) / 1000);
 const WorkerIDSchema = new mongoose.Schema({
   count: Number,
 }, { capped: 1 });
-const WorkerIDModel = mongoose.model('worker_id', WorkerIDSchema);
 const workerExpireMilliSeconds = 1000 * 3600;
 
 WorkerIDSchema.statics.newWorkerID = async function newWorkerID() {
-  const wid = await WorkerIDModel.findOneAndUpdate(
+  const { count } = await WorkerIDModel.findOneAndUpdate(
     {}, { $inc: { count: 1 } }, { new: true, upsert: 1 },
   ); // TODO: concernte(?) main, see mongodb docs.
-  return wid;
+  return count % 512;
 };
+
+const WorkerIDModel = mongoose.model('worker_id', WorkerIDSchema);
 
 // Random Bits
 const randomBits = () => Math.floor(Math.random() * 512);
@@ -55,7 +56,7 @@ Generator.run = async function run() {
   this.firstSeqInTs = nextSeq;
 };
 
-Generator.NewID = async function NewID() {
+Generator.newID = async function newID() {
   await this.run();
   const rb = randomBits();
   return [
