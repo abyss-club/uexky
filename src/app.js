@@ -1,22 +1,18 @@
-import 'module-alias/register';
 import { ApolloServer } from 'apollo-server-koa';
 import Koa from 'koa';
 import Router from 'koa-router';
 import cors from '@koa/cors';
 
-import mailguntest from './mailgun';
+// import mailguntest from './mailgun';
 import schema from './schema';
-import { genRandomStr } from './utils/uuid';
 import AuthModel from './models/auth';
-import TagModel from './models/tag';
-import { getUserByEmail } from './models/user';
-import { genNewToken, getEmailByToken } from './models/token';
+// import TagModel from './models/tag';
+import UserModel from './models/user';
+import TokenModel from './models/token';
 
 const server = new ApolloServer({
   schema,
-  context: ({ ctx }) => {
-    return { user: ctx.user };
-  },
+  context: ({ ctx }) => ({ user: ctx.user }),
 });
 
 function authMiddleware() {

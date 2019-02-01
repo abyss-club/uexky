@@ -13,9 +13,7 @@ const TokenSchema = new mongoose.Schema({
   },
 });
 
-const TokenModel = mongoose.model('Token', TokenSchema);
-
-async function genNewToken(email) {
+TokenSchema.statics.genNewToken = async function genNewToken(email) {
   const authToken = Base64.randomString(24);
   const newToken = { email, authToken, createdAt: new Date() };
   await TokenModel.update({ email }, newToken, { upsert: true });
