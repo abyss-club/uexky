@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import MongoMemoryServer from 'mongodb-memory-server';
-import ConfigModel from '~/models/config';
+import { ConfigModel } from '~/models/config';
 import { InternalError, ParamsError } from '~/error';
 
 // May require additional time for downloading MongoDB binaries

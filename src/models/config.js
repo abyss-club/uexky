@@ -58,4 +58,28 @@ ConfigSchema.statics.modifyMainTags = async function modifyMainTags(tags) {
 
 const ConfigModel = mongoose.model('Config', ConfigSchema);
 
-export default ConfigModel;
+const config = () => {
+  const store = {
+    mainTags: undefined,
+    rateLimit: undefined,
+  };
+  return {
+    getMainTags: async function getMainTags() {
+      if (!store.mainTags) {
+        const mainTags = await ConfigModel.getMainTags();
+        store.mainTags = mainTags;
+      }
+      return store.mainTags;
+    },
+    getRateLimit: async function getRateLimit() {
+      if (!store.rateLimit) {
+        const rateLimit = await ConfigModel.getRateLimit();
+        store.rateLimit = rateLimit;
+      }
+      return this.rateLimit;
+    },
+  };
+};
+
+export default config;
+export { ConfigModel };
