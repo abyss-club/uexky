@@ -1,4 +1,4 @@
-import ConfigModel from '~/models/config';
+import { ConfigModel } from '~/models/config';
 
 const Query = {
   config: () => ({}),
@@ -20,8 +20,8 @@ const Mutation = {
 };
 
 const Config = {
-  mainTags: () => ConfigModel.getMainTags(),
-  rateLimit: () => ConfigModel.getRateLimit(),
+  mainTags: (obj, args, ctx) => ctx.config.getMainTags,
+  rateLimit: (obj, args, ctx) => ctx.config.getRateLimit,
 };
 
 export default {

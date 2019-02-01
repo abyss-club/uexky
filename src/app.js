@@ -3,12 +3,11 @@ import Koa from 'koa';
 import Router from 'koa-router';
 import cors from '@koa/cors';
 
-// import mailguntest from './mailgun';
-import schema from './schema';
-import AuthModel from './models/auth';
-// import TagModel from './models/tag';
-import UserModel from './models/user';
-import TokenModel from './models/token';
+import schema from '~/schema';
+import AuthModel from '~/models/auth';
+import UserModel from '~/models/user';
+import config from '~/models/config';
+import TokenModel from '~/models/token';
 
 const server = new ApolloServer({
   schema,
@@ -32,8 +31,16 @@ function authMiddleware() {
   };
 }
 
+function configMiddleware() {
+  return async (ctx, next) => {
+    if (ctx.url === '/graphql') {
+      app.context.config = config();
+    }
+    await next();
+  };
+}
+
 const router = new Router();
-// router.use('/graphql', authMiddleware());
 router.get('/auth', async (ctx, next) => {
   if (!ctx.query.code || ctx.query.code.length !== 36) {
     ctx.body = 'Incorrect authentication code';
@@ -61,8 +68,8 @@ router.get('/auth', async (ctx, next) => {
 const app = new Koa();
 app.use(router.routes());
 app.use(authMiddleware());
+app.use(configMiddleware());
 app.use(cors({ allowMethods: ['GET', 'OPTION', 'POST'] }));
 server.applyMiddleware({ app });
-// mailguntest();
 
 export default app;
