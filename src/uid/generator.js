@@ -67,3 +67,4 @@ Generator.newID = async function newID() {
 };
 
 export default Generator;
+export { WorkerIDModel };
