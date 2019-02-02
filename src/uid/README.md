@@ -47,8 +47,7 @@ No special requirements.
 
 ### Display Format
 
-For better readability, storage format is converted to a base64-like string
-when displaying to users.  
+Storage format is designed for conveniently saving, indexing and comparing in  the database. When displaying to users, storage format is converted to a base64-like string for better readability.
   
 Frequently variable parts of the string are placed at the beginning and the end
 of it on purpose, so it looks like a complete random ID.
