@@ -1,14 +1,14 @@
 import mongoose from 'mongoose';
 import findSlice from '~/models/base';
+import { ParamsError } from '~/error';
 
 const { ObjectId } = mongoose.Types;
-
-const SchemaObjectId = mongoose.Schema.Types.ObjectId;
+const SchemaObjectId = mongoose.ObjectId;
 const notiTypes = ['system', 'replied', 'quoted'];
 const isValidType = type => notiTypes.findIndex(t => t === type) !== -1;
 
 const NotificationSchema = new mongoose.Schema({
-  id: [String],
+  id: String,
   type: { type: String, enum: notiTypes },
   sendTo: SchemaObjectId,
   sendToGroup: { type: String, enum: ['all'] },
@@ -18,18 +18,18 @@ const NotificationSchema = new mongoose.Schema({
     content: String,
   },
   replied: {
-    threadId: SchemaObjectId,
+    threadId: String,
     repliers: [String],
-    repliersIds: [SchemaObjectId],
+    replierIds: [SchemaObjectId],
   },
   quoted: {
-    threadId: SchemaObjectId,
-    postId: SchemaObjectId,
-    quotedPostId: SchemaObjectId,
+    threadId: String,
+    postId: String,
+    quotedPostId: String,
     quoter: String,
     quoterId: SchemaObjectId,
   },
-}, { id: false });
+}, { id: false, autoCreate: true });
 
 NotificationSchema.methods.body = function body() {
   switch (this.type) {
@@ -48,7 +48,7 @@ NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
 ) {
   const option = { ...opt, upsert: true };
   const threadUid = thread.uid();
-  await NotificationModel.update({
+  await NotificationModel.updateOne({
     id: `replied:${threadUid}`,
   }, {
     $setOnInsert: {
@@ -62,37 +62,42 @@ NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
     },
     $addToSet: {
       'replied.repliers': post.author,
-      'replied.repliersIds': post.userId,
+      'replied.replierIds': post.userId,
     },
   }, option);
 };
 NotificationSchema.statics.sendQuotedNoti = async function sendQuotedNoti(
   post, thread, quotedPosts, opt,
 ) {
-  quotedPosts.forEach(async (qp) => {
-    await NotificationModel.create({
-      id: `quoted:${post.uid()}:${qp.uid()}`,
+  const postUid = post.uid();
+  const threadUid = thread.uid();
+  await Promise.all(quotedPosts.map(async (qp) => {
+    NotificationModel.create({
+      id: `quoted:${postUid}:${qp.uid()}`,
       type: 'quoted',
       sendTo: qp.userId,
       eventTime: post.createdAt,
       quoted: {
-        threadId: thread.uid(),
-        postId: post.uid(),
+        threadId: threadUid,
+        postId: postUid,
         quotedPostId: qp.uid(),
         quoter: post.author,
         quoterId: post.userId,
       },
     }, opt);
-  });
+  }));
 };
 NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
   user, type, sliceQuery,
 ) {
   if (!isValidType(type)) {
-    throw new Error(`invalid type: ${type}`);
+    throw new ParamsError(`Invalid type: ${type}`);
+  }
+  if (!sliceQuery) {
+    throw new ParamsError('Invalid SliceQuery.');
   }
   const option = {
-    query: { $or: [{ sendTo: user._id }, { sendToGroup: 'all' }] },
+    query: { type, $or: [{ sendTo: user._id }, { sendToGroup: 'all' }] },
     desc: true,
     field: '_id',
     sliceName: type,

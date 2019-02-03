@@ -1,12 +1,13 @@
 import mongoose from 'mongoose';
 
+import { ParamsError } from '~/error';
 import Uid from '~/uid';
 import findSlice from '~/models/base';
 import ConfigModel from './config';
 import TagModel from './tag';
 import PostModel from './post';
 
-const SchemaObjectId = mongoose.Schema.Types.ObjectId;
+const SchemaObjectId = mongoose.ObjectId;
 
 const ThreadSchema = mongoose.Schema({
   suid: String,
@@ -38,7 +39,6 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
 
   const now = new Date();
   const thread = {
-    ...input,
     anonymous,
     userId: user._id,
     tags: [mainTag, ...(subTags)],
@@ -46,24 +46,28 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
     blocked: false,
     createdAt: now,
     updatedAt: now,
+    content,
+    title,
   };
   thread.suid = await Uid.newSuid();
   thread.author = await user.author(thread.suid, anonymous);
 
   const session = await mongoose.startSession();
   session.startTransaction();
-  await ThreadModel.create(thread, { session });
-  await user.onPubThread(thread, { session });
-  await TagModel.onPubThread(thread, { session });
+  const threadDoc = new ThreadModel(thread);
+  await threadDoc.save({ session });
+  await ThreadModel.create(threadDoc, { session });
+  await user.onPubThread(threadDoc, { session });
+  await TagModel.onPubThread(threadDoc, { session });
   await session.commitTransaction();
   session.endSession();
 
-  thread.id = await Uid.decode(thread.suid);
-  delete thread.suid;
-  return thread;
+  // thread.id = Uid.decode(thread.suid);
+  // delete thread.suid;
+  return threadDoc;
 };
 ThreadSchema.statics.findByUid = async function findByUid(uid) {
-  const thread = await ThreadModel.findOne({ suid: await Uid.encode(uid) });
+  const thread = await ThreadModel.findOne({ suid: Uid.encode(uid) });
   return thread;
 };
 ThreadSchema.statics.getThreadSlice = async function getThreadSlice(

@@ -19,12 +19,13 @@ TokenSchema.statics.genNewToken = async function genNewToken(email) {
   await TokenModel.update({ email }, newToken, { upsert: true });
   const result = await TokenModel.findOne({ email }).orFail(() => new AuthError('AuthToken not found'));
   return result;
-}
+};
 
-async function getEmailByToken(authToken) {
+TokenSchema.statics.getEmailByToken = async function getEmailByToken(authToken) {
   const result = await TokenModel.findOne({ authToken }).orFail(() => new AuthError('Email not found'));
   return result.email;
-}
+};
+
+const TokenModel = mongoose.model('Token', TokenSchema);
 
 export default TokenModel;
-export { genNewToken, getEmailByToken };

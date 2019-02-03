@@ -1,11 +1,11 @@
-import { AuthenticationError } from 'apollo-server-koa';
 import mongoose from 'mongoose';
 
 import Uid from '~/uid';
 import PostModel from '~/models/post';
 import ThreadModel from '~/models/thread';
+import { ParamsError, AuthError, InternalError } from '~/error';
 
-const SchemaObjectId = mongoose.Schema.Types.ObjectId;
+const SchemaObjectId = mongoose.ObjectId;
 
 // MODEL: User
 //        storage user info.
@@ -35,7 +35,7 @@ UserSchema.methods.author = async function author(threadSuid, anonymous) {
     return aid;
   }
   if ((this.name || '') === '') {
-    throw new Error('you must set name first');
+    throw new Error('Name not yet set.');
   }
   return this.name;
 };
@@ -52,7 +52,7 @@ UserSchema.methods.getRole = async function getRole() {
 UserSchema.methods.onPubPost = async function onPubPost(
   thread, post, { session },
 ) {
-  await UserPostsModel.update({
+  await UserPostsModel.updateOne({
     userId: this._id,
     threadSuid: thread.suid,
   }, {
@@ -85,30 +85,38 @@ UserSchema.methods.onPubThread = async function onPubThread(thread, { session })
 UserSchema.methods.setName = async function setName(name) {
   // TODO: validate length
   if ((this.name || '') !== '') {
-    throw new Error('already set name!');
+    throw new InternalError('Name can only be set once.');
   }
-  await UserModel.update({ _id: this._id }, { $set: { name } }).exec();
+  await UserModel.updateOne({ _id: this._id }, { $set: { name } });
+  const result = await UserModel.findOne({ _id: this._id });
+  return result;
 };
 UserSchema.methods.syncTags = async function syncTags(tags) {
-  await UserModel.update({ _id: this._id }, { tags: tags || [] });
+  await UserModel.updateOne({ _id: this._id }, { tags: tags || [] });
+  const result = await UserModel.findOne({ _id: this._id });
+  return result;
 };
 UserSchema.methods.addSubbedTags = async function addSubbedTags(tags) {
-  if ((tags || []).length === 0) {
-    return;
+  if (!Array.isArray(tags) || !tags.length) {
+    throw new ParamsError('Provided tags is not a non-empty array.');
   }
-  await UserModel.update(
+  await UserModel.updateOne(
     { _id: this._id },
     { $addToSet: { tags: { $each: tags } } },
   );
+  const result = await UserModel.findOne({ _id: this._id });
+  return result;
 };
 UserSchema.methods.delSubbedTags = async function delSubbedTags(tags) {
-  if ((tags || []).length === 0) {
-    return;
+  if (!Array.isArray(tags) || !tags.length) {
+    throw new ParamsError('Provided tags is not a non-empty array.');
   }
-  await UserModel.update(
+  await UserModel.updateOne(
     { _id: this._id },
     { $pull: { tags: { $in: tags } } },
   );
+  const result = await UserModel.findOne({ _id: this._id });
+  return result;
 };
 UserSchema.methods.ensurePermission = function ensurePermission(
   targetUser, action, tag,
@@ -130,7 +138,7 @@ UserSchema.methods.ensurePermission = function ensurePermission(
   }
 };
 UserSchema.methods.banUser = async function banUser(postUid) {
-  const post = await PostModel.findByUID(postUid);
+  const post = await PostModel.findByUid(postUid);
   const thread = await ThreadModel.findOne({ suid: post.threadSuid }).exec();
   const target = await UserModel.findOne({ _id: post.userId });
   this.ensurePermission(target, ACTIONS.BAN_USER, thread.mainTag);
@@ -140,20 +148,20 @@ UserSchema.methods.banUser = async function banUser(postUid) {
   );
 };
 UserSchema.methods.blockPost = async function blockPost(postUid) {
-  const post = await PostModel.findByUID(postUid);
+  const post = await PostModel.findByUid(postUid);
   const thread = await ThreadModel.findOne({ suid: post.threadSuid });
   const target = await UserModel.findOne({ _id: post.userId });
   this.ensurePermission(target, ACTIONS.BLOCK_POST, thread.mainTag);
   await PostModel.update({ _id: post._id }, { $set: { blocked: true } });
 };
 UserSchema.methods.lockThread = async function lockThread(threadUid) {
-  const thread = await ThreadModel.findByUID(threadUid);
+  const thread = await ThreadModel.findByUid(threadUid);
   const target = await UserModel.findOne({ _id: thread.userId });
   this.ensurePermission(target, ACTIONS.LOCK_THREAD, thread.mainTag);
   await ThreadModel.update({ _id: thread._id }, { $set: { locked: true } });
 };
 UserSchema.methods.blockThread = async function blockThread(threadUid) {
-  const thread = await ThreadModel.findById(threadUid);
+  const thread = await ThreadModel.findByUid(threadUid);
   const target = await UserModel.findOne({ _id: thread.userId });
   this.ensurePermission(target, ACTIONS.BLOCK_THREAD, thread.mainTag);
   await ThreadModel.update({ _id: thread._id }, { $set: { blocked: true } });
@@ -161,7 +169,7 @@ UserSchema.methods.blockThread = async function blockThread(threadUid) {
 UserSchema.methods.editTags = async function editTags(
   threadUid, mainTag, subTags,
 ) {
-  const thread = await ThreadModel.findById(threadUid);
+  const thread = await ThreadModel.findByUid(threadUid);
   const target = await UserModel.findOne({ _id: thread.userId });
   this.ensurePermission(target, ACTIONS.BLOCK_THREAD, thread.mainTag);
   await ThreadModel.update(
@@ -196,7 +204,7 @@ const UserAidModel = mongoose.model('UserAid', UserAidSchema);
 
 // MODEL: UserPosts
 //        used for querying user's posts grouped by thread.
-const UserPostsSchema = mongoose.Schema({
+const UserPostsSchema = new mongoose.Schema({
   userId: SchemaObjectId,
   threadSuid: String,
   updatedAt: Date,
@@ -205,23 +213,23 @@ const UserPostsSchema = mongoose.Schema({
     createdAt: Date,
     anonymous: Boolean,
   }],
-});
+}, { autoCreate: true });
 const UserPostsModel = mongoose.model('UserPosts', UserPostsSchema);
 
-async function getUserByEmail(email) {
+UserSchema.statics.getUserByEmail = async function getUserByEmail(email) {
   try {
-    const user = await UserModel.findOne({ email });
+    const user = await this.findOne({ email });
     if (user) return user;
     // const newUser = new UserModel({ email });
-    const res = await UserModel.create({ email });
+    const res = await this.create({ email });
     return res;
   } catch (e) {
-    throw new AuthFail(e);
+    throw new AuthError(e);
   }
-}
+};
 
 function ensureSignIn(ctx) {
-  if (!ctx.user) throw new AuthenticationError('Authentication needed.');
+  if (!ctx.user) throw new AuthError('Authentication needed.');
   return ctx.user;
 }
 
