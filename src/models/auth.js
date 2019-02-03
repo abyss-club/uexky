@@ -14,7 +14,7 @@ const AuthSchema = new mongoose.Schema({
 AuthSchema.statics.addToAuth = async function addToAuth(email, code) {
   const authCode = code || Base64.randomString(36);
   const newAuth = { email, authCode, createdAt: new Date() };
-  await AuthModel.update({ email }, newAuth, { upsert: true });
+  await AuthModel.updateOne({ email }, newAuth, { upsert: true });
 };
 
 AuthSchema.statics.getEmailByCode = async function getEmailByCode(authCode) {

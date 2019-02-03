@@ -1,3 +1,5 @@
+import { ParamsError } from '~/error';
+
 // type SliceQuery
 // {
 //   before: String
@@ -23,16 +25,16 @@ async function findSlice(sliceQuery, model, option) {
   let { before, after } = sliceQuery;
   const { limit } = sliceQuery;
   if ((typeof before === 'undefined') && (typeof after === 'undefined')) {
-    throw new Error('both before and after are empty');
-  } else if ((limit || 0) === 0) {
-    return null;
+    throw new ParamsError('Both before and after fields are empty');
+  } else if (!Number.isInteger(limit) || limit < 1) {
+    throw new ParamsError('Limit must be greater than 0.');
   }
   if (option.desc) {
     [before, after] = [after, before];
   }
 
   const field = option.field || '_id';
-  const sliceName = option.field || 'slice';
+  const sliceName = option.sliceName || 'slice';
   const parse = option.parse || (value => value);
   const toCursor = (value) => {
     if (!value) {
@@ -45,7 +47,7 @@ async function findSlice(sliceQuery, model, option) {
   };
   const query = option.query || {};
 
-  if (typeof before === 'undefined') {
+  if (typeof before !== 'undefined') {
     if (before !== '') {
       query[field] = { $lt: parse(before) };
     }
@@ -53,10 +55,10 @@ async function findSlice(sliceQuery, model, option) {
     query[field] = { $gt: parse(after) };
   }
 
-  const slice = await model.find(query, {
+  const slice = await model.find(query, null, {
     limit: (limit + 1),
     sort: { [field]: option.desc ? -1 : 1 },
-  }).exec();
+  });
   if (option.desc) {
     slice.reverse();
   }

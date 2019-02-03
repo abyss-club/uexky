@@ -45,6 +45,11 @@ ConfigSchema.statics.modifyMainTags = async function modifyMainTags(tags) {
   if (!Array.isArray(tags) || !tags.length) {
     throw new ParamsError('Provided tags is not a non-empty array.');
   }
+  tags.forEach((tag) => {
+    if (Object.prototype.toString.call(tag) !== '[object String]' || tag === '') {
+      throw new ParamsError('Invalid tag provided in array.');
+    }
+  });
   const newMainTags = { optionName: 'mainTags', optionValue: JSON.stringify(tags) };
   await ConfigModel.updateOne({ optionName: 'mainTags' }, newMainTags, { upsert: true });
   const result = await this.getMainTags();
