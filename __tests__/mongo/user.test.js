@@ -1,9 +1,6 @@
 import mongoose from 'mongoose';
 import MongoMemoryServer from 'mongodb-memory-server';
-import { genRandomStr } from '~/utils/uuid';
 import UserModel from '~/models/user';
-import TokenModel from '~/models/token';
-import TagModel from '~/models/tag';
 import { ParamsError, InternalError } from '~/error';
 
 // May require additional time for downloading MongoDB binaries
