@@ -1,11 +1,13 @@
 import mongoose from 'mongoose';
 
+import { ParamsError } from '~/error';
 import Uid from '~/uid';
 import findSlice from '~/models/base';
+import ConfigModel from './config';
 import TagModel from './tag';
 import PostModel from './post';
 
-const SchemaObjectId = mongoose.Schema.Types.ObjectId;
+const SchemaObjectId = mongoose.ObjectId;
 
 const ThreadSchema = mongoose.Schema({
   suid: String,
@@ -25,32 +27,47 @@ const ThreadSchema = mongoose.Schema({
     postSuid: String,
     createdAt: Date,
   }],
-}, { id: false });
+}, { autoCreate: true });
 
-ThreadSchema.statics.pubThread = async function pubThread(ctx, input) {
-  const user = { ctx };
+ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
+  const {
+    anonymous, content, title, mainTag, subTags = [],
+  } = input;
+
+  const mainTags = await ConfigModel.getMainTags();
+  if (!mainTags.includes(mainTag)) throw new ParamsError('Invalid mainTag');
+
   const now = new Date();
   const thread = {
-    ...input,
+    anonymous,
     userId: user._id,
-    tags: [input.mainTag, ...(input.subTags || [])],
+    tags: [mainTag, ...(subTags)],
     locked: false,
     blocked: false,
     createdAt: now,
     updatedAt: now,
+    content,
+    title,
   };
-  // TODO: validate main tag
   thread.suid = await Uid.newSuid();
-  thread.author = await user.author(thread.suid);
+  thread.author = await user.author(thread.suid, anonymous);
 
   const session = await mongoose.startSession();
-  await ThreadModel.create(thread, { session }).save();
-  await TagModel.onPubThread(thread, { session });
+  session.startTransaction();
+  const threadDoc = new ThreadModel(thread);
+  await threadDoc.save({ session });
+  await ThreadModel.create(threadDoc, { session });
+  await user.onPubThread(threadDoc, { session });
+  await TagModel.onPubThread(threadDoc, { session });
   await session.commitTransaction();
-  return thread;
+  session.endSession();
+
+  // thread.id = Uid.decode(thread.suid);
+  // delete thread.suid;
+  return threadDoc;
 };
-ThreadSchema.statics.findById = async function findByUID(uid) {
-  const thread = await PostModel.findOne({ suid: Uid.encode(uid) }).exec();
+ThreadSchema.statics.findByUid = async function findByUid(uid) {
+  const thread = await ThreadModel.findOne({ suid: Uid.encode(uid) });
   return thread;
 };
 ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
@@ -89,7 +106,7 @@ ThreadSchema.methods.replyCount = function replyCount() {
   return this.catalog.length;
 };
 ThreadSchema.methods.onPubPost = async function onPubPost(post, opt) {
-  await ThreadModel.update({ suid: this.suid }, {
+  await ThreadModel.updateOne({ suid: this.suid }, {
     $push: { catalog: { postId: post.suid, createdAt: post.createdAt } },
   }, opt);
 };

@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
 
 import Uid from '~/uid';
+import { ParamsError } from '~/error';
 import ThreadModel from './thread';
 import NotificationModel from './notification';
 
-const SchemaObjectId = mongoose.Schema.Types.ObjectId;
+const SchemaObjectId = mongoose.ObjectId;
 
 const PostSchema = new mongoose.Schema({
   suid: String, // TODO: unique
@@ -17,16 +18,26 @@ const PostSchema = new mongoose.Schema({
   blocked: Boolean,
   quoteSuids: [String],
   content: String,
-}, { id: false });
+}, { id: false, autoCreate: true });
 
-PostSchema.statics.findById = async function findByUid(uid) {
-  const post = await PostModel.findOne({ suid: Uid.encode(uid) }).exec();
+PostSchema.statics.findByUid = async function findByUid(uid) {
+  const post = await PostModel.findOne({ suid: Uid.encode(uid) });
   return post;
 };
-PostSchema.statics.pubPost = async function pubPost(ctx, input) {
-  const user = { ctx };
-  const { threadId: threadUid, anonymous, content } = input;
+PostSchema.statics.pubPost = async function pubPost({ user }, input) {
+  const {
+    threadId: threadUid, anonymous, content, quoteIds: quoteUids = [],
+  } = input;
+
   const threadSuid = Uid.encode(threadUid);
+  const threadDoc = await ThreadModel.findOne({ suid: threadSuid });
+  if (!threadDoc) {
+    throw new ParamsError('Thread not found.');
+  }
+  if (threadDoc.locked) {
+    throw new ParamsError('Thread is locked.');
+  }
+
   const now = new Date();
   const post = {
     userId: user._id,
@@ -39,36 +50,37 @@ PostSchema.statics.pubPost = async function pubPost(ctx, input) {
     quoteSuids: [],
     content,
   };
-  const thread = await ThreadModel.findOne({ suid: threadSuid }).exec();
-  if (thread.locked) {
-    throw new Error('this thread is locked');
-  }
 
   let quotedPosts = [];
-  if (input.quotes.length !== 0) {
+  if (quoteUids.length > 0) {
     quotedPosts = await PostModel.find({
       suid: {
-        $in: input.quotes.map(
+        $in: quoteUids.map(
           q => Uid.encode(q),
         ),
       },
-    }).all().exec();
-    post.quoteIds = quotedPosts.map(qp => qp.suid);
+    });
+    post.quoteSuids = quotedPosts.map(qp => qp.suid);
   }
-
   post.suid = await Uid.newSuid();
+
   const session = await mongoose.startSession();
-  await PostModel.create(post, { session });
-  await thread.onPubPost(post, { session });
-  await user.onPubPost(thread, post, { session });
-  await NotificationModel.sendRepliedNoti(post, thread, { session });
-  await NotificationModel.sendQuotedNoti(post, thread, quotedPosts, { session });
+  session.startTransaction();
+  const postDoc = new PostModel(post);
+  await postDoc.save({ session });
+  await threadDoc.onPubPost(postDoc, { session });
+  await user.onPubPost(threadDoc, postDoc, { session });
+  await NotificationModel.sendRepliedNoti(postDoc, threadDoc, { session });
+  await NotificationModel.sendQuotedNoti(postDoc, threadDoc, quotedPosts, { session });
   await session.commitTransaction();
-  return post;
+  session.endSession();
+
+  return postDoc;
 };
 
 PostSchema.methods.uid = function uid() {
-  return Uid.decode(this.suid);
+  if (!this.id) this.id = Uid.decode(this.suid);
+  return this.id;
 };
 PostSchema.methods.getQuotes = async function getQuotes() {
   let qs = [];
@@ -76,7 +88,7 @@ PostSchema.methods.getQuotes = async function getQuotes() {
     qs = await PostModel.find(
       { suid: { $in: this.quoteSuids } },
       { sort: { suid: 1 } },
-    ).all().exec();
+    ).all();
   }
   return qs;
 };
@@ -84,7 +96,7 @@ PostSchema.methods.getContent = async function getContent() {
   return this.blocked ? '' : this.content;
 };
 PostSchema.methods.quoteCount = async function quoteCount() {
-  const count = await PostModel.find({ quotes: this.suid }).count().exec();
+  const count = await PostModel.find({ quotes: this.suid }).count();
   return count;
 };
 
