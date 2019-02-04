@@ -20,7 +20,7 @@ const Base64 = {
   // Convert 3-hex number to 2-codes base64 string
   parseFromHex3(hexStr) {
     if (hexStr.length !== 3) {
-      throw new Error(`invalid hex string: ${hexStr}`);
+      throw new Error(`Invalid hex string: ${hexStr}`);
     }
     const padTo = 2;
     let remaining = parseInt(hexStr, 16);
@@ -69,12 +69,12 @@ const reverseTimestamp = (hex) => {
   for (let i = 0; i < hex.length; i += 1) {
     chars.push(hexReverse[hex[i]]);
   }
-  return chars.reverse().join();
+  return chars.reverse().join('');
 };
 
 const Uid = {
   async newSuid() {
-    const newId = await Generator.New();
+    const newId = await Generator.newID();
     return newId;
   },
   encode(displayId) {
