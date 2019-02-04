@@ -1,5 +1,5 @@
 import ThreadModel from '~/models/thread';
-import { decode } from '~/utils/uuid';
+import Uid from '~/uid';
 
 const Query = {
   threadSlice: async (obj, { tags, query }) => {
@@ -8,7 +8,7 @@ const Query = {
   },
 
   thread: async (ctx, { id }) => {
-    const thread = await ThreadModel.findById(decode(id)).exec();
+    const thread = await ThreadModel.findById(Uid.encode(id)).exec();
     return thread;
   },
 };
