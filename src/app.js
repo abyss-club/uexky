@@ -1,22 +1,18 @@
-import 'module-alias/register';
 import { ApolloServer } from 'apollo-server-koa';
 import Koa from 'koa';
 import Router from 'koa-router';
 import cors from '@koa/cors';
 
-import mailguntest from './mailgun';
+// import mailguntest from './mailgun';
 import schema from './schema';
-import { genRandomStr } from './utils/uuid';
 import AuthModel from './models/auth';
-import TagModel from './models/tag';
-import { getUserByEmail } from './models/user';
-import { genNewToken, getEmailByToken } from './models/token';
+// import TagModel from './models/tag';
+import UserModel from './models/user';
+import TokenModel from './models/token';
 
 const server = new ApolloServer({
   schema,
-  context: ({ ctx }) => {
-    return { user: ctx.user };
-  },
+  context: ({ ctx }) => ({ user: ctx.user }),
 });
 
 function authMiddleware() {
@@ -24,8 +20,8 @@ function authMiddleware() {
     const token = ctx.cookies.get('token');
     if (ctx.url === '/graphql') {
       try {
-        const email = await getEmailByToken(token);
-        const user = await getUserByEmail(email);
+        const email = await TokenModel.getEmailByToken(token);
+        const user = await UserModel.getUserByEmail(email);
         app.context.user = user;
       } catch (e) {
         if (e.authError) app.context.user = null;
@@ -44,7 +40,7 @@ router.get('/auth', async (ctx, next) => {
   } else {
     try {
       const email = await AuthModel.getEmailByCode(ctx.query.code);
-      const token = await genNewToken(email);
+      const token = await TokenModel.genNewToken(email);
       const expiry = new Date(token.createdAt);
       expiry.setDate(expiry.getDate() + 20);
       ctx.body = token;

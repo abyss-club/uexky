@@ -5,16 +5,15 @@ const TagSchema = new mongoose.Schema({
   subTag: { type: String, required: true, unique: true },
   mainTags: [String],
   updateAt: Date,
-});
+}, { autoCreate: true });
 
 TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
   const option = { ...opt, upsert: true };
-  thread.subTags.forEach(async (tag) => {
-    await this.updateOne({ subTag: tag }, {
-      $addToSet: { mainTags: thread.mainTag },
-      $set: { updateAt: new Date() },
-    }, option);
-  });
+  const updateTags = thread.subTags.map(async tag => this.updateOne({ subTag: tag }, {
+    $addToSet: { mainTags: thread.mainTag },
+    $set: { updateAt: new Date() },
+  }, option));
+  await Promise.all(updateTags);
 };
 
 TagSchema.statics.getTree = async function getTree(limit, query = '') {
