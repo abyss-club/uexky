@@ -42,6 +42,8 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
     anonymous,
     userId: user._id,
     tags: [mainTag, ...(subTags)],
+    mainTag,
+    subTags,
     locked: false,
     blocked: false,
     createdAt: now,
@@ -62,8 +64,6 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
   await session.commitTransaction();
   session.endSession();
 
-  // thread.id = Uid.decode(thread.suid);
-  // delete thread.suid;
   return threadDoc;
 };
 ThreadSchema.statics.findByUid = async function findByUid(uid) {
