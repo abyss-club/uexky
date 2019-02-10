@@ -29,6 +29,7 @@
     "mailgun-js": "^0.22.0",
     "module-alias": "^2.1.0",
     "mongoose": "^5.4.5",
+    "redis": "^2.8.0",
     "validator": "^10.9.0"
   },
   "devDependencies": {
