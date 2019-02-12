@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import MongoMemoryServer from 'mongodb-memory-server';
-import Generator, { WorkerIDModel } from '~/uid/generator';
+import generator, { WorkerIDModel } from '~/uid/generator';
 
 let mongoServer;
 const opts = { useNewUrlParser: true };
@@ -37,10 +37,10 @@ const getSeq = (uid) => {
   return Math.floor(slice / 2);
 };
 
-test('Generator.newID', async () => {
-  const id1 = await Generator.newID();
+test('generator.newID', async () => {
+  const id1 = await generator.newID();
   expect(id1).toMatch(/[0-9a-f]{15}/);
-  const id2 = await Generator.newID();
+  const id2 = await generator.newID();
   expect(id2).toMatch(/[0-9a-f]{15}/);
   console.log(id1, id2);
   expect(id2 > id1).toBeTruthy();

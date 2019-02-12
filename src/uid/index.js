@@ -1,4 +1,4 @@
-import Generator from './generator';
+import generator from './generator';
 
 const Base64 = {
   code: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_',
@@ -74,7 +74,7 @@ const reverseTimestamp = (hex) => {
 
 const Uid = {
   async newSuid() {
-    const newId = await Generator.newID();
+    const newId = await generator.newID();
     return newId;
   },
   encode(displayId) {

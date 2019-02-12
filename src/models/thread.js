@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 import { ParamsError } from '~/error';
 import Uid from '~/uid';
+import validator from '~/validator';
 import findSlice from '~/models/base';
 import ConfigModel from './config';
 import TagModel from './tag';
@@ -36,6 +37,10 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
 
   const mainTags = await ConfigModel.getMainTags();
   if (!mainTags.includes(mainTag)) throw new ParamsError('Invalid mainTag');
+  const len = validator.unicodeLength(title);
+  if (len > 28) {
+    throw new ParamsError('title\'s length cannot longger than 28');
+  }
 
   const now = new Date();
   const thread = {

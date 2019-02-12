@@ -8,7 +8,7 @@ import NotificationModel from './notification';
 const SchemaObjectId = mongoose.ObjectId;
 
 const PostSchema = new mongoose.Schema({
-  suid: String, // TODO: unique
+  suid: { type: String, required: true, unique: true },
   userId: SchemaObjectId,
   threadSuid: String,
   anonymous: Boolean,
