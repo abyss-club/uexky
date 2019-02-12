@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import MongoMemoryServer from 'mongodb-memory-server';
 
-import Generator, { Base64 } from '~/uid';
+import Uid, { Base64 } from '~/uid';
 
 let mongoServer;
 const opts = { useNewUrlParser: true };
@@ -44,11 +44,11 @@ describe('decode/encode', () => {
   beforeEach(connectMongodb);
   afterEach(disconnectMongodb);
   test('Generator id, decode, and encode', async () => {
-    const suid = await Generator.newSuid();
+    const suid = await Uid.newSuid();
     expect(suid).toMatch(/[0-9a-f]{15}/);
-    const uid = Generator.decode(suid);
+    const uid = Uid.decode(suid);
     expect(uid).toMatch(/[0-9a-zA-Z-_]{10}/);
-    const suid1 = Generator.encode(uid);
+    const suid1 = Uid.encode(uid);
     expect(suid1).toEqual(suid);
   });
 });
@@ -57,6 +57,6 @@ test('timestamp reverse', () => {
   const suid = '800000000000000';
   // 1000-0000-0000-0000-0000-0000-0000-0000 = 80000000
   // 000000-000000-000000-000000-0000000-010000 = AAAAAg
-  const uid = Generator.decode(suid);
+  const uid = Uid.decode(suid);
   expect(uid.substring(0, 6)).toEqual('AAAAAQ');
 });
