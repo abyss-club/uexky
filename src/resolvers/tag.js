@@ -11,7 +11,8 @@ const Query = {
 
 const Tags = {
   mainTags: ({ mainTags }) => mainTags,
-  tree: async (obj, { query, limit = 10 }) => {
+  tree: async (obj, { query, limit = 10 }, ctx) => {
+    await ctx.limiter.take(limit);
     try {
       const tree = await TagModel.getTree(limit, query);
       return tree;

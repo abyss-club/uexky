@@ -6,6 +6,9 @@ const { ObjectId } = mongoose.Types;
 const SchemaObjectId = mongoose.ObjectId;
 const notiTypes = ['system', 'replied', 'quoted'];
 const isValidType = type => notiTypes.findIndex(t => t === type) !== -1;
+const userGroups = {
+  AllUser: 'all_user',
+};
 
 const NotificationSchema = new mongoose.Schema({
   id: String,
@@ -43,6 +46,7 @@ NotificationSchema.methods.body = function body() {
       return null;
   }
 };
+
 NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
   post, thread, opt,
 ) {
@@ -66,6 +70,7 @@ NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
     },
   }, option);
 };
+
 NotificationSchema.statics.sendQuotedNoti = async function sendQuotedNoti(
   post, thread, quotedPosts, opt,
 ) {
@@ -87,6 +92,24 @@ NotificationSchema.statics.sendQuotedNoti = async function sendQuotedNoti(
     }, opt);
   }));
 };
+
+NotificationSchema.statics.getUnreadCount = async function getUnreadCount(
+  user, type,
+) {
+  if (!isValidType(type)) {
+    throw new ParamsError(`Invalid type: ${type}`);
+  }
+  const count = await NotificationModel.find({
+    $or: [
+      { send_to: user.ID },
+      { send_to_group: userGroups.AllUser },
+    ],
+    type,
+    eventTime: { $gt: user.readNotiTime[type] },
+  }).count().exec();
+  return count;
+};
+
 NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
   user, type, sliceQuery,
 ) {
@@ -110,3 +133,4 @@ NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
 
 const NotificationModel = mongoose.model('Notification', NotificationSchema);
 export default NotificationModel;
+export { notiTypes };
