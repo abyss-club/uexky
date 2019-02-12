@@ -4,15 +4,16 @@ const randomSeq = () => Math.floor(Math.random() * 1024);
 const timeZero = new Date('2018-03-01T00:00:00Z').getTime();
 const timestamp = date => Math.floor((date.getTime() - timeZero) / 1000);
 
-const WorkerIDSchema = new mongoose.Schema({
-  count: Number,
-}, { capped: 1 });
+const WorkerIDSchema = new mongoose.Schema(
+  { count: Number },
+  { capped: 1, writeConcern: { w: 'majority', j: true, wtimeout: 1000 } },
+);
 const workerExpireMilliSeconds = 1000 * 3600;
 
 WorkerIDSchema.statics.newWorkerID = async function newWorkerID() {
   const { count } = await WorkerIDModel.findOneAndUpdate(
     {}, { $inc: { count: 1 } }, { new: true, upsert: 1 },
-  ); // TODO: concernte(?) main, see mongodb docs.
+  );
   return count % 512;
 };
 
