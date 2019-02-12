@@ -7,7 +7,7 @@ import schema from '~/schema';
 import AuthModel from '~/models/auth';
 import UserModel from '~/models/user';
 import { config } from '~/models/config';
-import createRateLimiter from '~/rate-limit';
+import createRateLimiter, { createIdleRateLimiter } from '~/rate-limit';
 import TokenModel from '~/models/token';
 
 const server = new ApolloServer({
@@ -47,13 +47,13 @@ async function rateLimitMiddleware(ctx, next) {
     if (headerName !== '') {
       const ip = ctx.header.get(headerName);
       const { user } = ctx;
-      let limiter;
       if ((user) && (user.email) && (user.email !== '')) {
-        limiter = createRateLimiter(ip, user.email);
+        ctx.limiter = createRateLimiter(ip, user.email);
       } else {
-        limiter = createRateLimiter(ip);
+        ctx.limiter = createRateLimiter(ip);
       }
-      ctx.rateLimiter = limiter;
+    } else {
+      ctx.limiter = createIdleRateLimiter();
     }
   }
   await next();

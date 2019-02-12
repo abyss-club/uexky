@@ -1,4 +1,5 @@
 import redis from '~/redis';
+import { ParamsError } from '~/error';
 
 async function createSubRateLimiter(config, forMutation, ip, email) {
   const key = email === ''
@@ -6,7 +7,11 @@ async function createSubRateLimiter(config, forMutation, ip, email) {
     : `ratelimit:ip:${ip}:email:${email}`;
   const set = false;
   return {
-    take: async function take(cost, isMutation) {
+    take: async function take(cost, isMutation = false) {
+      if (!Number.isInteger(cost) || cost < 1) {
+        throw new ParamsError('Limit must be greater than 0.');
+      }
+
       if (forMutation !== isMutation) return;
       if (!set) {
         const limitCfg = await config.getRateLimit();
@@ -37,10 +42,17 @@ async function createRateLimiter(config, ip, email = '') {
   }
 
   return {
-    take: async function take(cost, isMutation) {
+    take: async function take(cost, isMutation = false) {
       await Promise.all(limiters.map(limiters.take(cost, isMutation)));
     },
   };
 }
 
+function createIdleRateLimiter() {
+  return {
+    take: function take() {},
+  };
+}
+
 export default createRateLimiter;
+export { createIdleRateLimiter };
