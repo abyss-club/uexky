@@ -81,5 +81,5 @@ const config = () => {
   };
 };
 
-export default config;
-export { ConfigModel };
+export default ConfigModel;
+export { config };
