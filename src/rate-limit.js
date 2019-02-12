@@ -24,18 +24,23 @@ async function createSubRateLimiter(config, forMutation, ip, email) {
 }
 
 async function createRateLimiter(config, ip, email = '') {
-  const limiters = [createSubRateLimiter(config, false, ip, '')];
+  let limiters = [];
   if (email !== '') {
-    limiters.push(createSubRateLimiter(config, true, ip, ''));
-    limiters.push(createSubRateLimiter(config, false, ip, email));
-    limiters.push(createSubRateLimiter(config, true, ip, email));
+    limiters = await Promise.all([
+      createSubRateLimiter(config, false, ip, ''),
+      createSubRateLimiter(config, true, ip, ''),
+      createSubRateLimiter(config, false, ip, email),
+      createSubRateLimiter(config, true, ip, email),
+    ]);
+  } else {
+    limiters = [await createSubRateLimiter(config, false, ip, '')];
   }
+
   return {
     take: async function take(cost, isMutation) {
       await Promise.all(limiters.map(limiters.take(cost, isMutation)));
     },
   };
 }
-
 
 export default createRateLimiter;

@@ -6,7 +6,8 @@ import cors from '@koa/cors';
 import schema from '~/schema';
 import AuthModel from '~/models/auth';
 import UserModel from '~/models/user';
-import config from '~/models/config';
+import { config } from '~/models/config';
+import createRateLimiter from '~/rate-limit';
 import TokenModel from '~/models/token';
 
 const server = new ApolloServer({
@@ -21,9 +22,9 @@ function authMiddleware() {
       try {
         const email = await TokenModel.getEmailByToken(token);
         const user = await UserModel.getUserByEmail(email);
-        app.context.user = user;
+        ctx.user = user;
       } catch (e) {
-        if (e.authError) app.context.user = null;
+        if (e.authError) ctx.user = null;
         else throw new Error(e);
       }
     }
@@ -34,10 +35,28 @@ function authMiddleware() {
 function configMiddleware() {
   return async (ctx, next) => {
     if (ctx.url === '/graphql') {
-      app.context.config = config();
+      ctx.config = config();
     }
     await next();
   };
+}
+
+async function rateLimitMiddleware(ctx, next) {
+  if (ctx.url === '/graphql') {
+    const headerName = (await ctx.config.getRateLimit()).HTTPHeader;
+    if (headerName !== '') {
+      const ip = ctx.header.get(headerName);
+      const { user } = ctx;
+      let limiter;
+      if ((user) && (user.email) && (user.email !== '')) {
+        limiter = createRateLimiter(ip, user.email);
+      } else {
+        limiter = createRateLimiter(ip);
+      }
+      ctx.rateLimiter = limiter;
+    }
+  }
+  await next();
 }
 
 const router = new Router();
@@ -69,6 +88,7 @@ const app = new Koa();
 app.use(router.routes());
 app.use(authMiddleware());
 app.use(configMiddleware());
+app.use(rateLimitMiddleware());
 app.use(cors({ allowMethods: ['GET', 'OPTION', 'POST'] }));
 server.applyMiddleware({ app });
 

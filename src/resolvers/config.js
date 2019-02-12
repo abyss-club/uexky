@@ -1,4 +1,4 @@
-import { ConfigModel } from '~/models/config';
+import ConfigModel from '~/models/config';
 
 const Query = {
   config: () => ({}),
