@@ -4,15 +4,16 @@ const randomSeq = () => Math.floor(Math.random() * 1024);
 const timeZero = new Date('2018-03-01T00:00:00Z').getTime();
 const timestamp = date => Math.floor((date.getTime() - timeZero) / 1000);
 
-const WorkerIDSchema = new mongoose.Schema({
-  count: Number,
-}, { capped: 1 });
+const WorkerIDSchema = new mongoose.Schema(
+  { count: Number },
+  { capped: 1, writeConcern: { w: 'majority', j: true, wtimeout: 1000 } },
+);
 const workerExpireMilliSeconds = 1000 * 3600;
 
 WorkerIDSchema.statics.newWorkerID = async function newWorkerID() {
   const { count } = await WorkerIDModel.findOneAndUpdate(
     {}, { $inc: { count: 1 } }, { new: true, upsert: 1 },
-  ); // TODO: concernte(?) main, see mongodb docs.
+  );
   return count % 512;
 };
 
@@ -21,50 +22,51 @@ const WorkerIDModel = mongoose.model('worker_id', WorkerIDSchema);
 // Random Bits
 const randomBits = () => Math.floor(Math.random() * 512);
 
-const Generator = {
-  workerID: '',
-  expiredAt: 0,
-  timestamp: 0,
-  firstSeq: randomSeq(),
-  seq: randomSeq(),
-};
+const generator = (function makeGenerator() {
+  const store = {
+    workerID: '',
+    expiredAt: 0,
+    timestamp: 0,
+    firstSeq: randomSeq(),
+    seq: randomSeq(),
+  };
+  const run = async () => {
+    const now = new Date();
+    if ((store.workerID === '') && (now.getTime() > store.expiredAt)) {
+      store.workerID = await WorkerIDModel.newWorkerID();
+      store.expiredAt = now + workerExpireMilliSeconds;
+    }
 
-// run to next state, preparing for new id
-Generator.run = async function run() {
-  const now = new Date();
-  if ((this.workerID === '') && (now.getTime() > this.expiredAt)) {
-    this.workerID = await WorkerIDModel.newWorkerID();
-    this.expiredAt = now + workerExpireMilliSeconds;
-  }
+    const nextSeq = (store.seq + 1) % 1024;
+    const nowTs = timestamp(now);
+    if (nowTs !== store.timestamp) {
+      store.timestamp = nowTs;
+      store.seq = nextSeq;
+      store.firstSeq = nextSeq;
+      return;
+    }
+    if (nextSeq !== store.firstSeq) {
+      store.seq = nextSeq;
+      return;
+    }
 
-  const nextSeq = (this.seq + 1) % 1024;
-  const nowTs = timestamp(now);
-  if (nowTs !== this.timestamp) {
-    this.timestamp = nowTs;
-    this.seq = nextSeq;
-    this.firstSeq = nextSeq;
-    return;
-  }
-  if (nextSeq !== this.firstSeq) {
-    this.seq = nextSeq;
-    return;
-  }
+    await setTimeout(1000 - now.getMilliseconds());
+    store.timestamp += 1;
+    store.seq = nextSeq;
+    store.firstSeqInTs = nextSeq;
+  };
 
-  await setTimeout(1000 - now.getMilliseconds());
-  this.timestamp += 1;
-  this.seq = nextSeq;
-  this.firstSeqInTs = nextSeq;
-};
+  const newID = async () => {
+    await run();
+    const rb = randomBits();
+    return [
+      store.timestamp.toString(16).padStart(8, '0'),
+      (store.workerID * (2 ** 19)
+      + store.seq * (2 ** 9) + rb).toString(16).padStart(7, '0'),
+    ].join('');
+  };
+  return { newID };
+}());
 
-Generator.newID = async function newID() {
-  await this.run();
-  const rb = randomBits();
-  return [
-    this.timestamp.toString(16).padStart(8, '0'),
-    (this.workerID * (2 ** 19)
-      + this.seq * (2 ** 9) + rb).toString(16).padStart(7, '0'),
-  ].join('');
-};
-
-export default Generator;
+export default generator;
 export { WorkerIDModel };

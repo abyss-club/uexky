@@ -1,7 +1,8 @@
 import PostModel from '~/models/post';
 
 const Query = {
-  post: async (obj, { id }) => {
+  post: async (obj, { id }, ctx) => {
+    await ctx.limiter.take(1);
     const post = await PostModel.findById(id).exec();
     return post;
   },
@@ -9,6 +10,8 @@ const Query = {
 
 const Mutation = {
   pubPost: async (obj, { post }, ctx) => {
+    const limiterCfg = await ctx.config.getRateLimit();
+    await ctx.limiter.take(limiterCfg.costSchema.pubPost);
     const newPost = await PostModel.pubPost(ctx, post);
     return newPost;
   },
@@ -16,7 +19,11 @@ const Mutation = {
 
 const Post = {
   content: post => post.getContent(),
-  quotes: post => post.getQuotes(),
+  quotes: async (post, args, ctx) => {
+    await ctx.limiter.take(post.quoteSuids.length);
+    const quotes = await post.getQuotes();
+    return quotes;
+  },
 };
 
 // Default Types Resolvers:
