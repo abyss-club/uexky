@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 
 import Uid from '~/uid';
+import validator from '~/validator';
+import findSlice from '~/models/base';
 import PostModel from '~/models/post';
 import ThreadModel from '~/models/thread';
 import { ParamsError, AuthError, InternalError } from '~/error';
@@ -39,10 +41,16 @@ UserSchema.methods.author = async function author(threadSuid, anonymous) {
   }
   return this.name;
 };
-UserSchema.methods.posts = async function posts() {
-  // TODO: use slice query
-  const userPosts = await UserPostsModel.find({ userId: this._id })
-    .sort({ updatedAt: -1 }).limit(10).exec();
+UserSchema.methods.posts = async function posts(sliceQuery) {
+  const option = {
+    query: { userId: this._id },
+    desc: true,
+    field: 'updatedAt',
+    sliceName: 'threads',
+    parse: value => new Date(value),
+    toCursor: value => value.toISOString(),
+  };
+  const userPosts = await findSlice(sliceQuery, UserPostsModel, option);
   return userPosts;
 };
 UserSchema.methods.getRole = async function getRole() {
@@ -83,7 +91,10 @@ UserSchema.methods.onPubThread = async function onPubThread(thread, { session })
   }, { session, upsert: true });
 };
 UserSchema.methods.setName = async function setName(name) {
-  // TODO: validate length
+  const len = validator.unicodeLength(name);
+  if (len > 15) {
+    throw new ParamsError('user name length cannot longger than 15');
+  }
   if ((this.name || '') !== '') {
     throw new InternalError('Name can only be set once.');
   }
