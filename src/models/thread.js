@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 
-import { ParamsError } from '~/error';
-import Uid from '~/uid';
-import validator from '~/validator';
+import { ParamsError } from '~/utilities/error';
+import Uid from '~/utilities/uid';
+import validator from '~/utilities/validator';
 import findSlice from '~/models/base';
 import ConfigModel from './config';
 import TagModel from './tag';

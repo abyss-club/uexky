@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import MongoMemoryServer from 'mongodb-memory-server';
 import UserModel from '~/models/user';
-import { ParamsError, InternalError } from '~/error';
+import { ParamsError, InternalError } from '~/utilities/error';
 
 // May require additional time for downloading MongoDB binaries
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;

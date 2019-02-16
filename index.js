@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import app from './app';
+import app from './src/app';
 
 // for babel-plugin-inline-dotenv
 const dbHost = process.env.DB_HOST;

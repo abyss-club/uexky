@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { AuthError } from '~/error';
+import { AuthError } from '~/utilities/error';
 import { Base64 } from '~/uid';
 
 const TokenSchema = new mongoose.Schema({

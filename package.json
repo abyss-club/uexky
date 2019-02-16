@@ -11,7 +11,7 @@
   "license": "AGPLv3",
   "private": true,
   "scripts": {
-    "start": "babel-node src/server.js",
+    "start": "babel-node src/server/index.js",
     "dev": "nodemon --config nodemon-config.json",
     "test": "jest --detectOpenHandles"
   },
