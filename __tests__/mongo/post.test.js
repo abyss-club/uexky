@@ -1,8 +1,7 @@
 import mongoose from 'mongoose';
-import sleep from 'sleep-promise';
+import { startRepl } from '../__utils__/mongoServer';
 
 import Uid from '~/uid';
-import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import UserModel, { UserPostsModel } from '~/models/user';
 import ThreadModel from '~/models/thread';
 import PostModel from '~/models/post';
@@ -14,33 +13,13 @@ import NotificationModel from '~/models/notification';
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
 
 let replSet;
-const opts = { useNewUrlParser: true };
-
 beforeAll(async () => {
-  replSet = new MongoMemoryReplSet({
-    instanceOpts: [
-      { storageEngine: 'wiredTiger' },
-      // { storageEngine: 'wiredTiger' },
-      // { storageEngine: 'wiredTiger' },
-    ],
-  });
-  await replSet.waitUntilRunning();
-  // const uri = await replSet.getUri();
-  // mongoServer = new MongoMemoryServer();
-  // const mongoUri = await mongoServer.getConnectionString();
-  const mongoUri = `${await replSet.getConnectionString()}?replicaSet=testset`;
-
-  await sleep(2000);
-
-  await mongoose.connect(mongoUri, opts, (err) => {
-    if (err) console.error(err);
-  });
+  replSet = await startRepl();
 });
 
 afterAll(() => {
   mongoose.disconnect();
   replSet.stop();
-  // mongoServer.stop();
 });
 
 const mockEmail = 'test@example.com';
