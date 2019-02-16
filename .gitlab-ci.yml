@@ -13,8 +13,10 @@ test:
     - docker
   services:
     - mongo
+    - redis:latest
   variables:
     MONGO_URL: "mongodb://mongo"
+    REDIS_URL: "//redis"
   stage: test
   script:
     - yarn test
