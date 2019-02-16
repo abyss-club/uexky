@@ -1,21 +1,9 @@
 import mongoose from 'mongoose';
-import MongoMemoryServer from 'mongodb-memory-server';
+import { startMongo } from '../__utils__/mongoServer';
 
 import Uid, { Base64 } from '~/uid';
 
 let mongoServer;
-const opts = { useNewUrlParser: true };
-const connectMongodb = async () => {
-  mongoServer = new MongoMemoryServer();
-  const mongoUri = await mongoServer.getConnectionString();
-  await mongoose.connect(mongoUri, opts, (err) => {
-    if (err) console.error(err);
-  });
-};
-const disconnectMongodb = () => {
-  mongoose.disconnect();
-  mongoServer.stop();
-};
 
 describe('Base64', () => {
   const pairs = [
@@ -41,8 +29,13 @@ describe('Base64', () => {
 });
 
 describe('decode/encode', () => {
-  beforeEach(connectMongodb);
-  afterEach(disconnectMongodb);
+  beforeEach(async () => {
+    mongoServer = await startMongo();
+  });
+  afterEach(() => {
+    mongoose.disconnect();
+    mongoServer.stop();
+  });
   test('Generator id, decode, and encode', async () => {
     const suid = await Uid.newSuid();
     expect(suid).toMatch(/[0-9a-f]{15}/);
