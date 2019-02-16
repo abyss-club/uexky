@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import findSlice from '~/models/base';
-import { ParamsError } from '~/error';
+import { ParamsError } from '~/utilities/error';
 
 const { ObjectId } = mongoose.Types;
 const SchemaObjectId = mongoose.ObjectId;
