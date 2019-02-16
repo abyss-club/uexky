@@ -1,4 +1,10 @@
 {
   "presets": ["@babel/preset-env"],
-  "plugins": ["inline-dotenv"]
+  "plugins": [
+    "inline-dotenv",
+    "module-resolver", {
+      "alias": {
+        "~": "./src"
+      }
+  }]
 }

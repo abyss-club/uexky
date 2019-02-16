@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 
 import Uid from '~/uid';
-import validator from '~/validator';
+import validator from '~/utilities/validator';
 import findSlice from '~/models/base';
 import PostModel from '~/models/post';
 import ThreadModel from '~/models/thread';
-import { ParamsError, AuthError, InternalError } from '~/error';
+import { ParamsError, AuthError, InternalError } from '~/utilities/error';
 
 const SchemaObjectId = mongoose.ObjectId;
 
@@ -91,9 +91,8 @@ UserSchema.methods.onPubThread = async function onPubThread(thread, { session })
   }, { session, upsert: true });
 };
 UserSchema.methods.setName = async function setName(name) {
-  const len = validator.unicodeLength(name);
-  if (len > 15) {
-    throw new ParamsError('user name length cannot longger than 15');
+  if (!validator.isUnicodeLength(name, { max: 15 })) {
+    throw new ParamsError('Max length of username is 15.');
   }
   if ((this.name || '') !== '') {
     throw new InternalError('Name can only be set once.');
