@@ -1,6 +1,6 @@
 {
   "name": "uexky",
-  "version": "0.1",
+  "version": "0.1.0",
   "engines": {
     "node": ">=11.3.0"
   },
@@ -11,7 +11,8 @@
   "license": "AGPLv3",
   "private": true,
   "scripts": {
-    "start": "babel-node src/server/index.js",
+    "build": "babel src -d dist",
+    "start": "npm run build && node dist/index.js",
     "dev": "nodemon --config nodemon-config.json",
     "test": "jest --detectOpenHandles"
   },
