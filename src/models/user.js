@@ -91,9 +91,8 @@ UserSchema.methods.onPubThread = async function onPubThread(thread, { session })
   }, { session, upsert: true });
 };
 UserSchema.methods.setName = async function setName(name) {
-  const len = validator.unicodeLength(name);
-  if (len > 15) {
-    throw new ParamsError('user name length cannot longger than 15');
+  if (!validator.isUnicodeLength(name, { max: 15 })) {
+    throw new ParamsError('Max length of username is 15.');
   }
   if ((this.name || '') !== '') {
     throw new InternalError('Name can only be set once.');

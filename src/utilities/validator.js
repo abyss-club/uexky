@@ -1,3 +1,5 @@
+import { ParamsError } from '~/utilities/error';
+
 function unicodeLength(str) {
   let len = 0;
   for (let i = 0; i < str.length; i += 1) {
@@ -7,6 +9,16 @@ function unicodeLength(str) {
   return len;
 }
 
+function isUnicodeLength(str, { min = 0, max }) {
+  if (Object.prototype.toString.call(str) !== '[object String]') throw new ParamsError('Invalid string.');
+  if (!Number.isInteger(min)) throw new ParamsError('Invalid min value.');
+  if (!Number.isInteger(max) && typeof max !== 'undefined') throw new ParamsError('Invalid max value.');
+
+  const len = unicodeLength(str);
+  if (!max) return len >= min;
+  return len >= min && len <= max;
+}
+
 export default {
-  unicodeLength,
+  isUnicodeLength,
 };
