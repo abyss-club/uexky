@@ -86,9 +86,9 @@ router.get('/auth', async (ctx, next) => {
 
 const app = new Koa();
 app.use(router.routes());
-app.use(authMiddleware());
-app.use(configMiddleware());
-app.use(rateLimitMiddleware());
+app.use(authMiddleware);
+app.use(configMiddleware);
+app.use(rateLimitMiddleware);
 app.use(cors({ allowMethods: ['GET', 'OPTION', 'POST'] }));
 server.applyMiddleware({ app });
 
