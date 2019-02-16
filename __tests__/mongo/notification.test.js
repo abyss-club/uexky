@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
-import MongoMemoryServer from 'mongodb-memory-server';
+import { startMongo } from '../__utils__/mongoServer';
+
 import Uid from '~/uid';
 import NotificationModel from '~/models/notification';
 import UserModel from '~/models/user';
@@ -8,14 +9,9 @@ import UserModel from '~/models/user';
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
 
 let mongoServer;
-const opts = { useNewUrlParser: true };
 
 beforeAll(async () => {
-  mongoServer = new MongoMemoryServer();
-  const mongoUri = await mongoServer.getConnectionString();
-  await mongoose.connect(mongoUri, opts, (err) => {
-    if (err) console.error(err);
-  });
+  mongoServer = await startMongo();
 });
 
 afterAll(() => {

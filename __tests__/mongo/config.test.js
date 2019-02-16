@@ -1,20 +1,15 @@
 import mongoose from 'mongoose';
 import MongoMemoryServer from 'mongodb-memory-server';
-import { ConfigModel } from '~/models/config';
-import { InternalError, ParamsError } from '~/utilities/error';
+import ConfigModel from '~/models/config';
+import { InternalError, ParamsError } from '~/error';
 
 // May require additional time for downloading MongoDB binaries
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
 
 let mongoServer;
-const opts = { useNewUrlParser: true };
 
 beforeAll(async () => {
-  mongoServer = new MongoMemoryServer();
-  const mongoUri = await mongoServer.getConnectionString();
-  await mongoose.connect(mongoUri, opts, (err) => {
-    if (err) console.error(err);
-  });
+  mongoServer = await startMongo();
 });
 
 afterAll(() => {
