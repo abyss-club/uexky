@@ -6,8 +6,8 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/uexky"
-	"gitlab.com/abyss.club/uexky/uuid64"
+	"gitlab.com/abyss.club/uexky-go/uexky"
+	"gitlab.com/abyss.club/uexky-go/uuid64"
 )
 
 // aid generator for post, thread and anonymous id.

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky-go/config"
 )
 
 func diffFlow(l, r *FlowImpl) string {

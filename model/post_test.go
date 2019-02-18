@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky-go/config"
 )
 
 func TestPost(t *testing.T) {

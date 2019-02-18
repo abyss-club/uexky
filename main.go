@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"gitlab.com/abyss.club/uexky/config"
-	"gitlab.com/abyss.club/uexky/view"
+	"gitlab.com/abyss.club/uexky-go/config"
+	"gitlab.com/abyss.club/uexky-go/view"
 )
 
 var (

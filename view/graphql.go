@@ -6,8 +6,8 @@ import (
 
 	graphql "github.com/graph-gophers/graphql-go"
 	"github.com/julienschmidt/httprouter"
-	"gitlab.com/abyss.club/uexky/resolver"
-	"gitlab.com/abyss.club/uexky/uexky"
+	"gitlab.com/abyss.club/uexky-go/resolver"
+	"gitlab.com/abyss.club/uexky-go/uexky"
 )
 
 // GraphQLHandle ...

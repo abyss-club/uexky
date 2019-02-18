@@ -3,7 +3,7 @@ package model
 import (
 	"testing"
 
-	"gitlab.com/abyss.club/uexky/uexky"
+	"gitlab.com/abyss.club/uexky-go/uexky"
 )
 
 func TestAuthInfo(t *testing.T) {

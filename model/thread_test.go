@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky-go/config"
 )
 
 func TestNewThread(t *testing.T) {

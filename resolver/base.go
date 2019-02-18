@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"gitlab.com/abyss.club/uexky/model"
+	"gitlab.com/abyss.club/uexky-go/model"
 )
 
 // Resolver for graphql

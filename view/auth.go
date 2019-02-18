@@ -7,9 +7,9 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/config"
-	"gitlab.com/abyss.club/uexky/uexky"
-	"gitlab.com/abyss.club/uexky/uuid64"
+	"gitlab.com/abyss.club/uexky-go/config"
+	"gitlab.com/abyss.club/uexky-go/uexky"
+	"gitlab.com/abyss.club/uexky-go/uuid64"
 )
 
 // AuthHandle ...

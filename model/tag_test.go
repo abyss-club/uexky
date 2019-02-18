@@ -7,7 +7,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky-go/config"
 )
 
 func Test_isMainTag(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	graphql "github.com/graph-gophers/graphql-go"
-	"gitlab.com/abyss.club/uexky/model"
-	"gitlab.com/abyss.club/uexky/uexky"
+	"gitlab.com/abyss.club/uexky-go/model"
+	"gitlab.com/abyss.club/uexky-go/uexky"
 )
 
 // queries:

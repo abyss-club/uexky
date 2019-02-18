@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/uexky"
+	"gitlab.com/abyss.club/uexky-go/uexky"
 )
 
 func TestGetSignedInUser(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky-go/config"
 )
 
 // NewRedisPool ...

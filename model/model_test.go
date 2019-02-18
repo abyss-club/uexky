@@ -11,8 +11,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/config"
-	"gitlab.com/abyss.club/uexky/uexky"
+	"gitlab.com/abyss.club/uexky-go/config"
+	"gitlab.com/abyss.club/uexky-go/uexky"
 )
 
 const testDB = "testing"

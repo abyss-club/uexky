@@ -6,9 +6,9 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/config"
-	"gitlab.com/abyss.club/uexky/uexky"
-	"gitlab.com/abyss.club/uexky/uuid64"
+	"gitlab.com/abyss.club/uexky-go/config"
+	"gitlab.com/abyss.club/uexky-go/uexky"
+	"gitlab.com/abyss.club/uexky-go/uuid64"
 )
 
 var postIDGenerator = uuid64.Generator{Sections: []uuid64.Section{

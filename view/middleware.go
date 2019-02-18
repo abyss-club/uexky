@@ -7,9 +7,9 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/julienschmidt/httprouter"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/config"
-	"gitlab.com/abyss.club/uexky/model"
-	"gitlab.com/abyss.club/uexky/uexky"
+	"gitlab.com/abyss.club/uexky-go/config"
+	"gitlab.com/abyss.club/uexky-go/model"
+	"gitlab.com/abyss.club/uexky-go/uexky"
 )
 
 // ----------------------------------------//

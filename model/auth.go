@@ -5,7 +5,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/uexky"
+	"gitlab.com/abyss.club/uexky-go/uexky"
 )
 
 // AuthInfo impl uexky.Auth

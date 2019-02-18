@@ -1,4 +1,4 @@
-# Uexky [![pipeline status](https://gitlab.com/abyss.club/uexky/badges/master/pipeline.svg)](https://gitlab.com/abyss.club/uexky/commits/master) [![coverage report](https://gitlab.com/abyss.club/uexky/badges/master/coverage.svg)](https://gitlab.com/abyss.club/uexky/commits/master)
+# Uexky [![pipeline status](https://gitlab.com/abyss.club/uexky-go/badges/master/pipeline.svg)](https://gitlab.com/abyss.club/uexky-go/commits/master) [![coverage report](https://gitlab.com/abyss.club/uexky-go/badges/master/coverage.svg)](https://gitlab.com/abyss.club/uexky-go/commits/master)
 
 讨论板 [abyss](https://gitlab.com/abyss.club/abyss) 的后端项目。
 

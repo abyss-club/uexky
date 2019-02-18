@@ -3,8 +3,8 @@ package resolver
 import (
 	"context"
 
-	"gitlab.com/abyss.club/uexky/model"
-	"gitlab.com/abyss.club/uexky/uexky"
+	"gitlab.com/abyss.club/uexky-go/model"
+	"gitlab.com/abyss.club/uexky-go/uexky"
 )
 
 // queries:
