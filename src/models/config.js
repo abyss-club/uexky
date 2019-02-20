@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import Joi from 'joi';
-import { InternalError, ParamsError } from '~/utilities/error';
+import { InternalError, ParamsError } from '~/utils/error';
 
 const ConfigSchema = new mongoose.Schema({
   optionName: { type: String, required: true, unique: true },

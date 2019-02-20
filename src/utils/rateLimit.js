@@ -1,5 +1,5 @@
 import redis from '~/external/redis';
-import { ParamsError } from '~/utilities/error';
+import { ParamsError } from '~/utils/error';
 
 async function createSubRateLimiter(config, forMutation, ip, email) {
   const key = email === ''
