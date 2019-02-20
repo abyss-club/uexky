@@ -7,7 +7,7 @@ import schema from '~/schema';
 import AuthModel from '~/models/auth';
 import UserModel from '~/models/user';
 import { config } from '~/models/config';
-import createRateLimiter, { createIdleRateLimiter } from '~/utilities/rateLimit';
+import createRateLimiter, { createIdleRateLimiter } from '~/utils/rateLimit';
 import TokenModel from '~/models/token';
 
 const server = new ApolloServer({

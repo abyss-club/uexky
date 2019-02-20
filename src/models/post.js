@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 import Uid from '~/uid';
-import { ParamsError } from '~/utilities/error';
+import { ParamsError } from '~/utils/error';
 import ThreadModel from './thread';
 import NotificationModel from './notification';
 
