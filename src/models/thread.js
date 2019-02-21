@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 import { ParamsError } from '~/utils/error';
-import Uid from '~/utils/uid';
+import Uid from '~/uid';
 import validator from '~/utils/validator';
 import findSlice from '~/models/base';
 import ConfigModel from './config';

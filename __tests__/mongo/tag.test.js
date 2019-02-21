@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { startMongo  } from '../__utils__/mongoServer';
+import { startMongo } from '../__utils__/mongoServer';
 import TagModel from '~/models/tag';
 import ConfigModel from '~/models/config';
 
