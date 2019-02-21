@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import sleep from 'sleep-promise';
 import MongoMemoryServer, { MongoMemoryReplSet } from 'mongodb-memory-server';
 
+import log from '~/utils/log';
+
 let mongoServer;
 let replSet;
 const opts = { useNewUrlParser: true };
@@ -10,7 +12,7 @@ const startMongo = async () => {
   mongoServer = new MongoMemoryServer({ instance: { storageEngine: 'wiredTiger' } });
   const mongoUri = await mongoServer.getConnectionString();
   await mongoose.connect(mongoUri, opts, (err) => {
-    if (err) console.error(err);
+    if (err) log.error(err);
   });
   return mongoServer;
 };
@@ -27,7 +29,7 @@ const startRepl = async () => {
   await sleep(2000);
 
   await mongoose.connect(mongoUri, opts, (err) => {
-    if (err) console.error(err);
+    if (err) log.error(err);
   });
 
   return replSet;

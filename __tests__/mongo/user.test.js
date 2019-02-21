@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { startMongo } from '../__utils__/mongoServer';
 
 import UserModel from '~/models/user';
-import { ParamsError, InternalError } from '~/utilities/error';
+import { ParamsError, InternalError } from '~/utils/error';
 
 // May require additional time for downloading MongoDB binaries
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;

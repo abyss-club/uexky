@@ -3,7 +3,6 @@ module.exports = {
   "rules": {
     "no-use-before-define": [0, {}],
     "no-underscore-dangle": ["error", {"allow": ["__MONGO__", "__MONGO_URI__", "__MONGO_DB_NAME__", "_id"]}],
-    "strict": 0,
     "node/no-unsupported-features/es-syntax": 0,
   },
   "env": {

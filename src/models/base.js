@@ -1,4 +1,4 @@
-import { ParamsError } from '~/utilities/error';
+import { ParamsError } from '~/utils/error';
 
 // type SliceQuery
 // {

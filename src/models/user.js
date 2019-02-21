@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
 
 import Uid from '~/uid';
-import validator from '~/utilities/validator';
+import validator from '~/utils/validator';
 import findSlice from '~/models/base';
 import PostModel from '~/models/post';
 import ThreadModel from '~/models/thread';
-import { ParamsError, AuthError, InternalError } from '~/utilities/error';
+import { ParamsError, AuthError, InternalError } from '~/utils/error';
 
 const SchemaObjectId = mongoose.ObjectId;
 
