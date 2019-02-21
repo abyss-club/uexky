@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { startRepl, stopRepl } from '../__utils__/mongoServer';
+import { startRepl } from '../__utils__/mongoServer';
 
 import UserModel, { UserPostsModel } from '~/models/user';
 import ThreadModel from '~/models/thread';

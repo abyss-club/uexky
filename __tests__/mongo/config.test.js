@@ -1,11 +1,11 @@
 import mongoose from 'mongoose';
-import MongoMemoryServer from 'mongodb-memory-server';
 import ConfigModel from '~/models/config';
-import { InternalError, ParamsError } from '~/error';
+import { InternalError, ParamsError } from '~/utils/error';
+
+import { startMongo } from '../__utils__/mongoServer';
 
 // May require additional time for downloading MongoDB binaries
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
-
 let mongoServer;
 
 beforeAll(async () => {

@@ -2,9 +2,10 @@
   "presets": ["@babel/preset-env"],
   "plugins": [
     "inline-dotenv",
-    "module-resolver", {
+    ["module-resolver", {
       "alias": {
         "~": "./src"
       }
-  }]
+    }],
+  ]
 }
