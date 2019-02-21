@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 import Joi from 'joi';
+
 import { InternalError, ParamsError } from '~/utils/error';
+import log from '~/utils/log';
 
 const ConfigSchema = new mongoose.Schema({
   optionName: { type: String, required: true, unique: true },
@@ -28,8 +30,10 @@ ConfigSchema.statics.modifyRateLimit = async function modifyRateLimit(rateSettin
     Cost: costSchema.default(costSchema.validate({}).value),
   });
   const { error, value } = Joi.validate(rateSettings, rateSettingSchema);
-  // console.log(error);
-  if (error) throw new ParamsError(`JSON validation failed, ${error}`);
+  if (error) {
+    log.error(error);
+    throw new ParamsError(`JSON validation failed, ${error}`);
+  }
   const newRateLimit = { optionName: 'rateLimit', optionValue: JSON.stringify(value) };
   await ConfigModel.updateOne({ optionName: 'rateLimit' }, newRateLimit, { upsert: true });
   const result = await this.getRateLimit();

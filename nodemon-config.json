@@ -1,7 +1,7 @@
 {
 	"verbose": true,
 	"debug": false,
-	"exec": "cross-env babel-node --inspect ./src/server/index.js",
+	"exec": "cross-env babel-node --inspect ./src/index.js",
 	"ignore": [
 		"mochawesome-report",
 		"node_modules",
