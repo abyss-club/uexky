@@ -4,6 +4,7 @@ import Router from 'koa-router';
 import cors from '@koa/cors';
 
 import schema from '~/schema';
+import log from '~/utils/log';
 import AuthModel from '~/models/auth';
 import UserModel from '~/models/user';
 import { config } from '~/models/config';
@@ -59,6 +60,25 @@ async function rateLimitMiddleware(ctx, next) {
   await next();
 }
 
+function logMiddleware() {
+  return async (ctx, next) => {
+    const start = new Date();
+    try {
+      await next();
+    } catch (e) {
+      log.error(e);
+      throw e;
+    }
+    const stop = new Date();
+    log.info('request', {
+      href: ctx.href,
+      take: `${stop - start}ms`,
+      method: ctx.method,
+      status: ctx.status,
+    });
+  };
+}
+
 const router = new Router();
 router.get('/auth', async (ctx, next) => {
   if (!ctx.query.code || ctx.query.code.length !== 36) {
@@ -78,6 +98,7 @@ router.get('/auth', async (ctx, next) => {
         expires: expiry,
       });
     } catch (e) {
+      log.error(e);
       ctx.throw(401, e);
     }
   }
@@ -86,6 +107,7 @@ router.get('/auth', async (ctx, next) => {
 
 const app = new Koa();
 app.use(router.routes());
+app.use(logMiddleware());
 app.use(authMiddleware);
 app.use(configMiddleware);
 app.use(rateLimitMiddleware);
