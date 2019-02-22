@@ -7,7 +7,9 @@ import TagModel from '~/models/tag';
 import ConfigModel from '~/models/config';
 
 // May require additional time for downloading MongoDB binaries
-// jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
+// Temporary hack for parallel tests
+jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
+
 let replSet;
 beforeAll(async () => {
   replSet = await startRepl();
