@@ -6,22 +6,19 @@ const Query = {
 
 const Mutation = {
   editConfig: async (obj, { config }) => {
-    const returnConfig = {};
     if (config.mainTags) {
-      const newMainTags = await ConfigModel.modifyMainTags(config.mainTags);
-      returnConfig.mainTags = newMainTags;
+      await ConfigModel.modifyMainTags(config.mainTags);
     }
     if (config.rateLimit) {
-      const newRateLimit = await ConfigModel.modifyRateLimit(config.rateLimit);
-      returnConfig.rateLimit = newRateLimit;
+      await ConfigModel.modifyRateLimit(config.rateLimit);
     }
-    return returnConfig;
+    return {};
   },
 };
 
 const Config = {
-  mainTags: (obj, args, ctx) => ctx.config.getMainTags,
-  rateLimit: (obj, args, ctx) => ctx.config.getRateLimit,
+  mainTags: (obj, args, ctx) => ctx.config.getMainTags(),
+  rateLimit: (obj, args, ctx) => ctx.config.getRateLimit(),
 };
 
 export default {
