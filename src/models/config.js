@@ -80,7 +80,7 @@ const config = () => {
         const rateLimit = await ConfigModel.getRateLimit();
         store.rateLimit = rateLimit;
       }
-      return this.rateLimit;
+      return store.rateLimit;
     },
   };
 };
