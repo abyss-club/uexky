@@ -42,22 +42,24 @@ function configMiddleware() {
   };
 }
 
-async function rateLimitMiddleware(ctx, next) {
-  if (ctx.url === '/graphql') {
-    const headerName = (await ctx.config.getRateLimit()).HTTPHeader;
-    if (headerName !== '') {
-      const ip = ctx.header.get(headerName);
-      const { user } = ctx;
-      if ((user) && (user.email) && (user.email !== '')) {
-        ctx.limiter = createRateLimiter(ip, user.email);
+function rateLimitMiddleware() {
+  return async (ctx, next) => {
+    if (ctx.url === '/graphql') {
+      const headerName = (await ctx.config.getRateLimit()).HTTPHeader;
+      if (headerName !== '') {
+        const ip = ctx.header.get(headerName);
+        const { user } = ctx;
+        if ((user) && (user.email) && (user.email !== '')) {
+          ctx.limiter = createRateLimiter(ip, user.email);
+        } else {
+          ctx.limiter = createRateLimiter(ip);
+        }
       } else {
-        ctx.limiter = createRateLimiter(ip);
+        ctx.limiter = createIdleRateLimiter();
       }
-    } else {
-      ctx.limiter = createIdleRateLimiter();
     }
-  }
-  await next();
+    await next();
+  };
 }
 
 function logMiddleware() {
@@ -108,9 +110,9 @@ router.get('/auth', async (ctx, next) => {
 const app = new Koa();
 app.use(router.routes());
 app.use(logMiddleware());
-app.use(authMiddleware);
-app.use(configMiddleware);
-app.use(rateLimitMiddleware);
+app.use(configMiddleware());
+app.use(rateLimitMiddleware());
+app.use(authMiddleware());
 app.use(cors({ allowMethods: ['GET', 'OPTION', 'POST'] }));
 server.applyMiddleware({ app });
 

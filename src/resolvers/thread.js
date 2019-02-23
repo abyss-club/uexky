@@ -18,7 +18,7 @@ const Query = {
 const Mutation = {
   pubThread: async (obj, { thread }, ctx) => {
     const limiterCfg = await ctx.config.getRateLimit();
-    await ctx.limiter.take(limiterCfg.costSchema.pubThread);
+    await ctx.limiter.take(JSON.parse(limiterCfg).Cost.PubThread);
     const newThread = await ThreadModel.pubThread(ctx, thread);
     return newThread;
   },
