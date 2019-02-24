@@ -1,9 +1,10 @@
 import redis from 'redis';
 import { promisify } from 'util';
 
-const redisUrl = process.env.REDIS_URL;
+import env from '~/utils/env';
+
 const redisClient = (function createClient() {
-  const client = redis.createClient(redisUrl);
+  const client = redis.createClient(env.REDIS_URI);
   return {
     get: promisify(client.get).bind(client),
     set: promisify(client.set).bind(client),
