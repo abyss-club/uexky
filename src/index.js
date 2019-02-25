@@ -10,6 +10,5 @@ mongoose.connect(env.MONGODB_URI, {
   useFindAndModify: false,
 });
 
-log.info('run uexky at env:', env);
 app.listen(env.PORT);
 log.info(`Listening to http://localhost:${env.PORT} 🚀`);
