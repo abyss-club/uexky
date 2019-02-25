@@ -14,7 +14,10 @@ import TokenModel from '~/models/token';
 
 const server = new ApolloServer({
   schema,
-  context: ({ ctx }) => ({ user: ctx.user }),
+  context: ({ ctx }) => ({
+    config: ctx.config,
+    user: ctx.user,
+  }),
 });
 
 function authMiddleware() {
@@ -112,6 +115,8 @@ router.get('/auth', async (ctx, next) => {
 });
 
 const app = new Koa();
+
+// use middlewares from top to bottom;
 app.use(router.routes());
 app.use(logMiddleware());
 app.use(configMiddleware());

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import ConfigModel from '~/models/config';
-import { InternalError, ParamsError } from '~/utils/error';
+import { ParamsError } from '~/utils/error';
 
 import { startMongo } from '../__utils__/mongoServer';
 
@@ -106,52 +106,53 @@ describe('Testing rateLimit', () => {
   it('add valid settings', async () => {
     const returned = await ConfigModel.modifyRateLimit(validSettings);
     const result = await ConfigModel.findOne({ optionName: 'rateLimit' });
-    expect(returned).toEqual(JSON.stringify(validSettings));
+    expect(returned).toEqual(validSettings);
     expect(JSON.parse(result.optionValue)).toEqual(validSettings);
   });
   it('verify valid settings', async () => {
     const result = await ConfigModel.getRateLimit();
-    expect(result).toEqual(JSON.stringify(validSettings));
+    expect(result).toEqual(validSettings);
   });
   it('add empty settings', async () => {
     await mongoose.connection.db.dropDatabase();
     const returned = await ConfigModel.modifyRateLimit(emptySettings);
     const result = await ConfigModel.findOne({ optionName: 'rateLimit' });
-    expect(returned).toEqual(JSON.stringify(defaultSettings));
+    expect(returned).toEqual(defaultSettings);
     expect(JSON.parse(result.optionValue)).toEqual(defaultSettings);
   });
   it('verify empty settings', async () => {
     const result = await ConfigModel.getRateLimit();
-    expect(result).toEqual(JSON.stringify(defaultSettings));
+    expect(result).toEqual(defaultSettings);
   });
   it('add invalid settings', async () => {
     await mongoose.connection.db.dropDatabase();
     await expect(ConfigModel.modifyRateLimit(invalidSettings)).rejects.toThrow(ParamsError);
   });
-  it('verify invalid settings', async () => {
-    expect(ConfigModel.getRateLimit()).rejects.toThrow(InternalError);
+  it('get default settings', async () => {
+    const returned = await ConfigModel.getRateLimit();
+    expect(returned).toEqual(defaultSettings);
   });
   it('add incomplete settings', async () => {
     const returned = await ConfigModel.modifyRateLimit(incompleteSettings);
     const result = await ConfigModel.findOne({ optionName: 'rateLimit' });
-    expect(returned).toEqual(JSON.stringify(finalSettings));
+    expect(returned).toEqual(finalSettings);
     expect(JSON.parse(result.optionValue)).toEqual(finalSettings);
   });
   it('verify incomplete settings', async () => {
     const result = await ConfigModel.getRateLimit();
-    expect(result).toEqual(JSON.stringify(finalSettings));
+    expect(result).toEqual(finalSettings);
   });
   it('add valid, then incomplete settings', async () => {
     await mongoose.connection.db.dropDatabase();
     const validReturn = await ConfigModel.modifyRateLimit(validSettings);
     const returned = await ConfigModel.modifyRateLimit(incompleteSettings);
     const result = await ConfigModel.findOne({ optionName: 'rateLimit' });
-    expect(validReturn).toEqual(JSON.stringify(validSettings));
-    expect(returned).toEqual(JSON.stringify(finalSettings));
+    expect(validReturn).toEqual(validSettings);
+    expect(returned).toEqual(finalSettings);
     expect(JSON.parse(result.optionValue)).toEqual(finalSettings);
   });
   it('verify final settings', async () => {
     const result = await ConfigModel.getRateLimit();
-    expect(result).toEqual(JSON.stringify(finalSettings));
+    expect(result).toEqual(finalSettings);
   });
 });
