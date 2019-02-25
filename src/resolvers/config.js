@@ -17,8 +17,14 @@ const Mutation = {
 };
 
 const Config = {
-  mainTags: (obj, args, ctx) => ctx.config.getMainTags(),
-  rateLimit: (obj, args, ctx) => ctx.config.getRateLimit(),
+  mainTags: async (obj, args, ctx) => {
+    const config = await ctx.config.getMainTags();
+    return config;
+  },
+  rateLimit: async (obj, args, ctx) => {
+    const config = await ctx.config.getRateLimit();
+    return JSON.stringify(config);
+  },
 };
 
 export default {

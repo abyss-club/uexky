@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import Joi from 'joi';
 
-import { InternalError, ParamsError } from '~/utils/error';
+import { ParamsError } from '~/utils/error';
 import log from '~/utils/log';
 
 const ConfigSchema = new mongoose.Schema({
@@ -10,25 +10,29 @@ const ConfigSchema = new mongoose.Schema({
   autoload: { type: Boolean },
 });
 
+const costSchema = Joi.object().keys({
+  CreateUser: Joi.number().integer().min(0).default(30),
+  PubThread: Joi.number().integer().min(0).default(10),
+  PubPost: Joi.number().integer().min(0).default(1),
+});
+const rateSettingSchema = Joi.object().keys({
+  HTTPHeader: Joi.string().alphanum().default(''),
+  QueryLimit: Joi.number().integer().min(0).default(300),
+  QueryResetTime: Joi.number().integer().min(0).default(3600),
+  MutLimit: Joi.number().integer().min(0).default(30),
+  MutResetTime: Joi.number().integer().min(0).default(3600),
+  Cost: costSchema.default(costSchema.validate({}).value),
+});
+
 ConfigSchema.statics.getRateLimit = async function getRateLimit() {
-  const result = await ConfigModel.findOne({ optionName: 'rateLimit' }, 'optionValue').orFail(() => new InternalError('rateLimit not yet set.'));
-  return result.optionValue;
+  const results = await ConfigModel.find({ optionName: 'rateLimit' }).exec();
+  if (results.length === 0) {
+    return rateSettingSchema.validate({}).value;
+  }
+  return JSON.parse(results[0].optionValue);
 };
 
 ConfigSchema.statics.modifyRateLimit = async function modifyRateLimit(rateSettings) {
-  const costSchema = Joi.object().keys({
-    CreateUser: Joi.number().integer().min(0).default(30),
-    PubThread: Joi.number().integer().min(0).default(10),
-    PubPost: Joi.number().integer().min(0).default(1),
-  });
-  const rateSettingSchema = Joi.object().keys({
-    HTTPHeader: Joi.string().alphanum().default(''),
-    QueryLimit: Joi.number().integer().min(0).default(300),
-    QueryResetTime: Joi.number().integer().min(0).default(3600),
-    MutLimit: Joi.number().integer().min(0).default(30),
-    MutResetTime: Joi.number().integer().min(0).default(3600),
-    Cost: costSchema.default(costSchema.validate({}).value),
-  });
   const { error, value } = Joi.validate(rateSettings, rateSettingSchema);
   if (error) {
     log.error(error);
@@ -41,8 +45,11 @@ ConfigSchema.statics.modifyRateLimit = async function modifyRateLimit(rateSettin
 };
 
 ConfigSchema.statics.getMainTags = async function getMainTags() {
-  const result = await ConfigModel.findOne({ optionName: 'mainTags' }, 'optionValue').orFail(() => new InternalError('mainTags not yet set.'));
-  return JSON.parse(result.optionValue);
+  const results = await ConfigModel.find({ optionName: 'mainTags' }).exec();
+  if (results.length === 0) {
+    return [];
+  }
+  return JSON.parse(results[0].optionValue);
 };
 
 ConfigSchema.statics.modifyMainTags = async function modifyMainTags(tags) {
@@ -64,21 +71,19 @@ const ConfigModel = mongoose.model('Config', ConfigSchema);
 
 const config = () => {
   const store = {
-    mainTags: undefined,
-    rateLimit: undefined,
+    mainTags: null,
+    rateLimit: null,
   };
   return {
     getMainTags: async function getMainTags() {
       if (!store.mainTags) {
-        const mainTags = await ConfigModel.getMainTags();
-        store.mainTags = mainTags;
+        store.mainTags = await ConfigModel.getMainTags();
       }
       return store.mainTags;
     },
     getRateLimit: async function getRateLimit() {
       if (!store.rateLimit) {
-        const rateLimit = await ConfigModel.getRateLimit();
-        store.rateLimit = rateLimit;
+        store.rateLimit = await ConfigModel.getRateLimit();
       }
       return store.rateLimit;
     },

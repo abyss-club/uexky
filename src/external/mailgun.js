@@ -1,15 +1,16 @@
 import Mailgun from 'mailgun-js';
 
 import log from '~/utils/log';
+import env from '~/utils/env';
 
 const mailgun = new Mailgun({
-  apiKey: process.env.MAILGUN_PRIVATE_KEY, domain: process.env.MAILGUN_DOMAIN,
+  apiKey: env.MAILGUN_PRIVATE_KEY, domain: env.MAILGUN_DOMAIN,
 });
 
 export default ({ sendTo, authCode }) => {
   const mailData = {
     // Specify email data
-    from: process.env.MAILGUN_SENDER,
+    from: env.MAILGUN_SENDER,
     // The email to contact
     to: sendTo,
     // Subject and text data
