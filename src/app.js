@@ -5,6 +5,7 @@ import cors from '@koa/cors';
 
 import schema from '~/schema';
 import log from '~/utils/log';
+import env from '~/utils/env';
 import AuthModel from '~/models/auth';
 import UserModel from '~/models/user';
 import { config } from '~/models/config';
@@ -13,7 +14,10 @@ import TokenModel from '~/models/token';
 
 const server = new ApolloServer({
   schema,
-  context: ({ ctx }) => ({ user: ctx.user }),
+  context: ({ ctx }) => ({
+    config: ctx.config,
+    user: ctx.user,
+  }),
 });
 
 function authMiddleware() {
@@ -90,15 +94,18 @@ router.get('/auth', async (ctx, next) => {
       const email = await AuthModel.getEmailByCode(ctx.query.code);
       const token = await TokenModel.genNewToken(email);
       const expiry = new Date(token.createdAt);
-      expiry.setDate(expiry.getDate() + 20);
+      expiry.setDate(expiry.getDate() + 20); // TODO(tangwenhan): time setting
       ctx.body = token;
       ctx.cookies.set('token', token.authToken, {
         path: '/',
-        domain: process.env.API_DOMAIN,
+        domain: env.API_DOMAIN,
         httpOnly: true,
         overwrite: true,
         expires: expiry,
       });
+      ctx.response.status = 302;
+      ctx.response.header.set('Location', `${env.PROTO}://${env.DOMAIN}`);
+      ctx.response.header.set('Cache-Control', 'no-cache, no-store');
     } catch (e) {
       log.error(e);
       ctx.throw(401, e);
@@ -108,6 +115,8 @@ router.get('/auth', async (ctx, next) => {
 });
 
 const app = new Koa();
+
+// use middlewares from top to bottom;
 app.use(router.routes());
 app.use(logMiddleware());
 app.use(configMiddleware());
