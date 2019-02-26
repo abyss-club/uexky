@@ -6,7 +6,11 @@ import log from '~/utils/log';
 
 let mongoServer;
 let replSet;
-const opts = { useNewUrlParser: true };
+const opts = {
+  useNewUrlParser: true,
+  useCreateIndex: true,
+  useFindAndModify: false,
+};
 
 const startMongo = async () => {
   mongoServer = new MongoMemoryServer({ instance: { storageEngine: 'wiredTiger' } });
