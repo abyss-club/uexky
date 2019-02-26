@@ -15,8 +15,8 @@ test:
     - mongo
     - redis:latest
   variables:
-    MONGO_URL: "mongodb://mongo"
-    REDIS_URL: "//redis"
+    MONGO_URI: "mongodb://mongo"
+    REDIS_URI: "redis://redis"
   stage: test
   script:
     - yarn test
