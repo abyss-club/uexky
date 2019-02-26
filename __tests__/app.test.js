@@ -1,5 +1,8 @@
 import request from 'supertest';
 import app from '~/app';
+import redis from '~/external/redis';
+
+afterAll(() => redis.quit());
 
 describe('Testing paths', () => {
   it('Get /invalid', async () => {
