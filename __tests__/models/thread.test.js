@@ -51,7 +51,7 @@ describe('Testing posting a thread', () => {
     const user = await UserModel.getUserByEmail(mockEmail);
     const newThread = mockThread;
     const { _id } = await ThreadModel.pubThread({ user }, newThread);
-    const threadResult = await ThreadModel.findOne({ _id });
+    const threadResult = await ThreadModel.findOne({ _id }).exec();
     const author = await user.author(threadResult.suid, true);
     expect(JSON.stringify(threadResult.subTags)).toEqual(JSON.stringify(mockThread.subTags));
     expect(JSON.stringify(threadResult.tags))
@@ -68,7 +68,7 @@ describe('Testing posting a thread', () => {
   });
   it('Validating the thread in UserPostsModel', async () => {
     const user = await UserModel.getUserByEmail(mockEmail);
-    const result = await UserPostsModel.find({ userId: user._id, threadSuid });
+    const result = await UserPostsModel.find({ userId: user._id, threadSuid }).exec();
     expect(result.length).toEqual(1);
     expect(result[0].posts.length).toEqual(0);
   });
@@ -89,7 +89,7 @@ describe('Testing posting a thread without subTags', () => {
     const user = await UserModel.getUserByEmail(mockEmail);
     const newThread = mockThreadNoSubTags;
     const { _id } = await ThreadModel.pubThread({ user }, newThread);
-    const threadResult = await ThreadModel.findOne({ _id });
+    const threadResult = await ThreadModel.findOne({ _id }).exec();
     const author = await user.author(threadResult.suid, true);
     expect(JSON.stringify(threadResult.subTags))
       .toEqual(JSON.stringify(mockThreadNoSubTags.subTags));
@@ -108,7 +108,7 @@ describe('Testing posting a thread without subTags', () => {
   });
   it('Validating the thread in UserPostsModel', async () => {
     const user = await UserModel.getUserByEmail(mockEmail);
-    const result = await UserPostsModel.find({ userId: user._id, threadSuid });
+    const result = await UserPostsModel.find({ userId: user._id, threadSuid }).exec();
     expect(result.length).toEqual(1);
     expect(result[0].posts.length).toEqual(0);
   });

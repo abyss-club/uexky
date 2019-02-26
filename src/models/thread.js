@@ -71,7 +71,7 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
   return threadDoc;
 };
 ThreadSchema.statics.findByUid = async function findByUid(uid) {
-  const thread = await ThreadModel.findOne({ suid: Uid.encode(uid) });
+  const thread = await ThreadModel.findOne({ suid: Uid.encode(uid) }).exec();
   return thread;
 };
 ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
@@ -112,7 +112,7 @@ ThreadSchema.methods.replyCount = function replyCount() {
 ThreadSchema.methods.onPubPost = async function onPubPost(post, opt) {
   await ThreadModel.updateOne({ suid: this.suid }, {
     $push: { catalog: { postId: post.suid, createdAt: post.createdAt } },
-  }, opt);
+  }, opt).exec();
 };
 
 const ThreadModel = mongoose.model('Thread', ThreadSchema);

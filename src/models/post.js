@@ -88,7 +88,7 @@ PostSchema.methods.getQuotes = async function getQuotes() {
     qs = await PostModel.find(
       { suid: { $in: this.quoteSuids } },
       { sort: { suid: 1 } },
-    ).all();
+    ).all().exec();
   }
   return qs;
 };

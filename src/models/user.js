@@ -97,13 +97,13 @@ UserSchema.methods.setName = async function setName(name) {
   if ((this.name || '') !== '') {
     throw new InternalError('Name can only be set once.');
   }
-  await UserModel.updateOne({ _id: this._id }, { $set: { name } });
-  const result = await UserModel.findOne({ _id: this._id });
+  await UserModel.updateOne({ _id: this._id }, { $set: { name } }).exec();
+  const result = await UserModel.findOne({ _id: this._id }).exec();
   return result;
 };
 UserSchema.methods.syncTags = async function syncTags(tags) {
-  await UserModel.updateOne({ _id: this._id }, { tags: tags || [] });
-  const result = await UserModel.findOne({ _id: this._id });
+  await UserModel.updateOne({ _id: this._id }, { tags: tags || [] }).exec();
+  const result = await UserModel.findOne({ _id: this._id }).exec();
   return result;
 };
 UserSchema.methods.addSubbedTags = async function addSubbedTags(tags) {
@@ -113,8 +113,8 @@ UserSchema.methods.addSubbedTags = async function addSubbedTags(tags) {
   await UserModel.updateOne(
     { _id: this._id },
     { $addToSet: { tags: { $each: tags } } },
-  );
-  const result = await UserModel.findOne({ _id: this._id });
+  ).exec();
+  const result = await UserModel.findOne({ _id: this._id }).exec();
   return result;
 };
 UserSchema.methods.delSubbedTags = async function delSubbedTags(tags) {
@@ -124,8 +124,8 @@ UserSchema.methods.delSubbedTags = async function delSubbedTags(tags) {
   await UserModel.updateOne(
     { _id: this._id },
     { $pull: { tags: { $in: tags } } },
-  );
-  const result = await UserModel.findOne({ _id: this._id });
+  ).exec();
+  const result = await UserModel.findOne({ _id: this._id }).exec();
   return result;
 };
 UserSchema.methods.ensurePermission = function ensurePermission(
@@ -150,42 +150,42 @@ UserSchema.methods.ensurePermission = function ensurePermission(
 UserSchema.methods.banUser = async function banUser(postUid) {
   const post = await PostModel.findByUid(postUid);
   const thread = await ThreadModel.findOne({ suid: post.threadSuid }).exec();
-  const target = await UserModel.findOne({ _id: post.userId });
+  const target = await UserModel.findOne({ _id: post.userId }).exec();
   this.ensurePermission(target, ACTIONS.BAN_USER, thread.mainTag);
-  await UserModel.update(
+  await UserModel.updateOne(
     { _id: post.userId },
     { $set: { 'role.role': ROLES.Banned } },
-  );
+  ).exec();
 };
 UserSchema.methods.blockPost = async function blockPost(postUid) {
   const post = await PostModel.findByUid(postUid);
-  const thread = await ThreadModel.findOne({ suid: post.threadSuid });
-  const target = await UserModel.findOne({ _id: post.userId });
+  const thread = await ThreadModel.findOne({ suid: post.threadSuid }).exec();
+  const target = await UserModel.findOne({ _id: post.userId }).exec();
   this.ensurePermission(target, ACTIONS.BLOCK_POST, thread.mainTag);
-  await PostModel.update({ _id: post._id }, { $set: { blocked: true } });
+  await PostModel.updateOne({ _id: post._id }, { $set: { blocked: true } }).exec();
 };
 UserSchema.methods.lockThread = async function lockThread(threadUid) {
   const thread = await ThreadModel.findByUid(threadUid);
-  const target = await UserModel.findOne({ _id: thread.userId });
+  const target = await UserModel.findOne({ _id: thread.userId }).exec();
   this.ensurePermission(target, ACTIONS.LOCK_THREAD, thread.mainTag);
-  await ThreadModel.update({ _id: thread._id }, { $set: { locked: true } });
+  await ThreadModel.updateOne({ _id: thread._id }, { $set: { locked: true } }).exec();
 };
 UserSchema.methods.blockThread = async function blockThread(threadUid) {
   const thread = await ThreadModel.findByUid(threadUid);
-  const target = await UserModel.findOne({ _id: thread.userId });
+  const target = await UserModel.findOne({ _id: thread.userId }).exec();
   this.ensurePermission(target, ACTIONS.BLOCK_THREAD, thread.mainTag);
-  await ThreadModel.update({ _id: thread._id }, { $set: { blocked: true } });
+  await ThreadModel.updateOne({ _id: thread._id }, { $set: { blocked: true } }).exec();
 };
 UserSchema.methods.editTags = async function editTags(
   threadUid, mainTag, subTags,
 ) {
   const thread = await ThreadModel.findByUid(threadUid);
-  const target = await UserModel.findOne({ _id: thread.userId });
+  const target = await UserModel.findOne({ _id: thread.userId }).exec();
   this.ensurePermission(target, ACTIONS.BLOCK_THREAD, thread.mainTag);
-  await ThreadModel.update(
+  await ThreadModel.updateOne(
     { _id: thread._id },
     { $set: { mainTag, subTags } },
-  );
+  ).exec();
 };
 
 // MODEL: UserAid
@@ -206,7 +206,7 @@ UserAidSchema.statics.getAid = async function getAid(userId, threadSuid) {
       anonymousId: Uid.decode(await Uid.newSuid()),
     },
     $set: { updatedAt: Date() },
-  }, { new: true, upsert: true });
+  }, { new: true, upsert: true }).exec();
   return result.anonymousId;
 };
 
@@ -228,7 +228,7 @@ const UserPostsModel = mongoose.model('UserPosts', UserPostsSchema);
 
 UserSchema.statics.getUserByEmail = async function getUserByEmail(email) {
   try {
-    const user = await this.findOne({ email });
+    const user = await this.findOne({ email }).exec();
     if (user) return user;
     // const newUser = new UserModel({ email });
     const res = await this.create({ email });
