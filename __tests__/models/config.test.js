@@ -23,7 +23,7 @@ describe('Testing mainTags', () => {
   const failTags = 'main';
   it('add mainTags', async () => {
     await ConfigModel.modifyMainTags(mockTags);
-    const result = await ConfigModel.findOne({ optionName: 'mainTags' });
+    const result = await ConfigModel.findOne({ optionName: 'mainTags' }).exec();
     expect(result.optionName).toEqual('mainTags');
     expect(JSON.parse(result.optionValue)).toEqual(mockTags);
   });
@@ -33,7 +33,7 @@ describe('Testing mainTags', () => {
   });
   it('modify mainTags', async () => {
     await ConfigModel.modifyMainTags(modifyTags);
-    const result = await ConfigModel.findOne({ optionName: 'mainTags' });
+    const result = await ConfigModel.findOne({ optionName: 'mainTags' }).exec();
     expect(result.optionName).toEqual('mainTags');
     expect(JSON.parse(result.optionValue)).toEqual(modifyTags);
   });
@@ -105,7 +105,7 @@ describe('Testing rateLimit', () => {
   };
   it('add valid settings', async () => {
     const returned = await ConfigModel.modifyRateLimit(validSettings);
-    const result = await ConfigModel.findOne({ optionName: 'rateLimit' });
+    const result = await ConfigModel.findOne({ optionName: 'rateLimit' }).exec();
     expect(returned).toEqual(validSettings);
     expect(JSON.parse(result.optionValue)).toEqual(validSettings);
   });
@@ -116,7 +116,7 @@ describe('Testing rateLimit', () => {
   it('add empty settings', async () => {
     await mongoose.connection.db.dropDatabase();
     const returned = await ConfigModel.modifyRateLimit(emptySettings);
-    const result = await ConfigModel.findOne({ optionName: 'rateLimit' });
+    const result = await ConfigModel.findOne({ optionName: 'rateLimit' }).exec();
     expect(returned).toEqual(defaultSettings);
     expect(JSON.parse(result.optionValue)).toEqual(defaultSettings);
   });
@@ -134,7 +134,7 @@ describe('Testing rateLimit', () => {
   });
   it('add incomplete settings', async () => {
     const returned = await ConfigModel.modifyRateLimit(incompleteSettings);
-    const result = await ConfigModel.findOne({ optionName: 'rateLimit' });
+    const result = await ConfigModel.findOne({ optionName: 'rateLimit' }).exec();
     expect(returned).toEqual(finalSettings);
     expect(JSON.parse(result.optionValue)).toEqual(finalSettings);
   });
@@ -146,7 +146,7 @@ describe('Testing rateLimit', () => {
     await mongoose.connection.db.dropDatabase();
     const validReturn = await ConfigModel.modifyRateLimit(validSettings);
     const returned = await ConfigModel.modifyRateLimit(incompleteSettings);
-    const result = await ConfigModel.findOne({ optionName: 'rateLimit' });
+    const result = await ConfigModel.findOne({ optionName: 'rateLimit' }).exec();
     expect(validReturn).toEqual(validSettings);
     expect(returned).toEqual(finalSettings);
     expect(JSON.parse(result.optionValue)).toEqual(finalSettings);

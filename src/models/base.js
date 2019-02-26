@@ -58,7 +58,7 @@ async function findSlice(sliceQuery, model, option) {
   const slice = await model.find(query, null, {
     limit: (limit + 1),
     sort: { [field]: option.desc ? -1 : 1 },
-  });
+  }).exec();
   if (option.desc) {
     slice.reverse();
   }

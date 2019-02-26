@@ -68,7 +68,7 @@ NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
       'replied.repliers': post.author,
       'replied.replierIds': post.userId,
     },
-  }, option);
+  }, option).exec();
 };
 
 NotificationSchema.statics.sendQuotedNoti = async function sendQuotedNoti(
