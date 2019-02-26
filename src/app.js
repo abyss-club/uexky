@@ -17,6 +17,7 @@ const server = new ApolloServer({
   context: ({ ctx }) => ({
     config: ctx.config,
     user: ctx.user,
+    limiter: ctx.limiter,
   }),
 });
 
