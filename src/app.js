@@ -8,18 +8,9 @@ import log from '~/utils/log';
 import env from '~/utils/env';
 import AuthModel from '~/models/auth';
 import UserModel from '~/models/user';
-import { getConfig } from '~/models/config';
+import { genConfigReader } from '~/models/config';
 import createRateLimiter, { createIdleRateLimiter } from '~/utils/rateLimit';
 import TokenModel from '~/models/token';
-
-const server = new ApolloServer({
-  schema,
-  context: ({ ctx }) => ({
-    config: ctx.config,
-    user: ctx.user,
-    limiter: ctx.limiter,
-  }),
-});
 
 const endpoints = {
   graphql: '/graphql',
@@ -46,7 +37,7 @@ function authMiddleware() {
 function configMiddleware() {
   return async (ctx, next) => {
     if (ctx.url === endpoints.graphql) {
-      ctx.getConfig = getConfig();
+      ctx.readConfig = genConfigReader();
     }
     await next();
   };
@@ -55,7 +46,7 @@ function configMiddleware() {
 function rateLimitMiddleware() {
   return async (ctx, next) => {
     if (ctx.url === endpoints.graphql) {
-      const config = await ctx.getConfig();
+      const config = await ctx.readConfig();
       const headerName = config.rateLimit.httpHeader;
       if (headerName !== '') {
         const ip = ctx.header.get(headerName);
@@ -119,6 +110,15 @@ router.get(endpoints.auth, async (ctx, next) => {
     }
   }
   await next();
+});
+
+const server = new ApolloServer({
+  schema,
+  context: ({ ctx }) => ({
+    readConfig: ctx.readConfig,
+    user: ctx.user,
+    limiter: ctx.limiter,
+  }),
 });
 
 const app = new Koa();
