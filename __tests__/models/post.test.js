@@ -62,7 +62,7 @@ describe('Testing posting a thread', () => {
     const user = await UserModel.getUserByEmail(mockEmail);
     const newThread = mockThread;
     const { _id } = await ThreadModel.pubThread({ user }, newThread);
-    const threadResult = await ThreadModel.findOne({ _id });
+    const threadResult = await ThreadModel.findOne({ _id }).exec();
     const author = await user.author(threadResult.suid, true);
     expect(JSON.stringify(threadResult.subTags)).toEqual(JSON.stringify(mockThread.subTags));
     expect(JSON.stringify(threadResult.tags))
@@ -82,7 +82,7 @@ describe('Testing posting a thread', () => {
   });
   it('Validating the thread in UserPostsModel', async () => {
     const user = await UserModel.getUserByEmail(mockEmail);
-    const result = await UserPostsModel.find({ userId: user._id, threadSuid });
+    const result = await UserPostsModel.find({ userId: user._id, threadSuid }).exec();
     expect(result.length).toEqual(1);
     expect(result[0].posts.length).toEqual(0);
   });
@@ -97,7 +97,7 @@ describe('Testing replying a thread', () => {
     const user = await UserModel.getUserByEmail(mockEmail);
     const newPost = mockPost;
     const { _id } = await PostModel.pubPost({ user }, newPost);
-    const postResult = await PostModel.findOne({ _id });
+    const postResult = await PostModel.findOne({ _id }).exec();
 
     postSuid = postResult.suid;
     postId = Uid.decode(postSuid);
@@ -117,7 +117,7 @@ describe('Testing replying a thread', () => {
     const user = await UserModel.getUserByEmail(mockReplierEmail);
     const newPost = mockReply;
     const { _id } = await PostModel.pubPost({ user }, newPost);
-    const postResult = await PostModel.findOne({ _id });
+    const postResult = await PostModel.findOne({ _id }).exec();
 
     replySuid = postResult.suid;
     replyId = Uid.decode(replySuid);
@@ -132,18 +132,18 @@ describe('Testing replying a thread', () => {
     expect(postResult.blocked).toEqual(false);
   });
   it('Validate updated post', async () => {
-    const postResult = await PostModel.findOne({ suid: replySuid });
+    const postResult = await PostModel.findOne({ suid: replySuid }).exec();
     expect(postResult.quoteSuids[0]).toEqual(postSuid);
   });
   it('Validating post for mockUser in UserPostsModel', async () => {
     const user = await UserModel.getUserByEmail(mockEmail);
-    const result = await UserPostsModel.find({ userId: user._id, threadSuid });
+    const result = await UserPostsModel.find({ userId: user._id, threadSuid }).exec();
     expect(result.length).toEqual(1);
     expect(result[0].posts[0].suid).toEqual(postSuid);
   });
   it('Validating post for mockReplier in UserPostsModel', async () => {
     const replier = await UserModel.getUserByEmail(mockReplierEmail);
-    const result = await UserPostsModel.find({ userId: replier._id, threadSuid });
+    const result = await UserPostsModel.find({ userId: replier._id, threadSuid }).exec();
     expect(result.length).toEqual(1);
     expect(result[0].posts[0].suid).toEqual(replySuid);
   });

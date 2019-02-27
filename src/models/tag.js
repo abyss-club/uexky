@@ -12,7 +12,7 @@ TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
   const updateTags = thread.subTags.map(async tag => this.updateOne({ subTag: tag }, {
     $addToSet: { mainTags: thread.mainTag },
     $set: { updateAt: new Date() },
-  }, option));
+  }, option).exec());
   await Promise.all(updateTags);
 };
 

@@ -39,7 +39,7 @@ ConfigSchema.statics.modifyRateLimit = async function modifyRateLimit(rateSettin
     throw new ParamsError(`JSON validation failed, ${error}`);
   }
   const newRateLimit = { optionName: 'rateLimit', optionValue: JSON.stringify(value) };
-  await ConfigModel.updateOne({ optionName: 'rateLimit' }, newRateLimit, { upsert: true });
+  await ConfigModel.updateOne({ optionName: 'rateLimit' }, newRateLimit, { upsert: true }).exec();
   const result = await this.getRateLimit();
   return result;
 };
@@ -62,7 +62,7 @@ ConfigSchema.statics.modifyMainTags = async function modifyMainTags(tags) {
     }
   });
   const newMainTags = { optionName: 'mainTags', optionValue: JSON.stringify(tags) };
-  await ConfigModel.updateOne({ optionName: 'mainTags' }, newMainTags, { upsert: true });
+  await ConfigModel.updateOne({ optionName: 'mainTags' }, newMainTags, { upsert: true }).exec();
   const result = await this.getMainTags();
   return result;
 };

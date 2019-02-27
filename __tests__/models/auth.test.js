@@ -26,14 +26,14 @@ describe('Testing auth', () => {
     // const newAuth = { email, authCode, createdAt: new Date() };
     // await AuthModel.update({ email }, newAuth, { upsert: true });
     await AuthModel.addToAuth(mockEmail, authCode);
-    const result = await AuthModel.findOne({ email });
+    const result = await AuthModel.findOne({ email }).exec();
     expect(result.email).toEqual(mockEmail);
     expect(result.authCode).toEqual(authCode);
   });
   it('validate user authCode for only once', async () => {
     const result = await AuthModel.getEmailByCode(authCode);
     expect(result).toEqual(mockEmail);
-    const deletedResult = await AuthModel.findOne({ authCode });
+    const deletedResult = await AuthModel.findOne({ authCode }).exec();
     expect(deletedResult).toBeNull();
   });
 });
