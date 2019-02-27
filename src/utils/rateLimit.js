@@ -14,10 +14,11 @@ async function createSubRateLimiter(config, forMutation, ip, email) {
 
       if (forMutation !== isMutation) return;
       if (!set) {
-        const limitCfg = await config.getRateLimit();
-        const limit = forMutation ? limitCfg.MutLimit : limitCfg.QueryLimit;
-        const expire = forMutation
-          ? limitCfg.MutResetTime : limitCfg.QueryResetTime;
+        const {
+          mutLimit, mutResetTime, queryLimit, queryResetTime,
+        } = config.rateLimit;
+        const limit = forMutation ? mutLimit : queryLimit;
+        const expire = forMutation ? mutResetTime : queryResetTime;
         await redis.set(key, limit, 'EX', expire, 'NX');
       }
       const remaining = redis.decrby(key, cost);

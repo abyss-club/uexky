@@ -5,90 +5,70 @@ import { ParamsError } from '~/utils/error';
 import log from '~/utils/log';
 
 const ConfigSchema = new mongoose.Schema({
-  optionName: { type: String, required: true, unique: true },
-  optionValue: { type: String, required: true },
-  autoload: { type: Boolean },
-});
+  rateLimit: {
+    httpHeader: String,
+    queryLimit: String,
+    queryResetTime: Number,
+    mutLimit: String,
+    mutResetTime: Number,
+  },
+  rateCost: {
+    createUser: Number,
+    pubThread: Number,
+    pubPost: Number,
+  },
+}, { capped: 1 });
 
-const costSchema = Joi.object().keys({
+const rateCostObjSchema = Joi.object().keys({
   CreateUser: Joi.number().integer().min(0).default(30),
   PubThread: Joi.number().integer().min(0).default(10),
   PubPost: Joi.number().integer().min(0).default(1),
 });
-const rateSettingSchema = Joi.object().keys({
+const rateLimitObjSchema = Joi.object().keys({
   HTTPHeader: Joi.string().alphanum().default(''),
   QueryLimit: Joi.number().integer().min(0).default(300),
   QueryResetTime: Joi.number().integer().min(0).default(3600),
   MutLimit: Joi.number().integer().min(0).default(30),
   MutResetTime: Joi.number().integer().min(0).default(3600),
-  Cost: costSchema.default(costSchema.validate({}).value),
+});
+const configObjSchema = Joi.object().keys({
+  rateLimit: rateLimitObjSchema.default(rateLimitObjSchema.validate({}).value),
+  rateCost: rateCostObjSchema.default(rateCostObjSchema.validate({}).value),
 });
 
-ConfigSchema.statics.getRateLimit = async function getRateLimit() {
-  const results = await ConfigModel.find({ optionName: 'rateLimit' }).exec();
+ConfigSchema.statics.getConfig = async function getConfig() {
+  const results = await ConfigModel.find({}).exec();
   if (results.length === 0) {
-    return rateSettingSchema.validate({}).value;
+    return configObjSchema.validate({});
   }
-  return JSON.parse(results[0].optionValue);
+  return results[0];
 };
 
-ConfigSchema.statics.modifyRateLimit = async function modifyRateLimit(rateSettings) {
-  const { error, value } = Joi.validate(rateSettings, rateSettingSchema);
+ConfigSchema.statics.setConfig = async function setConfig(input) {
+  const config = await ConfigModel.getConfig();
+  Object.keys(config).forEach((key) => {
+    Object.assign(config[key], input[key]);
+  });
+  const { error, value: newConfig } = configObjSchema.validate(config);
   if (error) {
     log.error(error);
     throw new ParamsError(`JSON validation failed, ${error}`);
   }
-  const newRateLimit = { optionName: 'rateLimit', optionValue: JSON.stringify(value) };
-  await ConfigModel.updateOne({ optionName: 'rateLimit' }, newRateLimit, { upsert: true }).exec();
-  const result = await this.getRateLimit();
-  return result;
-};
-
-ConfigSchema.statics.getMainTags = async function getMainTags() {
-  const results = await ConfigModel.find({ optionName: 'mainTags' }).exec();
-  if (results.length === 0) {
-    return [];
-  }
-  return JSON.parse(results[0].optionValue);
-};
-
-ConfigSchema.statics.modifyMainTags = async function modifyMainTags(tags) {
-  if (!Array.isArray(tags) || !tags.length) {
-    throw new ParamsError('Provided tags is not a non-empty array.');
-  }
-  tags.forEach((tag) => {
-    if (Object.prototype.toString.call(tag) !== '[object String]' || tag === '') {
-      throw new ParamsError('Invalid tag provided in array.');
-    }
-  });
-  const newMainTags = { optionName: 'mainTags', optionValue: JSON.stringify(tags) };
-  await ConfigModel.updateOne({ optionName: 'mainTags' }, newMainTags, { upsert: true }).exec();
-  const result = await this.getMainTags();
-  return result;
+  await ConfigModel.updateOne({}, newConfig).exec();
+  return newConfig;
 };
 
 const ConfigModel = mongoose.model('Config', ConfigSchema);
 
-const config = () => {
-  const store = {
-    mainTags: null,
-    rateLimit: null,
-  };
-  return {
-    getMainTags: async function getMainTags() {
-      if (!store.mainTags) {
-        store.mainTags = await ConfigModel.getMainTags();
-      }
-      return store.mainTags;
-    },
-    getRateLimit: async function getRateLimit() {
-      if (!store.rateLimit) {
-        store.rateLimit = await ConfigModel.getRateLimit();
-      }
-      return store.rateLimit;
-    },
+const getConfig = () => {
+  let configValue = null;
+  return async () => {
+    if (!configValue) {
+      configValue = await ConfigModel.getConfig();
+    }
+    return configValue;
   };
 };
 
 export default ConfigModel;
-export { config };
+export { getConfig };
