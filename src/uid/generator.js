@@ -13,7 +13,7 @@ const workerExpireMilliSeconds = 1000 * 3600;
 WorkerIDSchema.statics.newWorkerID = async function newWorkerID() {
   const { count } = await WorkerIDModel.findOneAndUpdate(
     {}, { $inc: { count: 1 } }, { new: true, upsert: 1 },
-  );
+  ).exec();
   return count % 512;
 };
 

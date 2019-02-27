@@ -16,13 +16,13 @@ const TokenSchema = new mongoose.Schema({
 TokenSchema.statics.genNewToken = async function genNewToken(email) {
   const authToken = Base64.randomString(24);
   const newToken = { email, authToken, createdAt: new Date() };
-  await TokenModel.update({ email }, newToken, { upsert: true });
-  const result = await TokenModel.findOne({ email }).orFail(() => new AuthError('AuthToken not found'));
+  await TokenModel.update({ email }, newToken, { upsert: true }).exec();
+  const result = await TokenModel.findOne({ email }).orFail(() => new AuthError('AuthToken not found')).exec();
   return result;
 };
 
 TokenSchema.statics.getEmailByToken = async function getEmailByToken(authToken) {
-  const result = await TokenModel.findOne({ authToken }).orFail(() => new AuthError('Email not found'));
+  const result = await TokenModel.findOne({ authToken }).orFail(() => new AuthError('Email not found')).exec();
   return result.email;
 };
 

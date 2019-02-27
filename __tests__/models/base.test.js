@@ -57,23 +57,23 @@ describe('Testing sliceQuery', () => {
   });
   it('Find string', async () => {
     const result = await findSlice(sliceQuery, TestModel, option);
-    const count1 = await TestModel.findOne({ count: 1 });
+    const count1 = await TestModel.findOne({ count: 1 }).exec();
     expect(result.sliceInfo.firstCursor).toEqual(count1._id.valueOf());
     expect(result.sliceInfo.lastCursor).toEqual(count1._id.valueOf());
     expect(result.sliceInfo.hasNext).toEqual(false);
   });
   it('Find between', async () => {
     const result = await findSlice(sliceQuery, TestModel, altOption);
-    const count3 = await TestModel.findOne({ count: 3 });
-    const count5 = await TestModel.findOne({ count: 5 });
+    const count3 = await TestModel.findOne({ count: 3 }).exec();
+    const count5 = await TestModel.findOne({ count: 5 }).exec();
     expect(result.sliceInfo.firstCursor).toEqual(count3._id.valueOf());
     expect(result.sliceInfo.lastCursor).toEqual(count5._id.valueOf());
     expect(result.sliceInfo.hasNext).toEqual(false);
   });
   it('Find between with limitation', async () => {
     const result = await findSlice({ ...sliceQuery, limit: 1 }, TestModel, altOption);
-    const count3 = await TestModel.findOne({ count: 3 });
-    const count4 = await TestModel.findOne({ count: 4 });
+    const count3 = await TestModel.findOne({ count: 3 }).exec();
+    const count4 = await TestModel.findOne({ count: 4 }).exec();
     expect(result.sliceInfo.firstCursor).toEqual(count3._id.valueOf());
     expect(result.sliceInfo.lastCursor).toEqual(count4._id.valueOf());
     expect(result.sliceInfo.hasNext).toEqual(true);
@@ -81,16 +81,16 @@ describe('Testing sliceQuery', () => {
   it('Find between with limitation and desc', async () => {
     const newOption = { ...altOption, desc: true };
     const result = await findSlice({ ...sliceQuery, limit: 1 }, TestModel, newOption);
-    const count4 = await TestModel.findOne({ count: 4 });
-    const count5 = await TestModel.findOne({ count: 5 });
+    const count4 = await TestModel.findOne({ count: 4 }).exec();
+    const count5 = await TestModel.findOne({ count: 5 }).exec();
     expect(result.sliceInfo.firstCursor).toEqual(count4._id.valueOf());
     expect(result.sliceInfo.lastCursor).toEqual(count5._id.valueOf());
     expect(result.sliceInfo.hasNext).toEqual(true);
   });
   it('Find using before and after', async () => {
-    const count3 = await TestModel.findOne({ count: 3 });
-    const count4 = await TestModel.findOne({ count: 4 });
-    const count5 = await TestModel.findOne({ count: 5 });
+    const count3 = await TestModel.findOne({ count: 3 }).exec();
+    const count4 = await TestModel.findOne({ count: 4 }).exec();
+    const count5 = await TestModel.findOne({ count: 5 }).exec();
     const result = await findSlice({
       ...sliceQuery, after: count3._id.valueOf(),
     }, TestModel, altOption);
