@@ -9,16 +9,40 @@ export default `
   }
 
   type Config {
-    # Main tags are mandatory and predefined manually.
-    mainTags: [String!]!
-    # RateLimit is a JSON string.
-    rateLimit: String!
+    rateLimit: ReteLimit!
+    cost: RateCost!
+  }
+
+  type RateLimit {
+    httpHeader: String!
+    queryLimit: Int!
+    queryResetTime: Int!
+    mutLimit: Int!
+    mutResetTime: Int!
+  }
+
+  type RateCost {
+    createUser: Int!
+    pubThread: Int!
+    pubPost: Int!
   }
 
   input ConfigInput {
-    # Update Main tags.
-    mainTags: [String!]
-    # Provide a JSON string to modify rateLimit.
-    rateLimit: String
+    rateLimit: ReteLimitInput
+    cost: RateCostLimitInput
+  }
+
+  type RateLimitInput {
+    httpHeader: String
+    queryLimit: Int
+    queryResetTime: Int
+    mutLimit: Int
+    mutResetTime: Int
+  }
+
+  type RateCostInput {
+    createUser: Int
+    pubThread: Int
+    pubPost: Int
   }
 `;

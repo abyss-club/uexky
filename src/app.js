@@ -8,7 +8,7 @@ import log from '~/utils/log';
 import env from '~/utils/env';
 import AuthModel from '~/models/auth';
 import UserModel from '~/models/user';
-import { config } from '~/models/config';
+import { getConfig } from '~/models/config';
 import createRateLimiter, { createIdleRateLimiter } from '~/utils/rateLimit';
 import TokenModel from '~/models/token';
 
@@ -21,10 +21,15 @@ const server = new ApolloServer({
   }),
 });
 
+const endpoints = {
+  graphql: '/graphql',
+  auth: '/auth',
+};
+
 function authMiddleware() {
   return async (ctx, next) => {
     const token = ctx.cookies.get('token');
-    if (ctx.url === '/graphql') {
+    if (ctx.url === endpoints.graphql) {
       try {
         const email = await TokenModel.getEmailByToken(token);
         const user = await UserModel.getUserByEmail(email);
@@ -40,8 +45,8 @@ function authMiddleware() {
 
 function configMiddleware() {
   return async (ctx, next) => {
-    if (ctx.url === '/graphql') {
-      ctx.config = config();
+    if (ctx.url === endpoints.graphql) {
+      ctx.getConfig = getConfig();
     }
     await next();
   };
@@ -49,15 +54,16 @@ function configMiddleware() {
 
 function rateLimitMiddleware() {
   return async (ctx, next) => {
-    if (ctx.url === '/graphql') {
-      const headerName = (await ctx.config.getRateLimit()).HTTPHeader;
+    if (ctx.url === endpoints.graphql) {
+      const config = await ctx.getConfig();
+      const headerName = config.rateLimit.httpHeader;
       if (headerName !== '') {
         const ip = ctx.header.get(headerName);
         const { user } = ctx;
         if ((user) && (user.email) && (user.email !== '')) {
-          ctx.limiter = createRateLimiter(ip, user.email);
+          ctx.limiter = createRateLimiter(config, ip, user.email);
         } else {
-          ctx.limiter = createRateLimiter(ip);
+          ctx.limiter = createRateLimiter(config, ip);
         }
       } else {
         ctx.limiter = createIdleRateLimiter();
@@ -87,7 +93,7 @@ function logMiddleware() {
 }
 
 const router = new Router();
-router.get('/auth', async (ctx, next) => {
+router.get(endpoints.auth, async (ctx, next) => {
   if (!ctx.query.code || ctx.query.code.length !== 36) {
     ctx.body = 'Incorrect authentication code';
   } else {
