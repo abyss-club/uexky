@@ -9,6 +9,7 @@ const redisClient = (function createClient() {
     get: promisify(client.get).bind(client),
     set: promisify(client.set).bind(client),
     decrby: promisify(client.decrby).bind(client),
+    quit: promisify(client.quit).bind(client),
   };
 }());
 
