@@ -133,3 +133,4 @@ app.use(cors({ allowMethods: ['GET', 'OPTION', 'POST'] }));
 server.applyMiddleware({ app });
 
 export default app;
+export { endpoints };
