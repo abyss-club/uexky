@@ -17,6 +17,7 @@ afterAll(() => {
   mongoServer.stop();
 });
 
+/* TODO(tangwenhan): may be useful in next work (tag model).
 describe('Testing mainTags', () => {
   const mockTags = ['mainA', 'mainB', 'mainC'];
   const modifyTags = ['mainC', 'mainD', 'mainE'];
@@ -45,114 +46,76 @@ describe('Testing mainTags', () => {
     await expect(ConfigModel.modifyMainTags(failTags)).rejects.toThrow(ParamsError);
   });
 });
+*/
 
 describe('Testing rateLimit', () => {
-  const emptySettings = {};
-  const validSettings = {
-    HTTPHeader: 'Header',
-    QueryLimit: 1,
-    QueryResetTime: 2,
-    MutLimit: 3,
-    MutResetTime: 4,
-    Cost: {
-      CreateUser: 5,
-      PubThread: 6,
-      PubPost: 7,
+  // default
+  const expectConfig = {
+    rateLimit: {
+      httpHeader: '',
+      queryLimit: 300,
+      queryResetTime: 3600,
+      mutLimit: 30,
+      mutResetTime: 3600,
+    },
+    rateCost: {
+      createUser: 30,
+      pubThread: 10,
+      pubPost: 1,
     },
   };
-  const incompleteSettings = {
-    HTTPHeader: 'Modified',
-    QueryLimit: 10,
-    QueryResetTime: 20,
-    MutLimit: 30,
-    MutResetTime: 40,
+  const checkConfig = async () => {
+    const result = await ConfigModel.getConfig();
+    const resultInDb = await ConfigModel.findOne().exec();
+    expect(result).toEqual(expectConfig);
+    expect(resultInDb.format()).toEqual(expectConfig);
   };
-  const invalidSettings = {
-    HTTPHeader: 0,
-    QueryLimit: '1',
-    QueryResetTime: '2',
-    MutLimit: '3',
-    MutResetTime: '4',
-    Cost: {
-      CreateUser: '5',
-      PubThread: '6',
-      PubPost: '7',
-    },
-  };
-  const finalSettings = {
-    HTTPHeader: 'Modified',
-    QueryLimit: 10,
-    QueryResetTime: 20,
-    MutLimit: 30,
-    MutResetTime: 40,
-    Cost: {
-      CreateUser: 30,
-      PubThread: 10,
-      PubPost: 1,
-    },
-  };
-  const defaultSettings = {
-    HTTPHeader: '',
-    QueryLimit: 300,
-    QueryResetTime: 3600,
-    MutLimit: 30,
-    MutResetTime: 3600,
-    Cost: {
-      CreateUser: 30,
-      PubThread: 10,
-      PubPost: 1,
-    },
-  };
-  it('add valid settings', async () => {
-    const returned = await ConfigModel.modifyRateLimit(validSettings);
-    const result = await ConfigModel.findOne({ optionName: 'rateLimit' }).exec();
-    expect(returned).toEqual(validSettings);
-    expect(JSON.parse(result.optionValue)).toEqual(validSettings);
+
+  it('get default config', async () => {
+    const result = await ConfigModel.getConfig();
+    expect(result).toEqual(expectConfig);
   });
-  it('verify valid settings', async () => {
-    const result = await ConfigModel.getRateLimit();
-    expect(result).toEqual(validSettings);
+  it('modify config with single entry', async () => {
+    await ConfigModel.setConfig({ rateLimit: { httpHeader: 'X-IP-Forward' } });
+    expectConfig.rateLimit.httpHeader = 'X-IP-Forward';
+    await checkConfig(expectConfig);
   });
-  it('add empty settings', async () => {
-    await mongoose.connection.db.dropDatabase();
-    const returned = await ConfigModel.modifyRateLimit(emptySettings);
-    const result = await ConfigModel.findOne({ optionName: 'rateLimit' }).exec();
-    expect(returned).toEqual(defaultSettings);
-    expect(JSON.parse(result.optionValue)).toEqual(defaultSettings);
+  it('modify config with invalid value (unknown group)', async () => {
+    await expect(ConfigModel.setConfig({
+      iamfine: true,
+      rateCost: { pubPost: 2 },
+    })).rejects.toThrow(ParamsError);
+    await checkConfig(expectConfig);
   });
-  it('verify empty settings', async () => {
-    const result = await ConfigModel.getRateLimit();
-    expect(result).toEqual(defaultSettings);
+  it('modify config with invalid value (unknown entry)', async () => {
+    await expect(ConfigModel.setConfig({
+      rateLimit: { mutLimit: 'hello', name: 'tom' },
+      rateCost: { pubPost: 2 },
+    })).rejects.toThrow(ParamsError);
+    await checkConfig(expectConfig);
   });
-  it('add invalid settings', async () => {
-    await mongoose.connection.db.dropDatabase();
-    await expect(ConfigModel.modifyRateLimit(invalidSettings)).rejects.toThrow(ParamsError);
+  it('modify config with invalid value (error group)', async () => {
+    await expect(ConfigModel.setConfig({
+      rateLimit: 'unreal',
+      rateCost: { pubPost: 2 },
+    })).rejects.toThrow(ParamsError);
+    await checkConfig(expectConfig);
   });
-  it('get default settings', async () => {
-    const returned = await ConfigModel.getRateLimit();
-    expect(returned).toEqual(defaultSettings);
+  it('modify config with invalid value (error entry)', async () => {
+    await expect(ConfigModel.setConfig({
+      rateLimit: { queryLimit: 'hi' },
+      rateCost: { pubPost: 2 },
+    })).rejects.toThrow(ParamsError);
+    await checkConfig(expectConfig);
   });
-  it('add incomplete settings', async () => {
-    const returned = await ConfigModel.modifyRateLimit(incompleteSettings);
-    const result = await ConfigModel.findOne({ optionName: 'rateLimit' }).exec();
-    expect(returned).toEqual(finalSettings);
-    expect(JSON.parse(result.optionValue)).toEqual(finalSettings);
-  });
-  it('verify incomplete settings', async () => {
-    const result = await ConfigModel.getRateLimit();
-    expect(result).toEqual(finalSettings);
-  });
-  it('add valid, then incomplete settings', async () => {
-    await mongoose.connection.db.dropDatabase();
-    const validReturn = await ConfigModel.modifyRateLimit(validSettings);
-    const returned = await ConfigModel.modifyRateLimit(incompleteSettings);
-    const result = await ConfigModel.findOne({ optionName: 'rateLimit' }).exec();
-    expect(validReturn).toEqual(validSettings);
-    expect(returned).toEqual(finalSettings);
-    expect(JSON.parse(result.optionValue)).toEqual(finalSettings);
-  });
-  it('verify final settings', async () => {
-    const result = await ConfigModel.getRateLimit();
-    expect(result).toEqual(finalSettings);
+  it('modify config multiple entries', async () => {
+    await ConfigModel.setConfig({
+      rateLimit: { queryLimit: 400 },
+      rateCost: { pubThread: 20, pubPost: 3 },
+    });
+    expectConfig.rateLimit.queryLimit = 400;
+    expectConfig.rateCost.pubThread = 20;
+    expectConfig.rateCost.pubPost = 3;
+    await checkConfig(expectConfig);
   });
 });

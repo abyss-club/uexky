@@ -25,6 +25,7 @@ const startRepl = async () => {
   });
   await replSet.waitUntilRunning();
   const mongoUri = `${await replSet.getConnectionString()}?replicaSet=testset`;
+  log.info(`connect test mongodb: ${mongoUri}`);
 
   await sleep(2000);
 

@@ -1,17 +1,26 @@
 import mongoose from 'mongoose';
-import ConfigModel from './config';
 
 const TagSchema = new mongoose.Schema({
-  subTag: { type: String, required: true, unique: true },
-  mainTags: [String],
+  name: { type: String, required: true, unique: true },
+  isMain: { type: Boolean, required: true },
+  belongsTo: [String],
   updateAt: Date,
 }, { autoCreate: true });
 
+TagSchema.statics.getMainTags = async function getMainTags() {
+  const tags = await TagModel.find({ isMain: true }).exec();
+  return tags.map(tag => tag.name);
+};
+TagSchema.statics.addMainTag = async function addMainTag(name) {
+  const tag = await TagModel.create({ name, isMain: true });
+  return tag;
+};
+
 TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
   const option = { ...opt, upsert: true };
-  const updateTags = thread.subTags.map(async tag => this.updateOne({ subTag: tag }, {
-    $addToSet: { mainTags: thread.mainTag },
-    $set: { updateAt: new Date() },
+  const updateTags = thread.subTags.map(async tag => this.updateOne({ name: tag }, {
+    $addToSet: { belongsTo: thread.mainTag },
+    $set: { updateAt: new Date(), isMain: false },
   }, option).exec());
   await Promise.all(updateTags);
 };
@@ -20,11 +29,11 @@ TagSchema.statics.getTree = async function getTree(limit, query = '') {
   const defaultLimit = 10;
   const selector = (mainTag) => {
     if (query === '') {
-      return { mainTags: mainTag };
+      return { belongsTo: mainTag };
     }
-    return { subTag: { $regex: query }, mainTags: mainTag };
+    return { name: { $regex: query }, isMain: false, belongsTo: mainTag };
   };
-  const mainTags = await ConfigModel.getMainTags();
+  const mainTags = await TagModel.getMainTags();
   const tagTrees = mainTags.map(async (mainTag) => {
     const subTags = await this.find(selector(mainTag))
       .sort({ updatedAt: -1 })
@@ -32,7 +41,7 @@ TagSchema.statics.getTree = async function getTree(limit, query = '') {
       .exec();
     return {
       mainTag,
-      subTags: subTags.map(tag => tag.subTag),
+      subTags: subTags.map(tag => tag.name),
     };
   });
   return Promise.all(tagTrees);
