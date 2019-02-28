@@ -1,34 +1,20 @@
 import ConfigModel from '~/models/config';
 
 const Query = {
-  config: () => ({}),
+  config: (obj, args, ctx) => ctx.config,
 };
 
 const Mutation = {
   editConfig: async (obj, { config }) => {
-    if (config.mainTags) {
-      await ConfigModel.modifyMainTags(config.mainTags);
-    }
-    if (config.rateLimit) {
-      await ConfigModel.modifyRateLimit(config.rateLimit);
-    }
+    await ConfigModel.setConfig(config);
     return {};
   },
 };
 
-const Config = {
-  mainTags: async (obj, args, ctx) => {
-    const config = await ctx.config.getMainTags();
-    return config;
-  },
-  rateLimit: async (obj, args, ctx) => {
-    const config = await ctx.config.getRateLimit();
-    return JSON.stringify(config);
-  },
-};
+// Auto Resolver:
+// Config
 
 export default {
   Query,
   Mutation,
-  Config,
 };

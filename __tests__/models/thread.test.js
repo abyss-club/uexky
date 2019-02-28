@@ -4,11 +4,10 @@ import { startRepl } from '../__utils__/mongoServer';
 import UserModel, { UserPostsModel } from '~/models/user';
 import ThreadModel from '~/models/thread';
 import TagModel from '~/models/tag';
-import ConfigModel from '~/models/config';
 
 // May require additional time for downloading MongoDB binaries
 // Temporary hack for parallel tests
-jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
+jest.setTimeout(60000);
 
 let replSet;
 beforeAll(async () => {
@@ -45,7 +44,7 @@ let threadSuid;
 
 describe('Testing posting a thread', () => {
   it('Setting tags', async () => {
-    await ConfigModel.modifyMainTags(['MainA']);
+    await TagModel.addMainTag('MainA');
   });
   it('Posting a thread', async () => {
     const user = await UserModel.getUserByEmail(mockEmail);
@@ -83,7 +82,7 @@ describe('Testing posting a thread without subTags', () => {
     await mongoose.connection.db.dropDatabase();
     await UserPostsModel.createCollection(); // necessary after db dropped
     await ThreadModel.createCollection(); // necessary after db dropped
-    await ConfigModel.modifyMainTags(['MainA']);
+    await TagModel.addMainTag('MainA');
   });
   it('Posting a thread', async () => {
     const user = await UserModel.getUserByEmail(mockEmail);

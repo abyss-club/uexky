@@ -4,7 +4,6 @@ import { ParamsError } from '~/utils/error';
 import Uid from '~/uid';
 import validator from '~/utils/validator';
 import findSlice from '~/models/base';
-import ConfigModel from './config';
 import TagModel from './tag';
 import PostModel from './post';
 
@@ -35,7 +34,7 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
     anonymous, content, title, mainTag, subTags = [],
   } = input;
 
-  const mainTags = await ConfigModel.getMainTags();
+  const mainTags = await TagModel.getMainTags();
   if (!mainTags.includes(mainTag)) throw new ParamsError('Invalid mainTag');
   if (!validator.isUnicodeLength(title, { max: 28 })) {
     throw new ParamsError('Max length of title is 28.');

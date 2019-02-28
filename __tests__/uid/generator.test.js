@@ -1,11 +1,12 @@
 import mongoose from 'mongoose';
-import { startMongo } from '../__utils__/mongoServer';
+import { startRepl } from '../__utils__/mongoServer';
 import generator, { WorkerIDModel } from '~/uid/generator';
 
+jest.setTimeout(60000); // for boot replica sets
 let mongoServer;
 
 beforeAll(async () => {
-  mongoServer = await startMongo();
+  mongoServer = await startRepl();
 });
 
 afterAll(() => {
