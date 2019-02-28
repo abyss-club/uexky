@@ -7,7 +7,7 @@ import TagModel from '~/models/tag';
 
 // May require additional time for downloading MongoDB binaries
 // Temporary hack for parallel tests
-jest.setTimeout(600000);
+jest.setTimeout(60000);
 
 let replSet;
 beforeAll(async () => {
