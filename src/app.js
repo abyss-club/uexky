@@ -37,7 +37,7 @@ function authMiddleware() {
 function configMiddleware() {
   return async (ctx, next) => {
     if (ctx.url === endpoints.graphql) {
-      ctx.config = ConfigModel.getConfig();
+      ctx.config = await ConfigModel.getConfig();
     }
     await next();
   };
@@ -46,15 +46,14 @@ function configMiddleware() {
 function rateLimitMiddleware() {
   return async (ctx, next) => {
     if (ctx.url === endpoints.graphql) {
-      const config = await ctx.readConfig();
-      const headerName = config.rateLimit.httpHeader;
+      const headerName = ctx.config.rateLimit.httpHeader;
       if (headerName !== '') {
         const ip = ctx.header.get(headerName);
         const { user } = ctx;
         if ((user) && (user.email) && (user.email !== '')) {
-          ctx.limiter = createRateLimiter(config, ip, user.email);
+          ctx.limiter = createRateLimiter(ctx.config, ip, user.email);
         } else {
-          ctx.limiter = createRateLimiter(config, ip);
+          ctx.limiter = createRateLimiter(ctx.config, ip);
         }
       } else {
         ctx.limiter = createIdleRateLimiter();
@@ -115,7 +114,7 @@ router.get(endpoints.auth, async (ctx, next) => {
 const server = new ApolloServer({
   schema,
   context: ({ ctx }) => ({
-    readConfig: ctx.readConfig,
+    config: ctx.config,
     user: ctx.user,
     limiter: ctx.limiter,
   }),
