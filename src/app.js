@@ -8,7 +8,7 @@ import log from '~/utils/log';
 import env from '~/utils/env';
 import AuthModel from '~/models/auth';
 import UserModel from '~/models/user';
-import { genConfigReader } from '~/models/config';
+import ConfigModel from '~/models/config';
 import createRateLimiter, { createIdleRateLimiter } from '~/utils/rateLimit';
 import TokenModel from '~/models/token';
 
@@ -37,7 +37,7 @@ function authMiddleware() {
 function configMiddleware() {
   return async (ctx, next) => {
     if (ctx.url === endpoints.graphql) {
-      ctx.readConfig = genConfigReader();
+      ctx.config = ConfigModel.getConfig();
     }
     await next();
   };

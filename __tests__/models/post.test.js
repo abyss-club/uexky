@@ -6,12 +6,11 @@ import UserModel, { UserPostsModel } from '~/models/user';
 import ThreadModel from '~/models/thread';
 import PostModel from '~/models/post';
 import TagModel from '~/models/tag';
-import ConfigModel from '~/models/config';
 import NotificationModel from '~/models/notification';
 
 // May require additional time for downloading MongoDB binaries
 // Temporary hack for parallel tests
-jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
+jest.setTimeout(600000);
 
 let replSet;
 beforeAll(async () => {
@@ -56,7 +55,7 @@ let replySuid;
 
 describe('Testing posting a thread', () => {
   it('Setting tags', async () => {
-    await ConfigModel.modifyMainTags(['MainA']);
+    await TagModel.addMainTag('MainA');
   });
   it('Posting a thread', async () => {
     const user = await UserModel.getUserByEmail(mockEmail);

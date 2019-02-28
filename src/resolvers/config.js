@@ -1,7 +1,7 @@
 import ConfigModel from '~/models/config';
 
 const Query = {
-  config: (obj, args, ctx) => ctx.readConfig(),
+  config: (obj, args, ctx) => ctx.config,
 };
 
 const Mutation = {

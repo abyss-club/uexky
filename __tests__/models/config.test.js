@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import ConfigModel, { genConfigReader } from '~/models/config';
+import ConfigModel from '~/models/config';
 import { ParamsError } from '~/utils/error';
 
 import { startMongo } from '../__utils__/mongoServer';
@@ -117,10 +117,5 @@ describe('Testing rateLimit', () => {
     expectConfig.rateCost.pubThread = 20;
     expectConfig.rateCost.pubPost = 3;
     await checkConfig(expectConfig);
-  });
-  it('config reader', async () => {
-    const read = await genConfigReader()();
-    const got = await ConfigModel.findOne({}).exec();
-    expect(got.format()).toEqual(read);
   });
 });
