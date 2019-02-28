@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
 import { startMongo } from '../__utils__/mongoServer';
 import TagModel from '~/models/tag';
-import ConfigModel from '~/models/config';
 
 // May require additional time for downloading MongoDB binaries
 // jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
@@ -20,8 +19,8 @@ afterAll(() => {
 describe('Insert Tags', () => {
   const mockTags = { mainTag: 'MainA', subTags: ['SubA', 'SubB'] };
   it('add tags', async () => {
+    await TagModel.addMainTag('MainA');
     const tags = mockTags;
-    await ConfigModel.modifyMainTags(['MainA']);
     await TagModel.onPubThread(tags);
   });
   it('validate tags', async () => {

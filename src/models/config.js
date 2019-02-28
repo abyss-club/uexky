@@ -67,15 +67,4 @@ ConfigSchema.methods.format = function format() {
 
 const ConfigModel = mongoose.model('Config', ConfigSchema);
 
-const genConfigReader = () => {
-  let configValue = null;
-  return async () => {
-    if (!configValue) {
-      configValue = await ConfigModel.getConfig();
-    }
-    return configValue;
-  };
-};
-
 export default ConfigModel;
-export { genConfigReader };

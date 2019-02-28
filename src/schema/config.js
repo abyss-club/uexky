@@ -9,7 +9,7 @@ export default `
   }
 
   type Config {
-    rateLimit: ReteLimit!
+    rateLimit: RateLimit!
     cost: RateCost!
   }
 
@@ -28,11 +28,11 @@ export default `
   }
 
   input ConfigInput {
-    rateLimit: ReteLimitInput
-    cost: RateCostLimitInput
+    rateLimit: RateLimitInput
+    cost: RateCostInput
   }
 
-  type RateLimitInput {
+  input RateLimitInput {
     httpHeader: String
     queryLimit: Int
     queryResetTime: Int
@@ -40,7 +40,7 @@ export default `
     mutResetTime: Int
   }
 
-  type RateCostInput {
+  input RateCostInput {
     createUser: Int
     pubThread: Int
     pubPost: Int
