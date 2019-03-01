@@ -6,8 +6,8 @@ const Query = {
 
 const Mutation = {
   editConfig: async (obj, { config }) => {
-    await ConfigModel.setConfig(config);
-    return {};
+    const newConfig = await ConfigModel.setConfig(config);
+    return newConfig;
   },
 };
 

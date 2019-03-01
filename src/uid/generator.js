@@ -6,7 +6,7 @@ const timestamp = date => Math.floor((date.getTime() - timeZero) / 1000);
 
 const WorkerIDSchema = new mongoose.Schema(
   { count: Number },
-  { capped: 1, writeConcern: { w: 'majority', j: true, wtimeout: 1000 } },
+  { writeConcern: { w: 'majority', j: true, wtimeout: 1000 } },
 );
 const workerExpireMilliSeconds = 1000 * 3600;
 

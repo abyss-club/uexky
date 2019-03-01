@@ -10,7 +10,7 @@ export default `
 
   type Config {
     rateLimit: RateLimit!
-    cost: RateCost!
+    rateCost: RateCost!
   }
 
   type RateLimit {
