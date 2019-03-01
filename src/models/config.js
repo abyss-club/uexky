@@ -17,7 +17,7 @@ const ConfigSchema = new mongoose.Schema({
     pubThread: Number,
     pubPost: Number,
   },
-}, { capped: 1 });
+}, { writeConcern: { w: 'majority', j: true, wtimeout: 1000 } });
 
 const rateLimitObjSchema = Joi.object().keys({
   httpHeader: Joi.string().regex(/^[0-9a-zA-Z-]*/).default(''),
@@ -55,7 +55,7 @@ ConfigSchema.statics.setConfig = async function setConfig(input) {
     log.error(error);
     throw new ParamsError(`JSON validation failed, ${error}`);
   }
-  await ConfigModel.updateOne({}, newConfig, { upsert: true }).exec();
+  await ConfigModel.findOneAndUpdate({}, newConfig, { upsert: true }).exec();
   log.info('config updated!', newConfig);
   return newConfig;
 };
