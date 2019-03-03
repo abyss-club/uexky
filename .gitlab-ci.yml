@@ -8,21 +8,21 @@ stages:
   - test
   - build
 
-# test:
-#  # install deps
-#  before_script:
-#    - yarn
-#   tags:
-#     - docker
-#   services:
-#     - mongo
-#     - redis:latest
-#   variables:
-#     MONGO_URI: "mongodb://mongo"
-#     REDIS_URI: "redis://redis"
-#   stage: test
-#   script:
-#     - yarn test
+test:
+ # install deps
+ before_script:
+   - yarn
+  tags:
+    - docker
+  services:
+    - mongo
+    - redis:latest
+  variables:
+    MONGO_URI: "mongodb://mongo"
+    REDIS_URI: "redis://redis"
+  stage: test
+  script:
+    - yarn test
 
 build:
   image: docker:stable
@@ -31,9 +31,9 @@ build:
   tags:
     - docker
   stage: build
-  # only:
-  #   - master
-  #   - tags
+  only:
+    - master
+    - tags
   script:
     - docker login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${REGISTRY_NAME}
     - docker build . -t ${IMAGE_NAME}
