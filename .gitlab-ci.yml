@@ -9,9 +9,9 @@ stages:
   - build
 
 test:
- # install deps
- before_script:
-   - yarn
+  # install deps
+  before_script:
+    - yarn
   tags:
     - docker
   services:
