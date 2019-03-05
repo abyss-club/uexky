@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import findSlice from '~/models/base';
 import { ParamsError } from '~/utils/error';
+import { timeZero } from '~/uid/generator';
 
 const { ObjectId } = mongoose.Types;
 const SchemaObjectId = mongoose.ObjectId;
@@ -86,13 +87,15 @@ NotificationSchema.statics.getUnreadCount = async function getUnreadCount(
   if (!isValidType(type)) {
     throw new ParamsError(`Invalid type: ${type}`);
   }
+
+  const userReadNotiTime = user.readNotiTime[type] || timeZero;
   const count = await NotificationModel.find({
     $or: [
       { send_to: user.ID },
       { send_to_group: userGroups.AllUser },
     ],
     type,
-    eventTime: { $gt: user.readNotiTime[type] },
+    eventTime: { $gt: userReadNotiTime },
   }).countDocuments().exec();
   return count;
 };
@@ -115,6 +118,7 @@ NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
     toCursor: value => value.toHexString(),
   };
   const result = await findSlice(sliceQuery, NotificationModel, option);
+  await user.setReadNotiTime(type, Date.now());
   return result;
 };
 

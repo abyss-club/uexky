@@ -187,7 +187,10 @@ UserSchema.methods.editTags = async function editTags(
     { $set: { mainTag, subTags } },
   ).exec();
 };
-
+UserSchema.methods.setReadNotiTime = async function setReadNotiTime(type, time) {
+  const notiType = `readNotiTime.${type}`;
+  await UserModel.updateOne({ _id: this._id }, { $set: { [notiType]: time } });
+};
 // MODEL: UserAid
 //        used for save anonymousId for user in threads.
 const UserAidSchema = new mongoose.Schema({
