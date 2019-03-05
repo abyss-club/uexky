@@ -47,29 +47,29 @@ const RepliedNoti = Object.assign({
   thread: async (noti, args, ctx) => {
     await ctx.limiter.take(1);
     const thread = await ThreadModel
-      .findOne({ _id: noti.replied.threadId }).exec();
+      .findByUid(noti.replied.threadId);
     return thread;
   },
-  repliers: noti => noti.repliers,
+  repliers: noti => noti.replied.repliers,
 }, baseNoti);
 
 const QuotedNoti = Object.assign({
   thread: async (noti, args, ctx) => {
     await ctx.limiter.take(1);
-    const thread = await ThreadModel.findById(noti.replied.threadId).exec();
+    const thread = await ThreadModel.findByUid(noti.quoted.threadId);
     return thread;
   },
   quotedPost: async (noti, args, ctx) => {
     await ctx.limiter.take(1);
-    const post = await PostModel.findById(noti.replied.quotedPostId).exec();
+    const post = await PostModel.findByUid(noti.quoted.quotedPostId);
     return post;
   },
   post: async (noti, args, ctx) => {
     await ctx.limiter.take(1);
-    const post = await PostModel.findById(noti.replied.quotedPostId).exec();
+    const post = await PostModel.findByUid(noti.quoted.quotedPostId);
     return post;
   },
-  quoter: noti => noti.replied.quoter,
+  quoter: noti => noti.quoted.quoter,
 }, baseNoti);
 
 export default {
