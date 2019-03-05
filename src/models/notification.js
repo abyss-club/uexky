@@ -34,19 +34,6 @@ const NotificationSchema = new mongoose.Schema({
   },
 }, { id: false, autoCreate: true });
 
-NotificationSchema.methods.body = function body() {
-  switch (this.type) {
-    case 'system':
-      return this.system;
-    case 'replied':
-      return this.replied;
-    case 'quoted':
-      return this.quoted;
-    default:
-      return null;
-  }
-};
-
 NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
   post, thread, opt,
 ) {
@@ -106,7 +93,7 @@ NotificationSchema.statics.getUnreadCount = async function getUnreadCount(
     ],
     type,
     eventTime: { $gt: user.readNotiTime[type] },
-  }).count().exec();
+  }).countDocuments().exec();
   return count;
 };
 
@@ -125,7 +112,7 @@ NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
     field: '_id',
     sliceName: type,
     parse: value => ObjectId(value),
-    toCursor: value => value.valueOf(),
+    toCursor: value => value.toHexString(),
   };
   const result = await findSlice(sliceQuery, NotificationModel, option);
   return result;

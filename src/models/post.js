@@ -18,12 +18,8 @@ const PostSchema = new mongoose.Schema({
   blocked: Boolean,
   quoteSuids: [String],
   content: String,
-}, { id: false, autoCreate: true });
+}, { autoCreate: true });
 
-PostSchema.statics.findByUid = async function findByUid(uid) {
-  const post = await PostModel.findOne({ suid: Uid.encode(uid) });
-  return post;
-};
 PostSchema.statics.pubPost = async function pubPost({ user }, input) {
   const {
     threadId: threadUid, anonymous, content, quoteIds: quoteUids = [],
@@ -40,6 +36,7 @@ PostSchema.statics.pubPost = async function pubPost({ user }, input) {
 
   const now = new Date();
   const post = {
+    suid: await Uid.newSuid(),
     userId: user._id,
     threadSuid,
     anonymous,
@@ -62,7 +59,6 @@ PostSchema.statics.pubPost = async function pubPost({ user }, input) {
     });
     post.quoteSuids = quotedPosts.map(qp => qp.suid);
   }
-  post.suid = await Uid.newSuid();
 
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -78,17 +74,20 @@ PostSchema.statics.pubPost = async function pubPost({ user }, input) {
   return postDoc;
 };
 
+PostSchema.statics.findByUid = async function findByUid(uid) {
+  const post = await PostModel.findOne({ suid: Uid.encode(uid) }).exec();
+  return post;
+};
 PostSchema.methods.uid = function uid() {
-  if (!this.id) this.id = Uid.decode(this.suid);
-  return this.id;
+  if (!this.CACHED_UID) this.CACHED_UID = Uid.decode(this.suid);
+  return this.CACHED_UID;
 };
 PostSchema.methods.getQuotes = async function getQuotes() {
   let qs = [];
-  if (this.quotes.length !== 0) {
+  if (this.quoteSuids.length > 0) {
     qs = await PostModel.find(
       { suid: { $in: this.quoteSuids } },
-      { sort: { suid: 1 } },
-    ).all().exec();
+    ).sort({ suid: 1 }).exec();
   }
   return qs;
 };
@@ -96,7 +95,7 @@ PostSchema.methods.getContent = async function getContent() {
   return this.blocked ? '' : this.content;
 };
 PostSchema.methods.quoteCount = async function quoteCount() {
-  const count = await PostModel.find({ quotes: this.suid }).count();
+  const count = await PostModel.find({ quoteSuids: this.suid }).countDocuments().exec();
   return count;
 };
 

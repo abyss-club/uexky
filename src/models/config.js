@@ -20,7 +20,7 @@ const ConfigSchema = new mongoose.Schema({
 }, { writeConcern: { w: 'majority', j: true, wtimeout: 1000 } });
 
 const rateLimitObjSchema = Joi.object().keys({
-  httpHeader: Joi.string().regex(/^[0-9a-zA-Z-]*/).default(''),
+  httpHeader: Joi.string().regex(/^[a-zA-Z0-9-]*$/).default(''),
   queryLimit: Joi.number().integer().min(0).default(300),
   queryResetTime: Joi.number().integer().min(0).default(3600),
   mutLimit: Joi.number().integer().min(0).default(30),

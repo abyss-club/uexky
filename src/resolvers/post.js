@@ -3,26 +3,30 @@ import PostModel from '~/models/post';
 const Query = {
   post: async (obj, { id }, ctx) => {
     await ctx.limiter.take(1);
-    const post = await PostModel.findById(id).exec();
+    const post = await PostModel.findByUid(id);
     return post;
   },
 };
 
 const Mutation = {
   pubPost: async (obj, { post }, ctx) => {
-    const limiterCfg = await ctx.config.getRateLimit();
-    await ctx.limiter.take(limiterCfg.costSchema.pubPost);
+    const { rateCost } = ctx.config;
+    await ctx.limiter.take(rateCost.pubPost);
     const newPost = await PostModel.pubPost(ctx, post);
     return newPost;
   },
 };
 
 const Post = {
+  id: post => post.uid(),
   content: post => post.getContent(),
   quotes: async (post, args, ctx) => {
-    await ctx.limiter.take(post.quoteSuids.length);
-    const quotes = await post.getQuotes();
-    return quotes;
+    if (post.quoteSuids) {
+      await ctx.limiter.take(post.quoteSuids.length);
+      const quotes = await post.getQuotes();
+      return quotes;
+    }
+    return [];
   },
 };
 
