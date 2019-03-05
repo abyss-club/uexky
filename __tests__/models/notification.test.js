@@ -99,8 +99,8 @@ describe('Testing notification', () => {
     expect(quoted[0].quoted.quotedPostId).toEqual(mockPost1.uid());
     expect(quoted[0].quoted.quoter).toEqual(mockPost2.author);
     expect(quoted[0].quoted.quoterId).toEqual(mockReplier._id);
-    expect(quotedSliceInfo.firstCursor).toEqual(quoted[0]._id.valueOf());
-    expect(quotedSliceInfo.lastCursor).toEqual(quoted[0]._id.valueOf());
+    expect(quotedSliceInfo.firstCursor).toEqual(quoted[0]._id.toHexString());
+    expect(quotedSliceInfo.lastCursor).toEqual(quoted[0]._id.toHexString());
     expect(quotedSliceInfo.hasNext).toBe(false);
 
 
@@ -110,8 +110,8 @@ describe('Testing notification', () => {
     expect(replied[0].eventTime).toEqual(post2Time);
     expect(replied[0].sendTo).toEqual(mockUser._id);
     expect(replied[0].type).toEqual('replied');
-    expect(repSliceInfo.firstCursor).toEqual(replied[0]._id.valueOf());
-    expect(repSliceInfo.lastCursor).toEqual(replied[0]._id.valueOf());
+    expect(repSliceInfo.firstCursor).toEqual(replied[0]._id.toHexString());
+    expect(repSliceInfo.lastCursor).toEqual(replied[0]._id.toHexString());
     expect(repSliceInfo.hasNext).toBe(false);
   });
 });
