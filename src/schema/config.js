@@ -29,7 +29,7 @@ export default `
 
   input ConfigInput {
     rateLimit: RateLimitInput
-    cost: RateCostInput
+    rateCost: RateCostInput
   }
 
   input RateLimitInput {
