@@ -9,8 +9,8 @@ import PostModel from './post';
 
 const SchemaObjectId = mongoose.ObjectId;
 
-const ThreadSchema = mongoose.Schema({
-  suid: String,
+const ThreadSchema = new mongoose.Schema({
+  suid: { type: String, required: true, unique: true },
   anonymous: Boolean,
   author: String,
   userId: SchemaObjectId,
@@ -42,6 +42,7 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
 
   const now = new Date();
   const thread = {
+    suid: await Uid.newSuid(),
     anonymous,
     userId: user._id,
     tags: [mainTag, ...(subTags)],
@@ -54,14 +55,12 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
     content,
     title,
   };
-  thread.suid = await Uid.newSuid();
   thread.author = await user.author(thread.suid, anonymous);
 
   const session = await mongoose.startSession();
   session.startTransaction();
   const threadDoc = new ThreadModel(thread);
   await threadDoc.save({ session });
-  await ThreadModel.create(threadDoc, { session });
   await user.onPubThread(threadDoc, { session });
   await TagModel.onPubThread(threadDoc, { session });
   await session.commitTransaction();
@@ -89,7 +88,8 @@ ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
 };
 
 ThreadSchema.methods.uid = function uid() {
-  return Uid.decode(this.suid);
+  if (!this.CACHED_UID) this.CACHED_UID = Uid.decode(this.suid);
+  return this.CACHED_UID;
 };
 ThreadSchema.methods.getContent = function getContent() {
   return this.blocked ? '' : this.content;
@@ -115,4 +115,5 @@ ThreadSchema.methods.onPubPost = async function onPubPost(post, opt) {
 };
 
 const ThreadModel = mongoose.model('Thread', ThreadSchema);
+
 export default ThreadModel;

@@ -42,6 +42,8 @@ export default `
     replies(query: SliceQuery!): PostSlice!
     replyCount: Int!
     catalog: [ThreadCatalogItem!]
+    blocked: Boolean!
+    locked: Boolean!
   }
 
   type ThreadCatalogItem {

@@ -50,7 +50,7 @@ describe('Testing mainTags', () => {
 
 describe('Testing rateLimit', () => {
   // default
-  const expectConfig = {
+  const expectedConfig = {
     rateLimit: {
       httpHeader: '',
       queryLimit: 300,
@@ -67,55 +67,55 @@ describe('Testing rateLimit', () => {
   const checkConfig = async () => {
     const result = await ConfigModel.getConfig();
     const resultInDb = await ConfigModel.findOne().exec();
-    expect(result).toEqual(expectConfig);
-    expect(resultInDb.format()).toEqual(expectConfig);
+    expect(result).toEqual(expectedConfig);
+    expect(resultInDb.format()).toEqual(expectedConfig);
   };
 
   it('get default config', async () => {
     const result = await ConfigModel.getConfig();
-    expect(result).toEqual(expectConfig);
+    expect(result).toEqual(expectedConfig);
   });
   it('modify config with single entry', async () => {
     await ConfigModel.setConfig({ rateLimit: { httpHeader: 'X-IP-Forward' } });
-    expectConfig.rateLimit.httpHeader = 'X-IP-Forward';
-    await checkConfig(expectConfig);
+    expectedConfig.rateLimit.httpHeader = 'X-IP-Forward';
+    await checkConfig();
   });
   it('modify config with invalid value (unknown group)', async () => {
     await expect(ConfigModel.setConfig({
       iamfine: true,
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
-    await checkConfig(expectConfig);
+    await checkConfig();
   });
   it('modify config with invalid value (unknown entry)', async () => {
     await expect(ConfigModel.setConfig({
       rateLimit: { mutLimit: 'hello', name: 'tom' },
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
-    await checkConfig(expectConfig);
+    await checkConfig();
   });
   it('modify config with invalid value (error group)', async () => {
     await expect(ConfigModel.setConfig({
       rateLimit: 'unreal',
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
-    await checkConfig(expectConfig);
+    await checkConfig();
   });
   it('modify config with invalid value (error entry)', async () => {
     await expect(ConfigModel.setConfig({
       rateLimit: { queryLimit: 'hi' },
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
-    await checkConfig(expectConfig);
+    await checkConfig();
   });
   it('modify config multiple entries', async () => {
     await ConfigModel.setConfig({
       rateLimit: { queryLimit: 400 },
       rateCost: { pubThread: 20, pubPost: 3 },
     });
-    expectConfig.rateLimit.queryLimit = 400;
-    expectConfig.rateCost.pubThread = 20;
-    expectConfig.rateCost.pubPost = 3;
-    await checkConfig(expectConfig);
+    expectedConfig.rateLimit.queryLimit = 400;
+    expectedConfig.rateCost.pubThread = 20;
+    expectedConfig.rateCost.pubPost = 3;
+    await checkConfig();
   });
 });
