@@ -130,7 +130,7 @@ describe('Testing replying a thread', () => {
     expect(postResult.author).toEqual(author);
     expect(postResult.blocked).toEqual(false);
   });
-  it('Validate updated post', async () => {
+  it('Validate updated reply', async () => {
     const postResult = await PostModel.findOne({ suid: replySuid }).exec();
     expect(postResult.quoteSuids[0]).toEqual(postSuid);
   });

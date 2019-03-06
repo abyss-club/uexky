@@ -27,6 +27,7 @@ export default `
       createdAt: Time!
       quotes: [Post!]
       quoteCount: Int!
+      blocked: Boolean!
   }
 
   # PostSlice object is for selecting specific 'slice' of Post objects to

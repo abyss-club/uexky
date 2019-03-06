@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import findSlice from '~/models/base';
 import { ParamsError } from '~/utils/error';
+import { timeZero } from '~/uid/generator';
 
 const { ObjectId } = mongoose.Types;
 const SchemaObjectId = mongoose.ObjectId;
@@ -33,19 +34,6 @@ const NotificationSchema = new mongoose.Schema({
     quoterId: SchemaObjectId,
   },
 }, { id: false, autoCreate: true });
-
-NotificationSchema.methods.body = function body() {
-  switch (this.type) {
-    case 'system':
-      return this.system;
-    case 'replied':
-      return this.replied;
-    case 'quoted':
-      return this.quoted;
-    default:
-      return null;
-  }
-};
 
 NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
   post, thread, opt,
@@ -99,14 +87,16 @@ NotificationSchema.statics.getUnreadCount = async function getUnreadCount(
   if (!isValidType(type)) {
     throw new ParamsError(`Invalid type: ${type}`);
   }
+
+  const userReadNotiTime = user.readNotiTime[type] || timeZero;
   const count = await NotificationModel.find({
     $or: [
       { send_to: user.ID },
       { send_to_group: userGroups.AllUser },
     ],
     type,
-    eventTime: { $gt: user.readNotiTime[type] },
-  }).count().exec();
+    eventTime: { $gt: userReadNotiTime },
+  }).countDocuments().exec();
   return count;
 };
 
@@ -125,9 +115,10 @@ NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
     field: '_id',
     sliceName: type,
     parse: value => ObjectId(value),
-    toCursor: value => value.valueOf(),
+    toCursor: value => value.toHexString(),
   };
   const result = await findSlice(sliceQuery, NotificationModel, option);
+  await user.setReadNotiTime(type, Date.now());
   return result;
 };
 

@@ -78,7 +78,7 @@ const Uid = {
     return newId;
   },
   encode(displayId) {
-    if (displayId.length !== 10) {
+    if (typeof displayId !== 'string' || displayId.length !== 10) {
       throw new Error(`Invalid uid display: ${displayId}`);
     }
     const hexes = [];
@@ -89,7 +89,7 @@ const Uid = {
     return reverseTimestamp(hex.substring(0, 8)) + hex.substring(8, 15);
   },
   decode(storageId) {
-    if (storageId.length !== 15) {
+    if (typeof storageId !== 'string' || storageId.length !== 15) {
       throw new Error(`Invalid storaged uid: ${storageId}`);
     }
     // reverse timestamp

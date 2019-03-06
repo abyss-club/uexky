@@ -69,4 +69,4 @@ const generator = (function makeGenerator() {
 }());
 
 export default generator;
-export { WorkerIDModel };
+export { WorkerIDModel, timeZero };
