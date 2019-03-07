@@ -15,13 +15,12 @@ afterAll(() => {
   mongoose.disconnect();
   mongoServer.stop();
 });
+const mockTags = { mainTag: 'MainA', subTags: ['SubA', 'SubB'] };
 
 describe('Insert Tags', () => {
-  const mockTags = { mainTag: 'MainA', subTags: ['SubA', 'SubB'] };
   it('add tags', async () => {
-    await TagModel.addMainTag('MainA');
-    const tags = mockTags;
-    await TagModel.onPubThread(tags);
+    await TagModel.addMainTag(mockTags.mainTag);
+    await TagModel.onPubThread(mockTags);
   });
   it('validate tags', async () => {
     const result = await TagModel.getTree();
