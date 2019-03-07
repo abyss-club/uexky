@@ -78,10 +78,12 @@ PostSchema.statics.findByUid = async function findByUid(uid) {
   const post = await PostModel.findOne({ suid: Uid.encode(uid) }).exec();
   return post;
 };
+
 PostSchema.methods.uid = function uid() {
   if (!this.CACHED_UID) this.CACHED_UID = Uid.decode(this.suid);
   return this.CACHED_UID;
 };
+
 PostSchema.methods.getQuotes = async function getQuotes() {
   let qs = [];
   if (this.quoteSuids.length > 0) {
@@ -91,9 +93,11 @@ PostSchema.methods.getQuotes = async function getQuotes() {
   }
   return qs;
 };
+
 PostSchema.methods.getContent = async function getContent() {
   return this.blocked ? '' : this.content;
 };
+
 PostSchema.methods.quoteCount = async function quoteCount() {
   const count = await PostModel.find({ quoteSuids: this.suid }).countDocuments().exec();
   return count;
