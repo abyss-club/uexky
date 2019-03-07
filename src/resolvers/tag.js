@@ -1,8 +1,10 @@
 import TagModel from '~/models/tag';
-import ConfigModel from '~/models/config';
 
 const Query = {
-  tags: () => ({ mainTags: ConfigModel.getMainTags() }),
+  tags: async () => {
+    const mainTags = await TagModel.getMainTags();
+    return { mainTags };
+  },
 };
 
 // Default Types Resolvers:
