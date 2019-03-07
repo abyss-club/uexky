@@ -10,7 +10,7 @@ import PostModel from './post';
 const SchemaObjectId = mongoose.ObjectId;
 
 const ThreadSchema = new mongoose.Schema({
-  suid: { type: String, required: true, unique: true },
+  suid: { type: String, required: true },
   anonymous: Boolean,
   author: String,
   userId: SchemaObjectId,

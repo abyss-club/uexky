@@ -2,13 +2,9 @@ import mongoose from 'mongoose';
 import { Base64 } from '~/uid';
 
 const AuthSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
   authCode: { type: String, required: true },
-  createdAt: {
-    type: Date,
-    index: { expireAfterSeconds: 1200 },
-    required: true,
-  },
+  createdAt: { type: Date, required: true },
 });
 
 AuthSchema.statics.addToAuth = async function addToAuth(email, code) {
