@@ -26,11 +26,13 @@ const rateLimitObjSchema = Joi.object().keys({
   mutLimit: Joi.number().integer().min(0).default(30),
   mutResetTime: Joi.number().integer().min(0).default(3600),
 });
+
 const rateCostObjSchema = Joi.object().keys({
   createUser: Joi.number().integer().min(0).default(30),
   pubThread: Joi.number().integer().min(0).default(10),
   pubPost: Joi.number().integer().min(0).default(1),
 });
+
 const configObjSchema = Joi.object().keys({
   rateLimit: rateLimitObjSchema.default(rateLimitObjSchema.validate({}).value),
   rateCost: rateCostObjSchema.default(rateCostObjSchema.validate({}).value),

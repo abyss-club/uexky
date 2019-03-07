@@ -68,10 +68,12 @@ ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
 
   return threadDoc;
 };
+
 ThreadSchema.statics.findByUid = async function findByUid(uid) {
   const thread = await ThreadModel.findOne({ suid: Uid.encode(uid) }).exec();
   return thread;
 };
+
 ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
   tags = [], sliceQuery,
 ) {
@@ -91,9 +93,11 @@ ThreadSchema.methods.uid = function uid() {
   if (!this.CACHED_UID) this.CACHED_UID = Uid.decode(this.suid);
   return this.CACHED_UID;
 };
+
 ThreadSchema.methods.getContent = function getContent() {
   return this.blocked ? '' : this.content;
 };
+
 ThreadSchema.methods.replies = async function replies(query) {
   const option = {
     query: { threadId: this.suid },
@@ -105,9 +109,11 @@ ThreadSchema.methods.replies = async function replies(query) {
   const result = await findSlice(query, PostModel, option);
   return result;
 };
+
 ThreadSchema.methods.replyCount = function replyCount() {
   return this.catalog.length;
 };
+
 ThreadSchema.methods.onPubPost = async function onPubPost(post, opt) {
   await ThreadModel.updateOne({ suid: this.suid }, {
     $push: { catalog: { postId: post.suid, createdAt: post.createdAt } },

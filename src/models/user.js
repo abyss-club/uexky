@@ -1,13 +1,12 @@
 import mongoose from 'mongoose';
 
-import Uid from '~/uid';
 import validator from '~/utils/validator';
 import findSlice from '~/models/base';
 import PostModel from '~/models/post';
 import ThreadModel from '~/models/thread';
+import UserAidModel from '~/models/userAid';
+import UserPostsModel from '~/models/userPosts';
 import { ParamsError, AuthError, InternalError } from '~/utils/error';
-
-const SchemaObjectId = mongoose.ObjectId;
 
 // MODEL: User
 //        storage user info.
@@ -31,6 +30,7 @@ const UserSchema = new mongoose.Schema({
     range: [String],
   },
 });
+
 UserSchema.methods.author = async function author(threadSuid, anonymous) {
   if (anonymous) {
     const aid = await UserAidModel.getAid(this._id, threadSuid);
@@ -41,6 +41,7 @@ UserSchema.methods.author = async function author(threadSuid, anonymous) {
   }
   return this.name;
 };
+
 UserSchema.methods.posts = async function posts(sliceQuery) {
   const option = {
     query: { userId: this._id },
@@ -53,10 +54,12 @@ UserSchema.methods.posts = async function posts(sliceQuery) {
   const userPosts = await findSlice(sliceQuery, UserPostsModel, option);
   return userPosts;
 };
+
 UserSchema.methods.getRole = async function getRole() {
   const { role, tags } = this.role || {};
   return { role: role || 0, tags: tags || [] };
 };
+
 UserSchema.methods.onPubPost = async function onPubPost(
   thread, post, { session },
 ) {
@@ -78,6 +81,7 @@ UserSchema.methods.onPubPost = async function onPubPost(
     },
   }, { session, upsert: true });
 };
+
 UserSchema.methods.onPubThread = async function onPubThread(thread, { session }) {
   await UserPostsModel.updateOne({
     userId: this._id,
@@ -90,6 +94,7 @@ UserSchema.methods.onPubThread = async function onPubThread(thread, { session })
     $set: { updatedAt: Date() },
   }, { session, upsert: true });
 };
+
 UserSchema.methods.setName = async function setName(name) {
   if (!validator.isUnicodeLength(name, { max: 15 })) {
     throw new ParamsError('Max length of username is 15.');
@@ -101,11 +106,13 @@ UserSchema.methods.setName = async function setName(name) {
   const result = await UserModel.findOne({ _id: this._id }).exec();
   return result;
 };
+
 UserSchema.methods.syncTags = async function syncTags(tags) {
   await UserModel.updateOne({ _id: this._id }, { tags: tags || [] }).exec();
   const result = await UserModel.findOne({ _id: this._id }).exec();
   return result;
 };
+
 UserSchema.methods.addSubbedTags = async function addSubbedTags(tags) {
   if (!Array.isArray(tags) || !tags.length) {
     throw new ParamsError('Provided tags is not a non-empty array.');
@@ -117,6 +124,7 @@ UserSchema.methods.addSubbedTags = async function addSubbedTags(tags) {
   const result = await UserModel.findOne({ _id: this._id }).exec();
   return result;
 };
+
 UserSchema.methods.delSubbedTags = async function delSubbedTags(tags) {
   if (!Array.isArray(tags) || !tags.length) {
     throw new ParamsError('Provided tags is not a non-empty array.');
@@ -128,6 +136,7 @@ UserSchema.methods.delSubbedTags = async function delSubbedTags(tags) {
   const result = await UserModel.findOne({ _id: this._id }).exec();
   return result;
 };
+
 UserSchema.methods.ensurePermission = function ensurePermission(
   targetUser, action, tag,
 ) {
@@ -147,6 +156,7 @@ UserSchema.methods.ensurePermission = function ensurePermission(
     throw new Error('Premitted Error');
   }
 };
+
 UserSchema.methods.banUser = async function banUser(postUid) {
   const post = await PostModel.findByUid(postUid);
   const thread = await ThreadModel.findOne({ suid: post.threadSuid }).exec();
@@ -157,6 +167,7 @@ UserSchema.methods.banUser = async function banUser(postUid) {
     { $set: { 'role.role': ROLES.Banned } },
   ).exec();
 };
+
 UserSchema.methods.blockPost = async function blockPost(postUid) {
   const post = await PostModel.findByUid(postUid);
   const thread = await ThreadModel.findOne({ suid: post.threadSuid }).exec();
@@ -164,18 +175,21 @@ UserSchema.methods.blockPost = async function blockPost(postUid) {
   this.ensurePermission(target, ACTIONS.BLOCK_POST, thread.mainTag);
   await PostModel.updateOne({ _id: post._id }, { $set: { blocked: true } }).exec();
 };
+
 UserSchema.methods.lockThread = async function lockThread(threadUid) {
   const thread = await ThreadModel.findByUid(threadUid);
   const target = await UserModel.findOne({ _id: thread.userId }).exec();
   this.ensurePermission(target, ACTIONS.LOCK_THREAD, thread.mainTag);
   await ThreadModel.updateOne({ _id: thread._id }, { $set: { locked: true } }).exec();
 };
+
 UserSchema.methods.blockThread = async function blockThread(threadUid) {
   const thread = await ThreadModel.findByUid(threadUid);
   const target = await UserModel.findOne({ _id: thread.userId }).exec();
   this.ensurePermission(target, ACTIONS.BLOCK_THREAD, thread.mainTag);
   await ThreadModel.updateOne({ _id: thread._id }, { $set: { blocked: true } }).exec();
 };
+
 UserSchema.methods.editTags = async function editTags(
   threadUid, mainTag, subTags,
 ) {
@@ -187,47 +201,11 @@ UserSchema.methods.editTags = async function editTags(
     { $set: { mainTag, subTags } },
   ).exec();
 };
+
 UserSchema.methods.setReadNotiTime = async function setReadNotiTime(type, time) {
   const notiType = `readNotiTime.${type}`;
   await UserModel.updateOne({ _id: this._id }, { $set: { [notiType]: time } });
 };
-// MODEL: UserAid
-//        used for save anonymousId for user in threads.
-const UserAidSchema = new mongoose.Schema({
-  userId: SchemaObjectId,
-  threadSuid: String,
-  anonymousId: String, // format: Uid
-});
-
-UserAidSchema.statics.getAid = async function getAid(userId, threadSuid) {
-  const result = await UserAidModel.findOneAndUpdate({
-    userId, threadSuid,
-  }, {
-    $setOnInsert: {
-      userId,
-      threadSuid,
-      anonymousId: Uid.decode(await Uid.newSuid()),
-    },
-    $set: { updatedAt: Date() },
-  }, { new: true, upsert: true }).exec();
-  return result.anonymousId;
-};
-
-const UserAidModel = mongoose.model('UserAid', UserAidSchema);
-
-// MODEL: UserPosts
-//        used for querying user's posts grouped by thread.
-const UserPostsSchema = new mongoose.Schema({
-  userId: SchemaObjectId,
-  threadSuid: String,
-  updatedAt: Date,
-  posts: [{
-    suid: String,
-    createdAt: Date,
-    anonymous: Boolean,
-  }],
-}, { autoCreate: true });
-const UserPostsModel = mongoose.model('UserPosts', UserPostsSchema);
 
 UserSchema.statics.getUserByEmail = async function getUserByEmail(email) {
   try {
@@ -272,6 +250,4 @@ const ROLES_ACTIONS = {
 
 const UserModel = mongoose.model('User', UserSchema);
 export default UserModel;
-export {
-  UserAidModel, UserPostsModel, ensureSignIn,
-};
+export { ensureSignIn };
