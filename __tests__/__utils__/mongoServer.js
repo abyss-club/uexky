@@ -11,6 +11,7 @@ const opts = {
   useNewUrlParser: true,
   useCreateIndex: true,
   useFindAndModify: false,
+  autoIndex: false,
 };
 
 const startMongo = async () => {
