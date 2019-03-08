@@ -11,15 +11,15 @@ const index = (model, spec, opt) => model.collection.createIndex(
   spec, { ...opt, background: true },
 );
 
-async function createIndexes() {
-  await Promise.all([
+function createIndexes() {
+  return Promise.all([
     index(AuthModel, { email: 1 }, { unique: true }),
     index(AuthModel, { authCode: 1 }, {}),
-    index(AuthModel, { createdAt: 1 }, { expireAfterSeconds: 1200 }),
+    index(AuthModel, { createdAt: 1 }, { expireAfterSeconds: 1200 }), // 20 minutes
 
     index(NotificationModel, { send_to: 1, type: 1, eventTime: 1 }, {}),
     index(NotificationModel, { send_to_group: 1, type: 1, eventTime: 1 }, {
-      partialFilterExpression: { send_to_group: { $exist: true } },
+      partialFilterExpression: { send_to_group: { $exists: true } },
     }),
 
     index(PostModel, { suid: 1 }, { unique: true }),
