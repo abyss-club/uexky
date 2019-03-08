@@ -4,16 +4,15 @@ import env from '~/utils/env';
 import log from '~/utils/log';
 import createIndexes from '~/models/indexes';
 
-mongoose.connect(env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useCreateIndex: true,
-  useFindAndModify: false,
-});
+const result = (async () => {
+  await mongoose.connect(env.MONGODB_URI, {
+    useNewUrlParser: true,
+    useCreateIndex: true,
+    useFindAndModify: false,
+    autoIndex: false,
+  });
+  await createIndexes();
+  await mongoose.disconnect();
+})();
 
-createIndexes().then(() => {
-  log.info('created indexes!');
-  process.exit();
-}).catch((err) => {
-  log.error(err);
-  process.exit(1);
-});
+log.info(`${result}`);
