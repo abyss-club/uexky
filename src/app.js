@@ -6,7 +6,7 @@ import cors from '@koa/cors';
 import schema from '~/schema';
 import log from '~/utils/log';
 import env from '~/utils/env';
-import AuthModel from '~/models/auth';
+import AuthModel, { expireTime } from '~/models/auth';
 import UserModel from '~/models/user';
 import ConfigModel from '~/models/config';
 import createRateLimiter, { createIdleRateLimiter } from '~/utils/rateLimit';
@@ -17,14 +17,29 @@ const endpoints = {
   auth: '/auth',
 };
 
+function setCookie(ctx, token) {
+  const opts = {
+    path: '/',
+    domain: env.DOMAIN,
+    maxAge: expireTime.token,
+    httpOnly: true,
+    overwrite: true,
+  };
+  if (env.PROTO === 'https') {
+    opts.secure = true;
+  }
+  ctx.cookies.set('token', token, opts);
+}
+
 function authMiddleware() {
   return async (ctx, next) => {
-    const token = ctx.cookies.get('token');
-    if (ctx.url === endpoints.graphql) {
+    const token = ctx.cookies.get('token') || '';
+    if ((ctx.url === endpoints.graphql) && (token !== '')) {
       try {
         const email = await TokenModel.getEmailByToken(token);
-        const user = await UserModel.getUserByEmail(email);
+        const user = await UserModel.getUserByEmail(email, true);
         ctx.user = user;
+        setCookie(ctx, token);
       } catch (e) {
         if (e.authError) ctx.user = null;
         else throw new Error(e);
@@ -90,19 +105,10 @@ router.get(endpoints.auth, async (ctx, next) => {
     try {
       const email = await AuthModel.getEmailByCode(ctx.query.code);
       const token = await TokenModel.genNewToken(email);
-      const expiry = new Date(token.createdAt);
-      expiry.setDate(expiry.getDate() + 20); // TODO(tangwenhan): time setting
-      ctx.body = token;
-      ctx.cookies.set('token', token.authToken, {
-        path: '/',
-        domain: env.API_DOMAIN,
-        httpOnly: true,
-        overwrite: true,
-        expires: expiry,
-      });
-      ctx.response.status = 302;
+      setCookie(ctx, token);
       ctx.response.header.set('Location', `${env.PROTO}://${env.DOMAIN}`);
       ctx.response.header.set('Cache-Control', 'no-cache, no-store');
+      ctx.response.status = 302;
     } catch (e) {
       log.error(e);
       ctx.throw(401, e);
