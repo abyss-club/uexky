@@ -1,22 +1,18 @@
 import mongoose from 'mongoose';
 
-import app from '~/app';
-import log from '~/utils/log';
 import env from '~/utils/env';
+import log from '~/utils/log';
+import createIndexes from '~/models/indexes';
 
-(async () => {
+const result = (async () => {
   await mongoose.connect(env.MONGODB_URI, {
     useNewUrlParser: true,
     useCreateIndex: true,
     useFindAndModify: false,
     autoIndex: false,
   });
-})();
-
-log.info('run uexky at env:', env);
-app.listen(env.PORT);
-log.info(`Listening to http://localhost:${env.PORT} 🚀`);
-
-(async () => {
+  await createIndexes();
   await mongoose.disconnect();
 })();
+
+log.info(`${result}`);

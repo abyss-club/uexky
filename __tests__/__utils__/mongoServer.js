@@ -3,6 +3,7 @@ import sleep from 'sleep-promise';
 import MongoMemoryServer, { MongoMemoryReplSet } from 'mongodb-memory-server';
 
 import log from '~/utils/log';
+// import createIndexes from '~/models/indexes';
 
 let mongoServer;
 let replSet;
@@ -10,6 +11,7 @@ const opts = {
   useNewUrlParser: true,
   useCreateIndex: true,
   useFindAndModify: false,
+  autoIndex: false,
 };
 
 const startMongo = async () => {
@@ -18,6 +20,7 @@ const startMongo = async () => {
   await mongoose.connect(mongoUri, opts, (err) => {
     if (err) log.error(err);
   });
+  // await createIndexes();
   return mongoServer;
 };
 
@@ -36,7 +39,7 @@ const startRepl = async () => {
   await mongoose.connect(mongoUri, opts, (err) => {
     if (err) log.error(err);
   });
-
+  // await createIndexes();
   return replSet;
 };
 
