@@ -3,14 +3,9 @@ import { AuthError } from '~/utils/error';
 import { Base64 } from '~/uid';
 
 const TokenSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
   authToken: { type: String, required: true },
-  createdAt: {
-    type: Date,
-    // 20 days
-    index: { expireAfterSeconds: 1728000 },
-    required: true,
-  },
+  createdAt: { type: Date, required: true },
 });
 
 TokenSchema.statics.genNewToken = async function genNewToken(email) {

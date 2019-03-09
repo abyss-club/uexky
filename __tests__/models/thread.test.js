@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 import { startRepl } from '../__utils__/mongoServer';
 
-import UserModel, { UserPostsModel } from '~/models/user';
+import UserModel from '~/models/user';
+import UserPostsModel from '~/models/userPosts';
 import ThreadModel from '~/models/thread';
 import TagModel from '~/models/tag';
 

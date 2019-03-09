@@ -11,6 +11,7 @@ TagSchema.statics.getMainTags = async function getMainTags() {
   const tags = await TagModel.find({ isMain: true }).exec();
   return tags.map(tag => tag.name);
 };
+
 TagSchema.statics.addMainTag = async function addMainTag(name) {
   const tag = await TagModel.create({ name, isMain: true });
   return tag;
