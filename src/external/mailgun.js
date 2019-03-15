@@ -1,30 +1,50 @@
 import Mailgun from 'mailgun-js';
 
-import log from '~/utils/log';
 import env from '~/utils/env';
+import log from '~/utils/log';
 
-const mailgun = new Mailgun({
-  apiKey: env.MAILGUN_PRIVATE_KEY, domain: env.MAILGUN_DOMAIN,
-});
+let mailgun = null;
 
-export default ({ sendTo, authCode }) => {
-  const mailData = {
-    // Specify email data
-    from: env.MAILGUN_SENDER,
-    // The email to contact
-    to: sendTo,
-    // Subject and text data
-    subject: 'Hello from Mailgun',
-    html: `Hello, This is not a plain-text email, I wanted to test some spicy Mailgun sauce in NodeJS! Authcode is ${authCode} .`,
+const init = (obj) => {
+  if (!obj) {
+    mailgun = new Mailgun({
+      apiKey: env.MAILGUN_PRIVATE_KEY,
+      domain: env.MAILGUN_DOMAIN,
+    });
+  } else {
+    mailgun = obj;
+  }
+};
+
+const sendAuthMail = (code, email) => new Promise(((resolve, reject) => {
+  const codeUrl = `${env.API_DOMAIN}/auth/?code=${code}`;
+  const mail = {
+    from: `Abyss <auth@${env.MAILGUN_DOMAIN}>`,
+    to: email,
+    subject: '点击登入 Abyss!',
+    text: `点击此链接进入 Abyss：${codeUrl}`,
+    html: `<html>
+  <head>
+      <meta charset="utf-8">
+      <title>点击登入 Abyss!</title>
+  </head>
+  <body>
+      <p>点击 <a href="${codeUrl}">此链接</a> 进入 Abyss</p>
+  </body>
+</html>`,
   };
-  mailgun.messages().send(mailData, (err, body) => {
-    // If there is an error, render the error page
+  if (!mailgun) {
+    init();
+  }
+  mailgun.messages().send(mail, (err, body) => {
     if (err) {
-      log.error(err);
+      reject(err);
     } else {
-      // Here "submitted.jade" is the view file for this landing page
-      // We pass the variable "email" from the url parameter in an object rendered by Jade
-      log.info('send message', body);
+      log.info(`send auth email to ${email}, res = ${body}`);
+      resolve(body);
     }
   });
-};
+}));
+
+export default sendAuthMail;
+export { init };
