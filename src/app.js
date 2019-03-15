@@ -100,7 +100,7 @@ function logMiddleware() {
 const router = new Router();
 router.get(endpoints.auth, async (ctx, next) => {
   if (!ctx.query.code || ctx.query.code.length !== 36) {
-    ctx.body = 'Incorrect authentication code';
+    ctx.throw(400, '验证信息格式错误');
   } else {
     try {
       const email = await AuthModel.getEmailByCode(ctx.query.code);
@@ -111,7 +111,7 @@ router.get(endpoints.auth, async (ctx, next) => {
       ctx.response.status = 302;
     } catch (e) {
       log.error(e);
-      ctx.throw(401, e);
+      ctx.throw(401, '验证信息错误或已失效');
     }
   }
   await next();

@@ -49,7 +49,7 @@ describe('decode/encode', () => {
 test('timestamp reverse', () => {
   const suid = '800000000000000';
   // 1000-0000-0000-0000-0000-0000-0000-0000 = 80000000
-  // 000000-000000-000000-000000-0000000-010000 = AAAAAg
+  // 000000-000000-000000-000000-0000000-010000 = AAAAAQ
   const uid = Uid.decode(suid);
   expect(uid.substring(0, 6)).toEqual('AAAAAQ');
 });

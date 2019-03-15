@@ -4,7 +4,6 @@ const env = {
   REDIS_URI: process.env.REDIS_URI || 'redis://localhost:6379/0',
 
   MAINGUN_PRIVATE_KEY: process.env.MAINGUN_PRIVATE_KEY,
-  MAINGUN_SENDER: process.env.MAINGUN_SENDER,
   MAINGUN_DOMAIN: process.env.MAINGUN_DOMAIN,
 
   DOMAIN: process.env.DOMAIN,
