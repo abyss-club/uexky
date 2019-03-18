@@ -1,26 +1,26 @@
-import mongoose from 'mongoose';
-import { startMongo } from '../__utils__/mongoServer';
+import { startRepl } from '../__utils__/mongoServer';
 import TokenModel from '~/models/token';
 
-// May require additional time for downloading MongoDB binaries
-// jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
+jest.setTimeout(60000);
 
-let mongoServer;
+let replSet;
+let mongoClient;
+let ctx;
 
 beforeAll(async () => {
-  mongoServer = await startMongo();
+  ({ replSet, mongoClient } = await startRepl());
 });
 
 afterAll(() => {
-  mongoose.disconnect();
-  mongoServer.stop();
+  mongoClient.close();
+  replSet.stop();
 });
 
 describe('Testing token', () => {
   const mockEmail = 'test@example.com';
   it('validate token by email', async () => {
-    const tokenResult = await TokenModel.genNewToken(mockEmail);
-    const emailResult = await TokenModel.getEmailByToken(tokenResult.authToken);
+    const tokenResult = await TokenModel(ctx).genNewToken(mockEmail);
+    const emailResult = await TokenModel(ctx).getEmailByToken(tokenResult.authToken);
     expect(emailResult).toEqual(mockEmail);
   });
 });

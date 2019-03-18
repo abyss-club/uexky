@@ -1,18 +1,19 @@
 import gql from 'graphql-tag';
-import mongoose from 'mongoose';
-import { startMongo } from '../__utils__/mongoServer';
+import { startRepl } from '../__utils__/mongoServer';
 
 import { query, mutate } from '../__utils__/apolloClient';
 
-let mongoServer;
+jest.setTimeout(60000);
+let replSet;
+let mongoClient;
 
 beforeAll(async () => {
-  mongoServer = await startMongo();
+  ({ replSet, mongoClient } = await startRepl());
 });
 
 afterAll(() => {
-  mongoose.disconnect();
-  mongoServer.stop();
+  mongoClient.close();
+  replSet.stop();
 });
 
 // const EDIT_TAGS = gql`

@@ -1,39 +1,40 @@
-import mongoose from 'mongoose';
-import { startMongo } from '../__utils__/mongoServer';
-
+import { startRepl } from '../__utils__/mongoServer';
+import dbClient from '~/dbClient';
 import { Base64 } from '~/uid';
 import AuthModel from '~/models/auth';
 
-// May require additional time for downloading MongoDB binaries
-// jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
+jest.setTimeout(60000);
 
-let mongoServer;
+let replSet;
+let mongoClient;
+let ctx; // placeholder
+// let db;
 
 beforeAll(async () => {
-  mongoServer = await startMongo();
+  ({ replSet, mongoClient } = await startRepl());
 });
 
 afterAll(() => {
-  mongoose.disconnect();
-  mongoServer.stop();
+  mongoClient.close();
+  replSet.stop();
 });
+
+const AUTH = 'auth';
 
 describe('Testing auth', () => {
   const authCode = Base64.randomString(36);
   const mockEmail = 'test@example.com';
   it('add user', async () => {
     const email = mockEmail;
-    // const newAuth = { email, authCode, createdAt: new Date() };
-    // await AuthModel.update({ email }, newAuth, { upsert: true });
-    await AuthModel.addToAuth(mockEmail, authCode);
-    const result = await AuthModel.findOne({ email }).exec();
+    await AuthModel(ctx).addToAuth({ email: mockEmail, authCode });
+    const result = await dbClient.collection(AUTH).findOne({ email });
     expect(result.email).toEqual(mockEmail);
     expect(result.authCode).toEqual(authCode);
   });
   it('validate user authCode for only once', async () => {
-    const result = await AuthModel.getEmailByCode(authCode);
+    const result = await AuthModel(ctx).getEmailByCode({ authCode });
     expect(result).toEqual(mockEmail);
-    const deletedResult = await AuthModel.findOne({ authCode }).exec();
+    const deletedResult = await dbClient.collection(AUTH).findOne({ authCode });
     expect(deletedResult).toBeNull();
   });
 });

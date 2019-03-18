@@ -1,29 +1,29 @@
-import mongoose from 'mongoose';
-import { startMongo } from '../__utils__/mongoServer';
+import { startRepl } from '../__utils__/mongoServer';
+import { ObjectId } from 'bson-ext';
 
 import Uid from '~/uid';
 import NotificationModel from '~/models/notification';
 import UserModel from '~/models/user';
 
-// May require additional time for downloading MongoDB binaries
-// jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
-
-let mongoServer;
+jest.setTimeout(60000); // for boot replica sets
+let replSet;
+let mongoClient;
+// let db;
 
 beforeAll(async () => {
-  mongoServer = await startMongo();
+  ({ replSet, mongoClient } = await startRepl());
 });
 
 afterAll(() => {
-  mongoose.disconnect();
-  mongoServer.stop();
+  mongoClient.close();
+  replSet.stop();
 });
 
 const mockEmail = 'test@example.com';
 const mockReplierEmail = 'replier@example.com';
-const threadId = mongoose.Types.ObjectId();
-const post1Id = mongoose.Types.ObjectId();
-const post2Id = mongoose.Types.ObjectId();
+const threadId = ObjectId();
+const post1Id = ObjectId();
+const post2Id = ObjectId();
 let threadSuid;
 let post1Suid;
 let post2Suid;
@@ -39,21 +39,21 @@ describe('Testing notification', () => {
     post1Suid = await Uid.newSuid();
     post2Suid = await Uid.newSuid();
 
-    const mockUser = await UserModel.getUserByEmail(mockEmail);
-    const mockReplier = await UserModel.getUserByEmail(mockReplierEmail);
+    const mockUser = await UserModel().getUserByEmail(mockEmail);
+    const mockReplier = await UserModel().getUserByEmail(mockReplierEmail);
     const mockThread = {
       _id: threadId,
       suid: threadSuid,
       uid: () => (Uid.decode(threadSuid)),
       anonymous: true,
       userId: mockUser._id,
+      author: await UserModel().methods(mockUser).author(threadSuid, true),
       tags: ['MainA'],
       locked: false,
       blocked: false,
       createdAt: threadTime,
       updatedAt: threadTime,
     };
-    mockThread.author = await mockUser.author(mockThread.suid, mockThread.anonymous);
 
     const mockPost1 = {
       _id: post1Id,
@@ -62,7 +62,7 @@ describe('Testing notification', () => {
       userId: mockUser._id,
       threadId,
       anonymous: true,
-      author: await mockUser.author(threadId, true),
+      author: await UserModel().methods(mockUser).author(threadSuid, true),
       createdAt: post1Time,
       updatedAt: post1Time,
       blocked: false,
@@ -77,7 +77,7 @@ describe('Testing notification', () => {
       userId: mockReplier._id,
       threadId,
       anonymous: true,
-      author: await mockReplier.author(threadId, true),
+      author: await UserModel().methods(mockReplier).author(threadSuid, true),
       createdAt: post2Time,
       updatedAt: post2Time,
       blocked: false,
@@ -85,10 +85,10 @@ describe('Testing notification', () => {
       content: 'Post2',
     };
 
-    await NotificationModel.sendQuotedNoti(mockPost2, mockThread, [mockPost1]);
-    await NotificationModel.sendRepliedNoti(mockPost2, mockThread);
+    await NotificationModel().sendQuotedNoti(mockPost2, mockThread, [mockPost1]);
+    await NotificationModel().sendRepliedNoti(mockPost2, mockThread);
 
-    const quotedResult = await NotificationModel.getNotiSlice(mockUser, 'quoted', { after: '', limit: 10 });
+    const quotedResult = await NotificationModel().getNotiSlice(mockUser, 'quoted', { after: '', limit: 10 });
     const { quoted, sliceInfo: quotedSliceInfo } = quotedResult;
     expect(quoted[0].id).toEqual(`quoted:${mockPost2.uid()}:${mockPost1.uid()}`);
     expect(quoted[0].eventTime).toEqual(post2Time);
@@ -104,7 +104,7 @@ describe('Testing notification', () => {
     expect(quotedSliceInfo.hasNext).toBe(false);
 
 
-    const repResult = await NotificationModel.getNotiSlice(mockUser, 'replied', { after: '', limit: 10 });
+    const repResult = await NotificationModel().getNotiSlice(mockUser, 'replied', { after: '', limit: 10 });
     const { replied, sliceInfo: repSliceInfo } = repResult;
     expect(replied[0].id).toEqual(`replied:${mockThread.uid()}`);
     expect(replied[0].eventTime).toEqual(post2Time);

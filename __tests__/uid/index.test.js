@@ -1,9 +1,6 @@
-import mongoose from 'mongoose';
-import { startMongo } from '../__utils__/mongoServer';
+import { startRepl } from '../__utils__/mongoServer';
 
 import Uid, { Base64 } from '~/uid';
-
-let mongoServer;
 
 describe('Base64', () => {
   const pairs = [
@@ -29,12 +26,15 @@ describe('Base64', () => {
 });
 
 describe('decode/encode', () => {
+  jest.setTimeout(60000);
+  let replSet;
+  let mongoClient;
   beforeEach(async () => {
-    mongoServer = await startMongo();
+    ({ replSet, mongoClient } = await startRepl());
   });
   afterEach(() => {
-    mongoose.disconnect();
-    mongoServer.stop();
+    mongoClient.close();
+    replSet.stop();
   });
   test('Generator id, decode, and encode', async () => {
     const suid = await Uid.newSuid();
