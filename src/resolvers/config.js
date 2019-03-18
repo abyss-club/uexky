@@ -8,8 +8,8 @@ const Query = {
 };
 
 const Mutation = {
-  editConfig: async (obj, { config }) => {
-    const newConfig = await ConfigModel.setConfig(config);
+  editConfig: async (obj, { config }, ctx) => {
+    const newConfig = await ConfigModel(ctx).setConfig(config);
     return newConfig;
   },
 };

@@ -3,13 +3,13 @@ import ThreadModel from '~/models/thread';
 const Query = {
   threadSlice: async (obj, { tags, query }, ctx) => {
     await ctx.limiter.take(query.limit);
-    const threadSlice = await ThreadModel.getThreadSlice(tags, query);
+    const threadSlice = await ThreadModel(ctx).getThreadSlice(tags, query);
     return threadSlice;
   },
 
   thread: async (obj, { id }, ctx) => {
     await ctx.limiter.take(1);
-    const thread = await ThreadModel.findByUid(id);
+    const thread = await ThreadModel(ctx).findByUid(id);
     return thread;
   },
 };
@@ -18,7 +18,8 @@ const Mutation = {
   pubThread: async (obj, { thread }, ctx) => {
     const { rateCost } = ctx.config;
     await ctx.limiter.take(rateCost.pubThread);
-    const newThread = await ThreadModel.pubThread(ctx, thread);
+    const newThread = await ThreadModel(ctx).pubThread(ctx, thread);
+    newThread.replyCount = 0;
     return newThread;
   },
 };
@@ -32,11 +33,11 @@ const Mutation = {
 //   ThreadSlice:
 //     thread, sliceInfo
 const Thread = {
-  id: thread => thread.uid(),
-  content: thread => thread.getContent(),
+  id: (thread, _, ctx) => ThreadModel(ctx).methods(thread).uid(),
+  content: (thread, _, ctx) => ThreadModel(ctx).methods(thread).getContent(),
   replies: async (thread, query, ctx) => {
     await ctx.limiter.take(query.limit);
-    const result = await thread.replies(query);
+    const result = await ThreadModel(ctx).methods(thread).replies(query);
     return result;
   },
 };

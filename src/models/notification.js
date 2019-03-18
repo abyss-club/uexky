@@ -1,127 +1,175 @@
-import mongoose from 'mongoose';
+import JoiBase from 'joi';
+import JoiObjectId from '~/utils/joiObjectId';
+import dbClient from '~/dbClient';
 import findSlice from '~/models/base';
 import { ParamsError } from '~/utils/error';
 import { timeZero } from '~/uid/generator';
+import { ObjectId } from 'bson-ext';
+import log from '~/utils/log';
 
-const { ObjectId } = mongoose.Types;
-const SchemaObjectId = mongoose.ObjectId;
+import ThreadModel from './thread';
+import UserModel from './user';
+import PostModel from './post';
+
+const Joi = JoiBase.extend(JoiObjectId);
+const NOTIFICATION = 'notification';
+const col = () => dbClient.collection(NOTIFICATION);
+
 const notiTypes = ['system', 'replied', 'quoted'];
 const isValidType = type => notiTypes.findIndex(t => t === type) !== -1;
 const userGroups = {
   AllUser: 'all_user',
 };
 
-const NotificationSchema = new mongoose.Schema({
-  id: String,
-  type: { type: String, enum: notiTypes },
-  sendTo: SchemaObjectId,
-  sendToGroup: { type: String, enum: ['all'] },
-  eventTime: Date,
-  system: {
-    title: String,
-    content: String,
-  },
-  replied: {
-    threadId: String,
-    repliers: [String],
-    replierIds: [SchemaObjectId],
-  },
+const notificationSchema = Joi.object().keys({
+  id: Joi.string().required(),
+  type: Joi.string().valid(notiTypes).required(),
+  sendTo: Joi.objectId(),
+  sendToGroup: Joi.string().valid('all'),
+  eventTime: Joi.date(),
+  system: Joi.object().keys({
+    title: Joi.string(),
+    content: Joi.string(),
+  }),
+  replied: Joi.object().keys({
+    threadId: Joi.string(),
+    repliers: Joi.array().items(Joi.string()),
+    replierIds: Joi.array().items(Joi.objectId()),
+  }),
   quoted: {
-    threadId: String,
-    postId: String,
-    quotedPostId: String,
-    quoter: String,
-    quoterId: SchemaObjectId,
+    threadId: Joi.string(),
+    postId: Joi.string(),
+    quotedPostId: Joi.string(),
+    quoter: Joi.string(),
+    quoterId: Joi.objectId(),
   },
-}, { id: false, autoCreate: true });
+});
 
-NotificationSchema.statics.sendRepliedNoti = async function sendRepliedNoti(
-  post, thread, opt,
-) {
-  const option = { ...opt, upsert: true };
-  const threadUid = thread.uid();
-  await NotificationModel.updateOne({
-    id: `replied:${threadUid}`,
-  }, {
-    $setOnInsert: {
+const NotificationModel = ctx => ({
+  sendRepliedNoti: async function sendRepliedNoti(
+    post, thread, opt,
+  ) {
+    const option = { ...opt, upsert: true };
+    const threadUid = ThreadModel(ctx).methods(thread).uid();
+
+    const { error } = notificationSchema.validate({
       id: `replied:${threadUid}`,
       type: 'replied',
       sendTo: thread.userId,
-      'replied.threadId': threadUid,
-    },
-    $set: {
       eventTime: post.createdAt,
-    },
-    $addToSet: {
-      'replied.repliers': post.author,
-      'replied.replierIds': post.userId,
-    },
-  }, option).exec();
-};
-
-NotificationSchema.statics.sendQuotedNoti = async function sendQuotedNoti(
-  post, thread, quotedPosts, opt,
-) {
-  const postUid = post.uid();
-  const threadUid = thread.uid();
-  await Promise.all(quotedPosts.map(async (qp) => {
-    NotificationModel.create({
-      id: `quoted:${postUid}:${qp.uid()}`,
-      type: 'quoted',
-      sendTo: qp.userId,
-      eventTime: post.createdAt,
-      quoted: {
+      replied: {
         threadId: threadUid,
-        postId: postUid,
-        quotedPostId: qp.uid(),
-        quoter: post.author,
-        quoterId: post.userId,
+        repliers: [post.author],
+        replierIds: [post.userId],
       },
-    }, opt);
-  }));
-};
+    });
 
-NotificationSchema.statics.getUnreadCount = async function getUnreadCount(
-  user, type,
-) {
-  if (!isValidType(type)) {
-    throw new ParamsError(`Invalid type: ${type}`);
-  }
+    if (error) {
+      log.error(error);
+      throw new ParamsError(`Notification validation failed, ${error}`);
+    }
 
-  const userReadNotiTime = user.readNotiTime[type] || timeZero;
-  const count = await NotificationModel.find({
-    $or: [
-      { send_to: user.ID },
-      { send_to_group: userGroups.AllUser },
-    ],
-    type,
-    eventTime: { $gt: userReadNotiTime },
-  }).countDocuments().exec();
-  return count;
-};
+    await col().updateOne({
+      id: `replied:${threadUid}`,
+    }, {
+      $setOnInsert: {
+        id: `replied:${threadUid}`,
+        type: 'replied',
+        sendTo: thread.userId,
+        'replied.threadId': threadUid,
+      },
+      $set: {
+        eventTime: post.createdAt,
+      },
+      $addToSet: {
+        'replied.repliers': post.author,
+        'replied.replierIds': post.userId,
+      },
+    }, option);
+  },
 
-NotificationSchema.statics.getNotiSlice = async function getNotiSlice(
-  user, type, sliceQuery,
-) {
-  if (!isValidType(type)) {
-    throw new ParamsError(`Invalid type: ${type}`);
-  }
-  if (!sliceQuery) {
-    throw new ParamsError('Invalid SliceQuery.');
-  }
-  const option = {
-    query: { type, $or: [{ sendTo: user._id }, { sendToGroup: 'all' }] },
-    desc: true,
-    field: '_id',
-    sliceName: type,
-    parse: value => ObjectId(value),
-    toCursor: value => value.toHexString(),
-  };
-  const result = await findSlice(sliceQuery, NotificationModel, option);
-  await user.setReadNotiTime(type, Date.now());
-  return result;
-};
+  sendQuotedNoti: async function sendQuotedNoti(
+    post, thread, quotedPosts, opt,
+  ) {
+    if (quotedPosts.length < 1) return;
 
-const NotificationModel = mongoose.model('Notification', NotificationSchema);
+    const postUid = PostModel(ctx).methods(post).uid();
+    const threadUid = ThreadModel(ctx).methods(thread).uid();
+
+    const validateQp = (qp) => {
+      const qpUid = PostModel(ctx).methods(qp).uid();
+      const { value, error } = notificationSchema.validate({
+        id: `quoted:${postUid}:${qpUid}`,
+        type: 'quoted',
+        sendTo: qp.userId,
+        eventTime: post.createdAt,
+        quoted: {
+          threadId: threadUid,
+          postId: postUid,
+          quotedPostId: qpUid,
+          quoter: post.author,
+          quoterId: post.userId,
+        },
+      });
+      if (error) {
+        log.error(error);
+        throw new ParamsError(`Notification validation failed, ${error}`);
+      }
+      return value;
+    };
+
+    const docs = quotedPosts.map(qp => (validateQp(qp)));
+    await col().insertMany(docs, opt);
+  },
+
+  getUnreadCount: async function getUnreadCount(
+    user, type,
+  ) {
+    if (!isValidType(type)) {
+      throw new ParamsError(`Invalid type: ${type}`);
+    }
+
+    let userReadNotiTime;
+    if (!user.readNotiTime || !user.readNotiTime[type]) {
+      userReadNotiTime = timeZero;
+    } else {
+      userReadNotiTime = user.readNotiTime[type];
+    }
+
+    const count = await col().find({
+      $or: [
+        { sendTo: user._id },
+        { sendToGroup: userGroups.AllUser },
+      ],
+      type,
+      eventTime: { $gt: userReadNotiTime },
+    }).count();
+
+    return count;
+  },
+
+  getNotiSlice: async function getNotiSlice(
+    user, type, sliceQuery,
+  ) {
+    if (!isValidType(type)) {
+      throw new ParamsError(`Invalid type: ${type}`);
+    }
+    if (!sliceQuery) {
+      throw new ParamsError('Invalid SliceQuery.');
+    }
+    const option = {
+      query: { type, $or: [{ sendTo: user._id }, { sendToGroup: 'all' }] },
+      desc: true,
+      field: '_id',
+      sliceName: type,
+      parse: value => ObjectId(value),
+      toCursor: value => value.toHexString(),
+    };
+    const result = await findSlice(sliceQuery, col(), option);
+    await UserModel(ctx).methods(user).setReadNotiTime(type, new Date());
+    return result;
+  },
+});
+
 export default NotificationModel;
 export { notiTypes };
