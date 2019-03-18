@@ -28,4 +28,16 @@ class InternalError extends Error {
   }
 }
 
-export { AuthError, ParamsError, InternalError };
+class PermissionError extends Error {
+  constructor(...params) {
+    super(...params);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, PermissionError);
+    }
+    this.internalError = true;
+  }
+}
+
+export {
+  AuthError, ParamsError, InternalError, PermissionError,
+};
