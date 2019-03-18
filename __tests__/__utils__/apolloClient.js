@@ -13,29 +13,29 @@ const mockUser = {
 
 const mockAltUser = {
   email: 'alt@example.com',
-  name: 'testUser',
+  name: 'altUser',
 };
 
 const server = new ApolloServer({
   schema,
   context: async () => {
-    const user = await UserModel.getUserByEmail(mockUser.email);
-    return { user, config: await ConfigModel.getConfig(), limiter: createIdleRateLimiter() };
+    const user = await UserModel().getUserByEmail(mockUser.email);
+    return { user, config: await ConfigModel().getConfig(), limiter: createIdleRateLimiter() };
   },
 });
 
 const serverBeforeAuth = new ApolloServer({
   schema,
   context: async () => ({
-    user: null, config: await ConfigModel.getConfig(), limiter: createIdleRateLimiter(),
+    user: null, config: await ConfigModel().getConfig(), limiter: createIdleRateLimiter(),
   }),
 });
 
 const serverAltUser = new ApolloServer({
   schema,
   context: async () => {
-    const user = await UserModel.getUserByEmail(mockAltUser.email);
-    return { user, config: await ConfigModel.getConfig(), limiter: createIdleRateLimiter() };
+    const user = await UserModel().getUserByEmail(mockAltUser.email);
+    return { user, config: await ConfigModel().getConfig(), limiter: createIdleRateLimiter() };
   },
 });
 

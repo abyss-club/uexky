@@ -1,58 +1,82 @@
-import mongoose from 'mongoose';
+// import { MongoClient } from 'mongodb';
+import { connectDb } from '~/dbClient';
 import sleep from 'sleep-promise';
-import MongoMemoryServer, { MongoMemoryReplSet } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
 import log from '~/utils/log';
 // import createIndexes from '~/models/indexes';
 
-let mongoServer;
-let replSet;
-const opts = {
-  useNewUrlParser: true,
-  useCreateIndex: true,
-  useFindAndModify: false,
-  autoIndex: false,
-};
+// let mongoServer;
+// let replSet;
 
-const startMongo = async () => {
-  mongoServer = new MongoMemoryServer({ instance: { storageEngine: 'wiredTiger' } });
-  const mongoUri = await mongoServer.getConnectionString();
-  await mongoose.connect(mongoUri, opts, (err) => {
-    if (err) log.error(err);
-  });
-  // await createIndexes();
-  return mongoServer;
-};
+// const options = {
+//   useNewUrlParser: true,
+// };
 
 const startRepl = async () => {
-  replSet = new MongoMemoryReplSet({
-    instanceOpts: [
-      { storageEngine: 'wiredTiger' },
-    ],
+  const replSet = new MongoMemoryReplSet({
+    replSet: {
+      count: 3,
+      storageEngine: 'wiredTiger',
+    },
   });
   await replSet.waitUntilRunning();
+  await sleep(5000);
   const mongoUri = `${await replSet.getConnectionString()}?replicaSet=testset`;
   log.info(`connect test mongodb: ${mongoUri}`);
 
-  await sleep(2000);
+  // process.env.MONGODB_URI = mongoUri;
+  // process.env.MONGODB_DBNAME = await replSet.getDbName();
+  const dbName = await replSet.getDbName();
 
-  await mongoose.connect(mongoUri, opts, (err) => {
-    if (err) log.error(err);
-  });
-  // await createIndexes();
-  return replSet;
+  const mongoClient = await connectDb(mongoUri, dbName);
+  return { replSet, mongoClient };
 };
 
+// const startMongo = async () => {
+//   const mongoServer = new MongoMemoryServer({ instance: { storageEngine: 'wiredTiger' } });
+//   const mongoUri = await mongoServer.getConnectionString();
+//   const mongoClient = new MongoClient(mongoUri, options);
+//
+//   try {
+//     await mongoClient.connect();
+//   } catch (err) {
+//     console.error(err.stack);
+//   }
+//   const db = mongoClient.db(await mongoServer.getDbName());
+//   return { mongoClient, mongoServer, db };
+// };
+
+// const startRepl = async () => {
+//   const replSet = new MongoMemoryReplSet({
+//     instanceOpts: [
+//       { storageEngine: 'wiredTiger' },
+//     ],
+//   });
+//   await replSet.waitUntilRunning();
+//   const mongoUri = `${await replSet.getConnectionString()}?replicaSet=testset`;
+//   log.info(`connect test mongodb: ${mongoUri}`);
+//
+//   await sleep(2000);
+//
+//   const mongoClient = new MongoClient(mongoUri, options);
+//   console.log(typeof mongoClient);
+//   try {
+//     await mongoClient.connect();
+//   } catch (err) {
+//     console.log(err.stack);
+//   }
+//
+//   const db = mongoClient.db(await replSet.getDbName());
+//   return { replSet, mongoClient, db };
+// };
+
 // const stopMongo = () => {
-//   mongoose.disconnect();
 //   mongoServer.stop();
 // };
 
 // const stopRepl = () => {
-//   mongoose.disconnect();
 //   replSet.stop();
 // };
 
-export {
-  startMongo, startRepl,
-};
+export { startRepl };
