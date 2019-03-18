@@ -1,18 +1,24 @@
-import mongoose from 'mongoose';
-
+import { connectDb } from '~/dbClient';
 import env from '~/utils/env';
 import log from '~/utils/log';
 import createIndexes from '~/models/indexes';
 
-const result = (async () => {
-  await mongoose.connect(env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useCreateIndex: true,
-    useFindAndModify: false,
-    autoIndex: false,
-  });
-  await createIndexes();
-  await mongoose.disconnect();
-})();
+// const result = (async () => {
+//   const mongoClient = await connectDb(env.MONGODB_URI, env.MONGODB_DBNAME);
+//   await createIndexes();
+//   await mongoClient.close();
+// })();
 
-log.info(`${result}`);
+const initIndex = async () => {
+  const mongoClient = await connectDb(env.MONGODB_URI, env.MONGODB_DBNAME);
+  await createIndexes();
+  await mongoClient.close();
+};
+
+try {
+  initIndex();
+} catch (e) {
+  log.error(e);
+}
+
+// log.info(`${result}`);
