@@ -1,125 +1,154 @@
-import mongoose from 'mongoose';
-
-import { ParamsError } from '~/utils/error';
+import JoiBase from 'joi';
+import JoiObjectId from '~/utils/joiObjectId';
+import dbClient from '~/dbClient';
+import { ParamsError, InternalError } from '~/utils/error';
 import Uid from '~/uid';
 import validator from '~/utils/validator';
 import findSlice from '~/models/base';
+import log from '~/utils/log';
+
+import UserPostsModel from './userPosts';
+import UserModel from './user';
 import TagModel from './tag';
-import PostModel from './post';
 
-const SchemaObjectId = mongoose.ObjectId;
+const Joi = JoiBase.extend(JoiObjectId);
+const THREAD = 'thread';
+const POST = 'post';
+const col = () => dbClient.collection(THREAD);
 
-const ThreadSchema = new mongoose.Schema({
-  suid: { type: String, required: true },
-  anonymous: Boolean,
-  author: String,
-  userId: SchemaObjectId,
-  mainTag: String,
-  subTags: [String],
-  tags: [String],
-  title: String,
-  locked: Boolean,
-  blocked: Boolean,
-  createdAt: Date,
-  updatedAt: Date,
-  content: String,
-  catalog: [{
-    postSuid: String,
-    createdAt: Date,
-  }],
-}, { autoCreate: true });
+const threadSchema = Joi.object().keys({
+  suid: Joi.string().alphanum().length(15).required(),
+  anonymous: Joi.boolean().required(),
+  author: Joi.string().required(),
+  userId: Joi.objectId().required(),
+  mainTag: Joi.string().required(),
+  subTags: Joi.array().items(Joi.string()).required(),
+  tags: Joi.array().items(Joi.string()).required(),
+  title: Joi.string().required(),
+  locked: Joi.boolean().default(false),
+  blocked: Joi.boolean().default(false),
+  createdAt: Joi.date().required(),
+  updatedAt: Joi.date().required(),
+  content: Joi.string().required(),
+  catalog: Joi.array().items(Joi.object().keys({
+    postSuid: Joi.string().alphanum().length(15).required(),
+    createdAt: Joi.date().required(),
+  })),
+});
 
-ThreadSchema.statics.pubThread = async function pubThread({ user }, input) {
-  const {
-    anonymous, content, title, mainTag, subTags = [],
-  } = input;
+const ThreadModel = ctx => ({
+  pubThread: async function pubThread({ user }, input) {
+    const {
+      anonymous, content, title, mainTag, subTags = [],
+    } = input;
 
-  const mainTags = await TagModel.getMainTags();
-  if (!mainTags.includes(mainTag)) throw new ParamsError('Invalid mainTag');
-  if (!validator.isUnicodeLength(title, { max: 28 })) {
-    throw new ParamsError('Max length of title is 28.');
-  }
+    const mainTags = await TagModel().getMainTags();
+    if (!mainTags.includes(mainTag)) throw new ParamsError('Invalid mainTag');
+    if (!validator.isUnicodeLength(title, { max: 28 })) {
+      throw new ParamsError('Max length of title is 28.');
+    }
 
-  const now = new Date();
-  const thread = {
-    suid: await Uid.newSuid(),
-    anonymous,
-    userId: user._id,
-    tags: [mainTag, ...(subTags)],
-    mainTag,
-    subTags,
-    locked: false,
-    blocked: false,
-    createdAt: now,
-    updatedAt: now,
-    content,
-    title,
-  };
-  thread.author = await user.author(thread.suid, anonymous);
+    const now = new Date();
+    let thread = {
+      suid: await Uid.newSuid(),
+      anonymous,
+      userId: user._id,
+      tags: [mainTag, ...(subTags)],
+      mainTag,
+      subTags,
+      locked: false,
+      blocked: false,
+      createdAt: now,
+      updatedAt: now,
+      content,
+      title,
+    };
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  const threadDoc = new ThreadModel(thread);
-  await threadDoc.save({ session });
-  await user.onPubThread(threadDoc, { session });
-  await TagModel.onPubThread(threadDoc, { session });
-  await session.commitTransaction();
-  session.endSession();
+    // console.log({ user });
+    thread.author = await UserModel(ctx).methods(user).author(thread.suid, anonymous);
 
-  return threadDoc;
-};
+    const { value, error } = threadSchema.validate(thread);
+    if (error) {
+      log.error(error);
+      throw new ParamsError(`Thread validation failed, ${error}`);
+    }
+    thread = value;
 
-ThreadSchema.statics.findByUid = async function findByUid(uid) {
-  const thread = await ThreadModel.findOne({ suid: Uid.encode(uid) }).exec();
-  return thread;
-};
+    const session = await dbClient.startSession();
+    session.startTransaction();
+    try {
+      await col().insertOne(thread);
+      await UserPostsModel(ctx).methods(user).onPubThread(thread, { session });
+      await TagModel().onPubThread(thread, { session });
+      await session.commitTransaction();
+      session.endSession();
 
-ThreadSchema.statics.getThreadSlice = async function getThreadSlice(
-  tags = [], sliceQuery,
-) {
-  const option = {
-    query: tags.length > 0 ? { tags: { $in: tags } } : {},
-    desc: true,
-    field: 'suid',
-    sliceName: 'threads',
-    parse: Uid.encode,
-    toCursor: Uid.decode,
-  };
-  const result = await findSlice(sliceQuery, ThreadModel, option);
-  return result;
-};
+      return thread;
+    } catch (e) {
+      await session.abortTransaction();
+      session.endSession();
+      throw new InternalError(`Transaction Failed: ${e}`);
+    }
+  },
 
-ThreadSchema.methods.uid = function uid() {
-  if (!this.CACHED_UID) this.CACHED_UID = Uid.decode(this.suid);
-  return this.CACHED_UID;
-};
+  findByUid: async function findByUid(uid) {
+    const thread = await col().findOne({ suid: Uid.encode(uid) });
+    return thread;
+  },
 
-ThreadSchema.methods.getContent = function getContent() {
-  return this.blocked ? '' : this.content;
-};
+  getThreadSlice: async function getThreadSlice(
+    tags = [], sliceQuery,
+  ) {
+    const option = {
+      query: tags.length > 0 ? { tags: { $in: tags } } : {},
+      desc: true,
+      field: 'suid',
+      sliceName: 'threads',
+      parse: Uid.encode,
+      toCursor: Uid.decode,
+    };
+    const result = await findSlice(sliceQuery, this, option);
+    return result;
+  },
 
-ThreadSchema.methods.replies = async function replies(query) {
-  const option = {
-    query: { threadId: this.suid },
-    field: '_id',
-    sliceName: 'posts',
-    parse: Uid.encode,
-    toCursor: Uid.decode,
-  };
-  const result = await findSlice(query, PostModel, option);
-  return result;
-};
+  methods: function methods(doc) {
+    return genDoc(ctx, this, doc);
+  },
+});
 
-ThreadSchema.methods.replyCount = function replyCount() {
-  return this.catalog.length;
-};
+const genDoc = (ctx, model, doc) => ({
+  CACHED_UID: '',
 
-ThreadSchema.methods.onPubPost = async function onPubPost(post, opt) {
-  await ThreadModel.updateOne({ suid: this.suid }, {
-    $push: { catalog: { postId: post.suid, createdAt: post.createdAt } },
-  }, opt).exec();
-};
+  uid: function uid() {
+    if (!this.CACHED_UID) this.CACHED_UID = Uid.decode(doc.suid);
+    return this.CACHED_UID;
+  },
 
-const ThreadModel = mongoose.model('Thread', ThreadSchema);
+  getContent: function getContent() {
+    return doc.blocked ? '' : doc.content;
+  },
+
+  replies: async function replies(query) {
+    const option = {
+      query: { threadId: doc.suid },
+      field: '_id',
+      sliceName: 'posts',
+      parse: Uid.encode,
+      toCursor: Uid.decode,
+    };
+    const result = await findSlice(query, dbClient.collection(POST), option);
+    return result;
+  },
+
+  replyCount: function replyCount() {
+    return doc.catalog.length;
+  },
+
+  onPubPost: async function onPubPost(post, opt) {
+    await col().updateOne({ suid: doc.suid }, {
+      $push: { catalog: { postId: post.suid, createdAt: post.createdAt } },
+    }, opt);
+  },
+});
 
 export default ThreadModel;

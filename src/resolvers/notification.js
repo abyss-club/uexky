@@ -10,7 +10,7 @@ const Query = {
   notification: async (obj, { type, query }, ctx) => {
     if (!ctx.user) return null;
     await ctx.limiter.take(query.limit);
-    const result = await NotificationModel.getNotiSlice(ctx.user, type, query);
+    const result = await NotificationModel().getNotiSlice(ctx.user, type, query);
     return result;
   },
 };
@@ -21,7 +21,7 @@ const UnreadNotiCount = (function makeUnreadNotiCount() {
     resolver[type] = async (obj, args, ctx) => {
       const { user, limiter } = ctx;
       await limiter.take(1);
-      const count = await NotificationModel.getUnreadCount(user, type);
+      const count = await NotificationModel().getUnreadCount(user, type);
       return count;
     };
   });
@@ -46,7 +46,7 @@ const SystemNoti = Object.assign({
 const RepliedNoti = Object.assign({
   thread: async (noti, args, ctx) => {
     await ctx.limiter.take(1);
-    const thread = await ThreadModel
+    const thread = await ThreadModel(ctx)
       .findByUid(noti.replied.threadId);
     return thread;
   },
@@ -56,17 +56,17 @@ const RepliedNoti = Object.assign({
 const QuotedNoti = Object.assign({
   thread: async (noti, args, ctx) => {
     await ctx.limiter.take(1);
-    const thread = await ThreadModel.findByUid(noti.quoted.threadId);
+    const thread = await ThreadModel(ctx).findByUid(noti.quoted.threadId);
     return thread;
   },
   quotedPost: async (noti, args, ctx) => {
     await ctx.limiter.take(1);
-    const post = await PostModel.findByUid(noti.quoted.quotedPostId);
+    const post = await PostModel(ctx).findByUid(noti.quoted.quotedPostId);
     return post;
   },
   post: async (noti, args, ctx) => {
     await ctx.limiter.take(1);
-    const post = await PostModel.findByUid(noti.quoted.quotedPostId);
+    const post = await PostModel(ctx).findByUid(noti.quoted.quotedPostId);
     return post;
   },
   quoter: noti => noti.quoted.quoter,

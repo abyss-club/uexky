@@ -1,53 +1,58 @@
-import mongoose from 'mongoose';
+import Joi from 'joi';
+import dbClient from '~/dbClient';
 
-const TagSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  isMain: { type: Boolean, required: true },
-  belongsTo: [String],
-  updateAt: Date,
-}, { autoCreate: true });
+const TAG = 'tag';
+const col = () => dbClient.collection(TAG);
 
-TagSchema.statics.getMainTags = async function getMainTags() {
-  const tags = await TagModel.find({ isMain: true }).exec();
-  return tags.map(tag => tag.name);
-};
+const tagSchema = Joi.object().keys({
+  name: Joi.string().required(),
+  isMain: Joi.boolean().required(),
+  belongsTo: Joi.array().items(Joi.string()),
+  updateAt: Joi.date(),
+});
 
-TagSchema.statics.addMainTag = async function addMainTag(name) {
-  const tag = await TagModel.create({ name, isMain: true });
-  return tag;
-};
+const TagModel = () => ({
+  getMainTags: async function getMainTags() {
+    const tags = await col().find({ isMain: true }).toArray();
+    return tags.map(tag => tag.name);
+  },
 
-TagSchema.statics.onPubThread = async function onPubThread(thread, opt) {
-  const option = { ...opt, upsert: true };
-  const updateTags = thread.subTags.map(async tag => this.updateOne({ name: tag }, {
-    $addToSet: { belongsTo: thread.mainTag },
-    $set: { updateAt: new Date(), isMain: false },
-  }, option).exec());
-  await Promise.all(updateTags);
-};
+  addMainTag: async function addMainTag(name) {
+    const tag = await col().insertOne({ name, isMain: true });
+    return tag;
+  },
 
-TagSchema.statics.getTree = async function getTree(limit, query = '') {
-  const defaultLimit = 10;
-  const selector = (mainTag) => {
-    if (query === '') {
-      return { belongsTo: mainTag };
-    }
-    return { name: { $regex: query }, isMain: false, belongsTo: mainTag };
-  };
-  const mainTags = await TagModel.getMainTags();
-  const tagTrees = mainTags.map(async (mainTag) => {
-    const subTags = await this.find(selector(mainTag))
-      .sort({ updatedAt: -1 })
-      .limit(limit || defaultLimit)
-      .exec();
-    return {
-      mainTag,
-      subTags: subTags.map(tag => tag.name),
+  onPubThread: async function onPubThread(thread, opt) {
+    const option = { ...opt, upsert: true };
+    const updateTags = thread.subTags.map(async tag => col().updateOne({ name: tag }, {
+      $addToSet: { belongsTo: thread.mainTag },
+      $set: { updateAt: new Date(), isMain: false },
+    }, option));
+    await Promise.all(updateTags);
+  },
+
+  getTree: async function getTree(limit, query = '') {
+    const defaultLimit = 10;
+    const selector = (mainTag) => {
+      if (query === '') {
+        return { belongsTo: mainTag };
+      }
+      return { name: { $regex: query }, isMain: false, belongsTo: mainTag };
     };
-  });
-  return Promise.all(tagTrees);
-};
+    const mainTags = await this.getMainTags();
+    const tagTrees = mainTags.map(async (mainTag) => {
+      const subTags = await col().find(selector(mainTag))
+        .sort({ updatedAt: -1 })
+        .limit(limit || defaultLimit)
+        .toArray();
+      return {
+        mainTag,
+        subTags: subTags.map(tag => tag.name),
+      };
+    });
+    return Promise.all(tagTrees);
+  },
+});
 
-const TagModel = mongoose.model('Tag', TagSchema);
 
 export default TagModel;
