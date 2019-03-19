@@ -1,12 +1,12 @@
 import JoiBase from 'joi';
 import JoiObjectId from '~/utils/joiObjectId';
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
 import log from '~/utils/log';
 import { ParamsError } from '~/utils/error';
 
 const Joi = JoiBase.extend(JoiObjectId);
 const USERPOSTS = 'userPosts';
-const col = () => dbClient.collection(USERPOSTS);
+const col = () => mongo.collection(USERPOSTS);
 
 const userPostsSchema = Joi.object().keys({
   userId: Joi.objectId().required(),

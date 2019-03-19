@@ -1,4 +1,4 @@
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 import { ObjectId } from 'bson-ext';
 
 import Uid from '~/uid';

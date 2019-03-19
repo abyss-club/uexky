@@ -1,11 +1,11 @@
 import Joi from 'joi';
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
 
 import { ParamsError } from '~/utils/error';
 import log from '~/utils/log';
 
 const CONFIG = 'config';
-const col = () => dbClient.collection(CONFIG);
+const col = () => mongo.collection(CONFIG);
 
 const rateLimitObjSchema = Joi.object().keys({
   httpHeader: Joi.string().regex(/^[a-zA-Z0-9-]*$/).default(''),

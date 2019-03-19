@@ -1,4 +1,4 @@
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 import TagModel from '~/models/tag';
 
 jest.setTimeout(60000);

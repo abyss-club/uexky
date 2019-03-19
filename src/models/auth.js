@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
 import { Base64 } from '~/uid';
 import { AuthError, ParamsError } from '~/utils/error';
 
@@ -10,7 +10,7 @@ const authSchema = Joi.object().keys({
 });
 
 const AUTH = 'auth';
-const col = () => dbClient.collection(AUTH);
+const col = () => mongo.collection(AUTH);
 
 const AuthModel = () => ({
   addToAuth: async function addToAuth({ email, authCode = Base64.randomString(36) }) {

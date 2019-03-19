@@ -1,5 +1,5 @@
-import { startRepl } from '../__utils__/mongoServer';
-import dbClient from '~/dbClient';
+import startRepl from '../__utils__/mongoServer';
+import mongo from '~/utils/mongo';
 import { Base64 } from '~/uid';
 import AuthModel from '~/models/auth';
 
@@ -27,14 +27,14 @@ describe('Testing auth', () => {
   it('add user', async () => {
     const email = mockEmail;
     await AuthModel(ctx).addToAuth({ email: mockEmail, authCode });
-    const result = await dbClient.collection(AUTH).findOne({ email });
+    const result = await mongo.collection(AUTH).findOne({ email });
     expect(result.email).toEqual(mockEmail);
     expect(result.authCode).toEqual(authCode);
   });
   it('validate user authCode for only once', async () => {
     const result = await AuthModel(ctx).getEmailByCode({ authCode });
     expect(result).toEqual(mockEmail);
-    const deletedResult = await dbClient.collection(AUTH).findOne({ authCode });
+    const deletedResult = await mongo.collection(AUTH).findOne({ authCode });
     expect(deletedResult).toBeNull();
   });
 });

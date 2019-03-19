@@ -1,5 +1,5 @@
 // import { MongoClient } from 'mongodb';
-import { connectDb } from '~/dbClient';
+import { connectDb } from '~/utils/mongo';
 import sleep from 'sleep-promise';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
 
@@ -79,4 +79,4 @@ const startRepl = async () => {
 //   replSet.stop();
 // };
 
-export { startRepl };
+export default startRepl;

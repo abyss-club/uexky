@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import dbClient, { db } from '~/dbClient';
+import mongo, { db } from '~/utils/mongo';
 import log from '~/utils/log';
 
 import validator from '~/utils/validator';
@@ -15,13 +15,13 @@ import {
 const USER = 'user';
 const USERPOSTS = 'userPosts';
 const THREAD = 'thread';
-const col = () => dbClient.collection(USER);
+const col = () => mongo.collection(USER);
 
 const tagsSchema = Joi.array().items(Joi.string());
 
 const userSchema = Joi.object().keys({
   email: Joi.string().email().required(),
-  name: Joi.string().required(),
+  name: Joi.string(),
   tags: tagsSchema,
   readNotiTime: Joi.object().keys({
     system: Joi.date(),
@@ -39,7 +39,11 @@ const UserModel = ctx => ({
     try {
       const user = await col().findOne({ email });
       if (user) return user;
-      // const newUser = new UserModel({ email });
+      const { error } = userSchema.validate({ email });
+      if (error) {
+        log.error(error);
+        throw new ParamsError(`Email validation failed, ${error}`);
+      }
       const res = await col().insertOne({ email });
       return res.ops[0];
     } catch (e) {

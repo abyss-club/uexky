@@ -1,4 +1,4 @@
-import { connectDb } from '~/dbClient';
+import { connectDb } from '~/utils/mongo';
 import env from '~/utils/env';
 import log from '~/utils/log';
 import createIndexes from '~/models/indexes';

@@ -1,7 +1,7 @@
 import gql from 'graphql-tag';
-import dbClient, { db } from '~/dbClient';
+import mongo, { db } from '~/utils/mongo';
 
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 import { mockUser, mutate } from '../__utils__/apolloClient';
 
 import Uid from '~/uid';
@@ -101,7 +101,7 @@ describe('Testing posting a thread', () => {
   });
   it('Validating thread in UserPostsModel', async () => {
     const user = await UserModel().getUserByEmail(mockEmail);
-    const result = await dbClient.collection(USERPOSTS).find(
+    const result = await mongo.collection(USERPOSTS).find(
       { userId: user._id, threadId },
     ).toArray();
     expect(result.length).toEqual(1);
@@ -142,7 +142,7 @@ describe('Testing posting a thread without subTags', () => {
   });
   it('Validating thread in UserPostsModel', async () => {
     const user = await UserModel().getUserByEmail(mockEmail);
-    const result = await dbClient.collection(USERPOSTS).find(
+    const result = await mongo.collection(USERPOSTS).find(
       { userId: user._id, threadId },
     ).toArray();
     expect(result.length).toEqual(1);

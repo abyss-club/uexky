@@ -1,6 +1,6 @@
 import gql from 'graphql-tag';
 
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 import { mockUser, mutate, guestMutate } from '../__utils__/apolloClient';
 
 jest.setTimeout(60000);

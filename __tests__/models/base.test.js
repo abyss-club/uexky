@@ -1,6 +1,6 @@
 import { ObjectID } from 'mongodb';
-import { startRepl } from '../__utils__/mongoServer';
-import dbClient from '~/dbClient';
+import startRepl from '../__utils__/mongoServer';
+import mongo from '~/utils/mongo';
 import Joi from 'joi';
 
 import findSlice from '~/models/base';
@@ -57,28 +57,28 @@ describe('Testing sliceQuery', () => {
       { count: 6 },
     ], testSchema);
     expect(error).toBeNull();
-    const r = await dbClient.collection(BASE).insertMany(value);
+    const r = await mongo.collection(BASE).insertMany(value);
     expect(r.insertedCount).toEqual(6);
   });
   it('Find string', async () => {
-    const result = await findSlice(sliceQuery, dbClient.collection(BASE), option);
-    const count1 = await dbClient.collection(BASE).findOne({ count: 1 });
+    const result = await findSlice(sliceQuery, mongo.collection(BASE), option);
+    const count1 = await mongo.collection(BASE).findOne({ count: 1 });
     expect(result.sliceInfo.firstCursor).toEqual(count1._id.valueOf());
     expect(result.sliceInfo.lastCursor).toEqual(count1._id.valueOf());
     expect(result.sliceInfo.hasNext).toEqual(false);
   });
   it('Find between', async () => {
-    const result = await findSlice(sliceQuery, dbClient.collection(BASE), altOption);
-    const count3 = await dbClient.collection(BASE).findOne({ count: 3 });
-    const count5 = await dbClient.collection(BASE).findOne({ count: 5 });
+    const result = await findSlice(sliceQuery, mongo.collection(BASE), altOption);
+    const count3 = await mongo.collection(BASE).findOne({ count: 3 });
+    const count5 = await mongo.collection(BASE).findOne({ count: 5 });
     expect(result.sliceInfo.firstCursor).toEqual(count3._id.valueOf());
     expect(result.sliceInfo.lastCursor).toEqual(count5._id.valueOf());
     expect(result.sliceInfo.hasNext).toEqual(false);
   });
   it('Find between with limitation', async () => {
-    const result = await findSlice({ ...sliceQuery, limit: 1 }, dbClient.collection(BASE), altOption);
-    const count3 = await dbClient.collection(BASE).findOne({ count: 3 });
-    const count4 = await dbClient.collection(BASE).findOne({ count: 4 });
+    const result = await findSlice({ ...sliceQuery, limit: 1 }, mongo.collection(BASE), altOption);
+    const count3 = await mongo.collection(BASE).findOne({ count: 3 });
+    const count4 = await mongo.collection(BASE).findOne({ count: 4 });
     expect(result.sliceInfo.firstCursor).toEqual(count3._id.valueOf());
     expect(result.sliceInfo.lastCursor).toEqual(count4._id.valueOf());
     expect(result.sliceInfo.hasNext).toEqual(true);
@@ -86,21 +86,21 @@ describe('Testing sliceQuery', () => {
   it('Find between with limitation and desc', async () => {
     const newOption = { ...altOption, desc: true };
     const result = await findSlice(
-      { ...sliceQuery, limit: 1 }, dbClient.collection(BASE), newOption,
+      { ...sliceQuery, limit: 1 }, mongo.collection(BASE), newOption,
     );
-    const count4 = await dbClient.collection(BASE).findOne({ count: 4 });
-    const count5 = await dbClient.collection(BASE).findOne({ count: 5 });
+    const count4 = await mongo.collection(BASE).findOne({ count: 4 });
+    const count5 = await mongo.collection(BASE).findOne({ count: 5 });
     expect(result.sliceInfo.firstCursor).toEqual(count4._id.valueOf());
     expect(result.sliceInfo.lastCursor).toEqual(count5._id.valueOf());
     expect(result.sliceInfo.hasNext).toEqual(true);
   });
   it('Find using before and after', async () => {
-    const count3 = await dbClient.collection(BASE).findOne({ count: 3 });
-    const count4 = await dbClient.collection(BASE).findOne({ count: 4 });
-    const count5 = await dbClient.collection(BASE).findOne({ count: 5 });
+    const count3 = await mongo.collection(BASE).findOne({ count: 3 });
+    const count4 = await mongo.collection(BASE).findOne({ count: 4 });
+    const count5 = await mongo.collection(BASE).findOne({ count: 5 });
     const result = await findSlice({
       ...sliceQuery, after: count3._id.valueOf(),
-    }, dbClient.collection(BASE), altOption);
+    }, mongo.collection(BASE), altOption);
     expect(result.sliceInfo.firstCursor).toEqual(count4._id.valueOf());
     expect(result.sliceInfo.lastCursor).toEqual(count5._id.valueOf());
     expect(result.sliceInfo.hasNext).toEqual(false);

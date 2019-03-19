@@ -1,7 +1,7 @@
 import ConfigModel from '~/models/config';
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
 import { ParamsError } from '~/utils/error';
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 
 // May require additional time for downloading MongoDB binaries
 jest.setTimeout(60000);
@@ -71,7 +71,7 @@ describe('Testing rateLimit', () => {
   };
   const checkConfig = async () => {
     const result = await ConfigModel().getConfig();
-    const resultInDb = await dbClient.collection(CONFIG).findOne({}, { projection: { _id: 0 } });
+    const resultInDb = await mongo.collection(CONFIG).findOne({}, { projection: { _id: 0 } });
     expect(result).toEqual(expectedConfig);
     expect(resultInDb).toEqual(expectedConfig);
   };

@@ -1,5 +1,5 @@
-import { startRepl } from '../__utils__/mongoServer';
-import dbClient, { db } from '~/dbClient';
+import startRepl from '../__utils__/mongoServer';
+import mongo, { db } from '~/utils/mongo';
 
 import Uid from '~/uid';
 import UserModel from '~/models/user';
@@ -27,7 +27,7 @@ const THREAD = 'thread';
 const POST = 'post';
 const USERPOSTS = 'userPosts';
 const NOTIFICATION = 'notification';
-const col = () => dbClient.collection(POST);
+const col = () => mongo.collection(POST);
 
 const mockUser = {
   email: 'test@example.com',
@@ -79,7 +79,7 @@ describe('Testing posting a thread', () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
     const newThread = mockThread;
     const { _id } = await ThreadModel({ user }).pubThread({ user }, newThread);
-    const threadResult = await dbClient.collection(THREAD).findOne({ _id });
+    const threadResult = await mongo.collection(THREAD).findOne({ _id });
     const author = await UserModel({ user }).methods(user).author(threadResult.suid, true);
     expect(JSON.stringify(threadResult.subTags)).toEqual(JSON.stringify(newThread.subTags));
     expect(JSON.stringify(threadResult.tags))
@@ -99,7 +99,7 @@ describe('Testing posting a thread', () => {
   });
   it('Validating the thread in UserPostsModel', async () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await dbClient.collection(USERPOSTS).find(
+    const result = await mongo.collection(USERPOSTS).find(
       { userId: user._id, threadSuid },
     ).toArray();
     expect(result.length).toEqual(1);
@@ -119,7 +119,7 @@ describe('Testing replying a thread', () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
     const newPost = mockPost;
     const { _id } = await PostModel({ user }).pubPost({ user }, newPost);
-    const postResult = await dbClient.collection(POST).findOne({ _id });
+    const postResult = await mongo.collection(POST).findOne({ _id });
 
     postSuid = postResult.suid;
     postId = Uid.decode(postSuid);
@@ -139,7 +139,7 @@ describe('Testing replying a thread', () => {
     const user = await UserModel().getUserByEmail(mockReplier.email);
     const newPost = mockReply;
     const { _id } = await PostModel({ user }).pubPost({ user }, newPost);
-    const postResult = await dbClient.collection(POST).findOne({ _id });
+    const postResult = await mongo.collection(POST).findOne({ _id });
 
     replySuid = postResult.suid;
     replyId = Uid.decode(replySuid);
@@ -159,7 +159,7 @@ describe('Testing replying a thread', () => {
   });
   it('Validating post for mockUser in UserPostsModel', async () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await dbClient.collection(USERPOSTS).find(
+    const result = await mongo.collection(USERPOSTS).find(
       { userId: user._id, threadSuid },
     ).toArray();
     expect(result.length).toEqual(1);
@@ -167,7 +167,7 @@ describe('Testing replying a thread', () => {
   });
   it('Validating post for mockReplier in UserPostsModel', async () => {
     const replier = await UserModel().getUserByEmail(mockReplier.email);
-    const result = await dbClient.collection(USERPOSTS).find(
+    const result = await mongo.collection(USERPOSTS).find(
       { userId: replier._id, threadSuid },
     ).toArray();
     expect(result.length).toEqual(1);

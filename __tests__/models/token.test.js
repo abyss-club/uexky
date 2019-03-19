@@ -1,4 +1,4 @@
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 import TokenModel from '~/models/token';
 
 jest.setTimeout(60000);
