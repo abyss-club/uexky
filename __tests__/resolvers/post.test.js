@@ -1,7 +1,7 @@
 import gql from 'graphql-tag';
-import mongoose from 'mongoose';
+import { db } from '~/utils/mongo';
 
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 import {
   mockUser, mockAltUser, query, mutate, altMutate,
 } from '../__utils__/apolloClient';
@@ -10,19 +10,22 @@ import Uid from '~/uid';
 import UserModel from '~/models/user';
 import TagModel from '~/models/tag';
 
-// May require additional time for downloading MongoDB binaries
-// Temporary hack for parallel tests
-jest.setTimeout(600000);
+jest.setTimeout(60000);
 
 let replSet;
+let mongoClient;
+
 beforeAll(async () => {
-  replSet = await startRepl();
+  ({ replSet, mongoClient } = await startRepl());
 });
 
 afterAll(() => {
-  mongoose.disconnect();
+  mongoClient.close();
   replSet.stop();
 });
+
+const USERPOSTS = 'userPosts';
+const NOTIFICATION = 'notification';
 
 const mockEmail = mockUser.email;
 const mockReplierEmail = mockAltUser.email;
@@ -87,8 +90,11 @@ const GET_NOTI = gql`
 `;
 
 describe('Testing posting a thread', () => {
+  it('Create collections', async () => {
+    await db.createCollection(USERPOSTS);
+  });
   it('Setting mainTag', async () => {
-    await TagModel.addMainTag('MainA');
+    await TagModel().addMainTag('MainA');
   });
   it('Posting thread', async () => {
     const { data, errors } = await mutate({
@@ -111,8 +117,11 @@ describe('Testing posting a thread', () => {
 });
 
 describe('Testing replying a thread', () => {
+  it('Create collections', async () => {
+    await db.createCollection(NOTIFICATION);
+  });
   it('Posting reply', async () => {
-    const user = await UserModel.getUserByEmail(mockEmail);
+    const user = await UserModel().getUserByEmail(mockEmail);
     const newPost = mockPost;
     const { data, errors } = await mutate({
       mutation: PUB_POST, variables: { post: newPost },
@@ -120,7 +129,7 @@ describe('Testing replying a thread', () => {
     expect(errors).toBeUndefined();
 
     const postResult = data.pubPost;
-    const author = await user.author(Uid.encode(threadId), true);
+    const author = await UserModel().methods(user).author(Uid.encode(threadId), true);
     expect(postResult.anonymous).toEqual(true);
     expect(postResult.content).toEqual(mockPost.content);
     expect(postResult.quotes).toEqual([]);
@@ -132,7 +141,7 @@ describe('Testing replying a thread', () => {
     mockReply.quoteIds.push(postResult.id);
   });
   it('Posting reply with quotes', async () => {
-    const replier = await UserModel.getUserByEmail(mockReplierEmail);
+    const replier = await UserModel().getUserByEmail(mockReplierEmail);
     const newPost = mockReply;
     const { data, errors } = await altMutate({
       mutation: PUB_POST, variables: { post: newPost },
@@ -140,7 +149,7 @@ describe('Testing replying a thread', () => {
     expect(errors).toBeUndefined();
 
     const postResult = data.pubPost;
-    const author = await replier.author(Uid.encode(threadId), true);
+    const author = await UserModel().methods(replier).author(Uid.encode(threadId), true);
     expect(postResult.anonymous).toEqual(true);
     expect(postResult.content).toEqual(mockPost.content);
     expect(postResult.quotes).toEqual([{ id: postId }]);
@@ -150,12 +159,12 @@ describe('Testing replying a thread', () => {
     replyId = postResult.id;
   });
   it('Validate updated post', async () => {
-    const user = await UserModel.getUserByEmail(mockEmail);
+    const user = await UserModel().getUserByEmail(mockEmail);
     const { data, errors } = await query({ query: GET_POST, variables: { id: postId } });
     expect(errors).toBeUndefined();
 
     const postResult = data.post;
-    const author = await user.author(Uid.encode(threadId), true);
+    const author = await UserModel().methods(user).author(Uid.encode(threadId), true);
     expect(postResult.anonymous).toEqual(true);
     expect(postResult.content).toEqual(mockPost.content);
     expect(postResult.quotes).toEqual([]);
@@ -164,12 +173,12 @@ describe('Testing replying a thread', () => {
     expect(postResult.blocked).toEqual(false);
   });
   it('Validate reply', async () => {
-    const replier = await UserModel.getUserByEmail(mockReplierEmail);
+    const replier = await UserModel().getUserByEmail(mockReplierEmail);
     const { data, errors } = await query({ query: GET_POST, variables: { id: replyId } });
     expect(errors).toBeUndefined();
 
     const postResult = data.post;
-    const author = await replier.author(Uid.encode(threadId), true);
+    const author = await UserModel().methods(replier).author(Uid.encode(threadId), true);
     expect(postResult.anonymous).toEqual(true);
     expect(postResult.content).toEqual(mockPost.content);
     expect(postResult.quotes).toEqual([{ id: postId }]);
@@ -177,10 +186,11 @@ describe('Testing replying a thread', () => {
     expect(postResult.blocked).toEqual(false);
   });
   it('Validating post for mockUser in NotificationModel', async () => {
-    const user = await UserModel.getUserByEmail(mockEmail);
-    const replier = await UserModel.getUserByEmail(mockReplierEmail);
-    const userAuthor = await user.author(Uid.encode(threadId), true);
-    const replyAuthor = await replier.author(Uid.encode(threadId), true);
+    const user = await UserModel().getUserByEmail(mockEmail);
+    const replier = await UserModel().getUserByEmail(mockReplierEmail);
+    const userAuthor = await UserModel().methods(user).author(Uid.encode(threadId), true);
+    const replyAuthor = await UserModel().methods(replier).author(Uid.encode(threadId), true);
+
 
     const repResult = await query({
       query: GET_NOTI,

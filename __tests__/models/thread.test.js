@@ -1,26 +1,33 @@
-import mongoose from 'mongoose';
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
+import mongo, { db } from '~/utils/mongo';
 
 import UserModel from '~/models/user';
-import UserPostsModel from '~/models/userPosts';
+// import UserPostsModel from '~/models/userPosts';
 import ThreadModel from '~/models/thread';
 import TagModel from '~/models/tag';
 
-// May require additional time for downloading MongoDB binaries
-// Temporary hack for parallel tests
-jest.setTimeout(60000);
-
+jest.setTimeout(60000); // for boot replica sets
 let replSet;
+let mongoClient;
+// let db;
+
 beforeAll(async () => {
-  replSet = await startRepl();
+  ({ replSet, mongoClient } = await startRepl());
 });
 
 afterAll(() => {
-  mongoose.disconnect();
+  mongoClient.close();
   replSet.stop();
 });
 
-const mockEmail = 'test@example.com';
+const THREAD = 'thread';
+const USERPOSTS = 'userPosts';
+const col = () => mongo.collection(THREAD);
+
+const mockUser = {
+  email: 'test@example.com',
+  name: 'testUser',
+};
 const mockThread = {
   anonymous: true,
   content: 'Test Content',
@@ -43,22 +50,26 @@ const mockAltTagTree = {
 };
 let threadSuid;
 
+
 describe('Testing posting a thread', () => {
+  it('Create collections', async () => {
+    await db.createCollection(USERPOSTS);
+  });
   it('Setting tags', async () => {
-    await TagModel.addMainTag('MainA');
+    await TagModel().addMainTag('MainA');
   });
   it('Posting a thread', async () => {
-    const user = await UserModel.getUserByEmail(mockEmail);
+    const user = await UserModel().getUserByEmail(mockUser.email);
     const newThread = mockThread;
-    const { _id } = await ThreadModel.pubThread({ user }, newThread);
-    const threadResult = await ThreadModel.findOne({ _id }).exec();
-    const author = await user.author(threadResult.suid, true);
-    expect(JSON.stringify(threadResult.subTags)).toEqual(JSON.stringify(mockThread.subTags));
+    const { _id } = await ThreadModel({ user }).pubThread({ user }, newThread);
+    const threadResult = await col().findOne({ _id });
+    const author = await UserModel({ user }).methods(user).author(threadResult.suid, true);
+    expect(JSON.stringify(threadResult.subTags)).toEqual(JSON.stringify(newThread.subTags));
     expect(JSON.stringify(threadResult.tags))
-      .toEqual(JSON.stringify([mockThread.mainTag, ...mockThread.subTags]));
+      .toEqual(JSON.stringify([newThread.mainTag, ...newThread.subTags]));
     expect(threadResult.anonymous).toEqual(true);
-    expect(threadResult.content).toEqual(mockThread.content);
-    expect(threadResult.title).toEqual(mockThread.title);
+    expect(threadResult.content).toEqual(newThread.content);
+    expect(threadResult.title).toEqual(newThread.title);
     expect(threadResult.userId).toEqual(user._id);
     expect(threadResult.author).toEqual(author);
     expect(threadResult.blocked).toEqual(false);
@@ -67,38 +78,41 @@ describe('Testing posting a thread', () => {
     threadSuid = threadResult.suid;
   });
   it('Validating the thread in UserPostsModel', async () => {
-    const user = await UserModel.getUserByEmail(mockEmail);
-    const result = await UserPostsModel.find({ userId: user._id, threadSuid }).exec();
+    const user = await UserModel().getUserByEmail(mockUser.email);
+    const result = await mongo.collection(USERPOSTS).find(
+      { userId: user._id, threadSuid },
+    ).toArray();
     expect(result.length).toEqual(1);
     expect(result[0].posts.length).toEqual(0);
   });
   it('Validating the thread in TagModel', async () => {
-    const result = await TagModel.getTree();
+    const result = await TagModel().getTree();
     expect(JSON.stringify(result[0])).toEqual(JSON.stringify(mockTagTree));
   });
 });
 
 describe('Testing posting a thread without subTags', () => {
   it('Creating collection', async () => {
-    await mongoose.connection.db.dropDatabase();
-    await UserPostsModel.createCollection(); // necessary after db dropped
-    await ThreadModel.createCollection(); // necessary after db dropped
-    await TagModel.addMainTag('MainA');
+    await db.dropDatabase();
+    await db.createCollection(USERPOSTS); // create collection after db droppped
+  });
+  it('Setting tags', async () => {
+    await TagModel().addMainTag('MainA');
   });
   it('Posting a thread', async () => {
-    const user = await UserModel.getUserByEmail(mockEmail);
+    const user = await UserModel().getUserByEmail(mockUser.email);
     const newThread = mockThreadNoSubTags;
-    const { _id } = await ThreadModel.pubThread({ user }, newThread);
-    const threadResult = await ThreadModel.findOne({ _id }).exec();
-    const author = await user.author(threadResult.suid, true);
+    const { _id } = await ThreadModel({ user }).pubThread({ user }, newThread);
+    const threadResult = await col().findOne({ _id });
+    const author = await UserModel({ user }).methods(user).author(threadResult.suid, true);
     expect(JSON.stringify(threadResult.subTags))
-      .toEqual(JSON.stringify(mockThreadNoSubTags.subTags));
+      .toEqual(JSON.stringify(newThread.subTags));
     expect(JSON.stringify(threadResult.tags)).toEqual(
-      JSON.stringify([mockThreadNoSubTags.mainTag, ...mockThreadNoSubTags.subTags]),
+      JSON.stringify([newThread.mainTag, ...newThread.subTags]),
     );
     expect(threadResult.anonymous).toEqual(true);
-    expect(threadResult.content).toEqual(mockThreadNoSubTags.content);
-    expect(threadResult.title).toEqual(mockThreadNoSubTags.title);
+    expect(threadResult.content).toEqual(newThread.content);
+    expect(threadResult.title).toEqual(newThread.title);
     expect(threadResult.userId).toEqual(user._id);
     expect(threadResult.author).toEqual(author);
     expect(threadResult.blocked).toEqual(false);
@@ -107,13 +121,15 @@ describe('Testing posting a thread without subTags', () => {
     threadSuid = threadResult.suid;
   });
   it('Validating the thread in UserPostsModel', async () => {
-    const user = await UserModel.getUserByEmail(mockEmail);
-    const result = await UserPostsModel.find({ userId: user._id, threadSuid }).exec();
+    const user = await UserModel().getUserByEmail(mockUser.email);
+    const result = await mongo.collection(USERPOSTS).find(
+      { userId: user._id, threadSuid },
+    ).toArray();
     expect(result.length).toEqual(1);
     expect(result[0].posts.length).toEqual(0);
   });
   it('Validating the thread in TagModel', async () => {
-    const result = await TagModel.getTree();
+    const result = await TagModel().getTree();
     expect(JSON.stringify(result[0])).toEqual(JSON.stringify(mockAltTagTree));
   });
 });

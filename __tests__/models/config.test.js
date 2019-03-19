@@ -1,21 +1,26 @@
-import mongoose from 'mongoose';
 import ConfigModel from '~/models/config';
+import mongo from '~/utils/mongo';
 import { ParamsError } from '~/utils/error';
-
-import { startMongo } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 
 // May require additional time for downloading MongoDB binaries
-// jasmine.DEFAULT_TIMEOUT_INTERVAL = 600000;
-let mongoServer;
+jest.setTimeout(60000);
+
+let replSet;
+let mongoClient;
+let ctx;
+// let db;
 
 beforeAll(async () => {
-  mongoServer = await startMongo();
+  ({ replSet, mongoClient } = await startRepl());
 });
 
 afterAll(() => {
-  mongoose.disconnect();
-  mongoServer.stop();
+  mongoClient.close();
+  replSet.stop();
 });
+
+const CONFIG = 'config';
 
 /* TODO(tangwenhan): may be useful in next work (tag model).
 describe('Testing mainTags', () => {
@@ -65,51 +70,51 @@ describe('Testing rateLimit', () => {
     },
   };
   const checkConfig = async () => {
-    const result = await ConfigModel.getConfig();
-    const resultInDb = await ConfigModel.findOne().exec();
+    const result = await ConfigModel().getConfig();
+    const resultInDb = await mongo.collection(CONFIG).findOne({}, { projection: { _id: 0 } });
     expect(result).toEqual(expectedConfig);
-    expect(resultInDb.format()).toEqual(expectedConfig);
+    expect(resultInDb).toEqual(expectedConfig);
   };
 
   it('get default config', async () => {
-    const result = await ConfigModel.getConfig();
+    const result = await ConfigModel().getConfig();
     expect(result).toEqual(expectedConfig);
   });
   it('modify config with single entry', async () => {
-    await ConfigModel.setConfig({ rateLimit: { httpHeader: 'X-IP-Forward' } });
+    await ConfigModel(ctx).setConfig({ rateLimit: { httpHeader: 'X-IP-Forward' } });
     expectedConfig.rateLimit.httpHeader = 'X-IP-Forward';
     await checkConfig();
   });
   it('modify config with invalid value (unknown group)', async () => {
-    await expect(ConfigModel.setConfig({
+    await expect(ConfigModel(ctx).setConfig({
       iamfine: true,
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
     await checkConfig();
   });
   it('modify config with invalid value (unknown entry)', async () => {
-    await expect(ConfigModel.setConfig({
+    await expect(ConfigModel(ctx).setConfig({
       rateLimit: { mutLimit: 'hello', name: 'tom' },
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
     await checkConfig();
   });
   it('modify config with invalid value (error group)', async () => {
-    await expect(ConfigModel.setConfig({
+    await expect(ConfigModel(ctx).setConfig({
       rateLimit: 'unreal',
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
     await checkConfig();
   });
   it('modify config with invalid value (error entry)', async () => {
-    await expect(ConfigModel.setConfig({
+    await expect(ConfigModel(ctx).setConfig({
       rateLimit: { queryLimit: 'hi' },
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
     await checkConfig();
   });
   it('modify config multiple entries', async () => {
-    await ConfigModel.setConfig({
+    await ConfigModel(ctx).setConfig({
       rateLimit: { queryLimit: 400 },
       rateCost: { pubThread: 20, pubPost: 3 },
     });

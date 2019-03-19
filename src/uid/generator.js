@@ -1,8 +1,8 @@
-import WorkerIDModel from '~/models/workId';
+import WorkerIdModel from '~/models/workerId';
 
 const randomSeq = () => Math.floor(Math.random() * 1024);
-const timeZero = new Date('2018-03-01T00:00:00Z').getTime();
-const timestamp = date => Math.floor((date.getTime() - timeZero) / 1000);
+const timeZero = new Date('2018-03-01T00:00:00Z');
+const timestamp = date => Math.floor((date.getTime() - timeZero.getTime()) / 1000);
 const workerExpireMilliSeconds = 1000 * 3600;
 
 // Random Bits
@@ -19,7 +19,7 @@ const generator = (function makeGenerator() {
   const run = async () => {
     const now = new Date();
     if ((store.workerID === '') && (now.getTime() > store.expiredAt)) {
-      store.workerID = await WorkerIDModel.newWorkerID();
+      store.workerID = await WorkerIdModel().newWorkerId();
       store.expiredAt = now + workerExpireMilliSeconds;
     }
 
@@ -55,4 +55,4 @@ const generator = (function makeGenerator() {
 }());
 
 export default generator;
-export { WorkerIDModel, timeZero };
+export { timeZero };

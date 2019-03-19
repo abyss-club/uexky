@@ -2,7 +2,7 @@ import TagModel from '~/models/tag';
 
 const Query = {
   tags: async () => {
-    const mainTags = await TagModel.getMainTags();
+    const mainTags = await TagModel().getMainTags();
     return { mainTags };
   },
 };
@@ -16,7 +16,7 @@ const Tags = {
   tree: async (obj, { query, limit = 10 }, ctx) => {
     await ctx.limiter.take(limit);
     try {
-      const tree = await TagModel.getTree(limit, query);
+      const tree = await TagModel(ctx).getTree(limit, query);
       return tree;
     } catch (e) {
       throw e;

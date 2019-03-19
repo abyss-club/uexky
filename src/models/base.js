@@ -21,7 +21,7 @@ import { ParamsError } from '~/utils/error';
 //     hasNext: true,
 //   }
 // }
-async function findSlice(sliceQuery, model, option) {
+async function findSlice(sliceQuery, collection, option) {
   let { before, after } = sliceQuery;
   const { limit } = sliceQuery;
   if ((typeof before === 'undefined') && (typeof after === 'undefined')) {
@@ -55,10 +55,10 @@ async function findSlice(sliceQuery, model, option) {
     query[field] = { $gt: parse(after) };
   }
 
-  const slice = await model.find(query, null, {
+  const slice = await collection.find(query, {
     limit: (limit + 1),
     sort: { [field]: option.desc ? -1 : 1 },
-  }).exec();
+  }).toArray();
   if (option.desc) {
     slice.reverse();
   }

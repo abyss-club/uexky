@@ -1,23 +1,11 @@
-import mongoose from 'mongoose';
 import Joi from 'joi';
+import mongo from '~/utils/mongo';
 
 import { ParamsError } from '~/utils/error';
 import log from '~/utils/log';
 
-const ConfigSchema = new mongoose.Schema({
-  rateLimit: {
-    httpHeader: String,
-    queryLimit: Number,
-    queryResetTime: Number,
-    mutLimit: Number,
-    mutResetTime: Number,
-  },
-  rateCost: {
-    createUser: Number,
-    pubThread: Number,
-    pubPost: Number,
-  },
-}, { writeConcern: { w: 'majority', j: true, wtimeout: 1000 } });
+const CONFIG = 'config';
+const col = () => mongo.collection(CONFIG);
 
 const rateLimitObjSchema = Joi.object().keys({
   httpHeader: Joi.string().regex(/^[a-zA-Z0-9-]*$/).default(''),
@@ -33,40 +21,37 @@ const rateCostObjSchema = Joi.object().keys({
   pubPost: Joi.number().integer().min(0).default(1),
 });
 
-const configObjSchema = Joi.object().keys({
+const configSchema = Joi.object().keys({
   rateLimit: rateLimitObjSchema.default(rateLimitObjSchema.validate({}).value),
   rateCost: rateCostObjSchema.default(rateCostObjSchema.validate({}).value),
 });
 
-ConfigSchema.statics.getConfig = async function getConfig() {
-  const results = await ConfigModel.find({}).exec();
-  if (results.length === 0) {
-    return configObjSchema.validate({}).value;
-  }
-  return results[0].format();
-};
+const ConfigModel = () => ({
+  getConfig: async function getConfig() {
+    const results = await col().find({}, { projection: { _id: 0 } }).toArray();
+    if (results.length === 0) {
+      return configSchema.validate({}).value;
+    }
+    return results[0];
+  },
 
-ConfigSchema.statics.setConfig = async function setConfig(input) {
-  const config = await ConfigModel.getConfig();
-  Object.keys(input).forEach((key) => {
-    config[key] = Object.assign(config[key] || {}, input[key] || {});
-  });
-  log.info('will to set new config', config);
-  const { error, value: newConfig } = configObjSchema.validate(config);
-  if (error) {
-    log.error(error);
-    throw new ParamsError(`JSON validation failed, ${error}`);
-  }
-  await ConfigModel.findOneAndUpdate({}, newConfig, { upsert: true }).exec();
-  log.info('config updated!', newConfig);
-  return newConfig;
-};
-
-ConfigSchema.methods.format = function format() {
-  const obj = this.toObject();
-  return (({ rateLimit, rateCost }) => ({ rateLimit, rateCost }))(obj);
-};
-
-const ConfigModel = mongoose.model('Config', ConfigSchema);
+  setConfig: async function setConfig(input) {
+    const config = await this.getConfig();
+    Object.keys(input).forEach((key) => {
+      config[key] = Object.assign(config[key] || {}, input[key] || {});
+    });
+    log.info('will to set new config', config);
+    const { error, value: newConfig } = configSchema.validate(config);
+    if (error) {
+      log.error(error);
+      throw new ParamsError(`JSON validation failed, ${error}`);
+    }
+    await col().findOneAndUpdate({}, { $set: newConfig }, {
+      upsert: true, w: 'majority', j: true, wtimeout: 1000,
+    });
+    log.info('config updated!', newConfig);
+    return newConfig;
+  },
+});
 
 export default ConfigModel;

@@ -1,26 +1,34 @@
-import mongoose from 'mongoose';
+// import Joi from 'joi';
+import mongo from '~/utils/mongo';
 import { AuthError } from '~/utils/error';
 import { Base64 } from '~/uid';
 
-const TokenSchema = new mongoose.Schema({
-  email: { type: String, required: true },
-  authToken: { type: String, required: true },
-  createdAt: { type: Date, required: true },
+const TOKEN = 'token';
+const col = () => mongo.collection(TOKEN);
+
+// const tagSchema = Joi.object().keys({
+//   email: Joi.string().email().required(),
+//   authToken: Joi.string().required(),
+//   createdAt: Joi.date().required(),
+// });
+
+const TokenModel = () => ({
+  genNewToken: async function genNewToken(email) {
+    const authToken = Base64.randomString(24);
+    const newToken = { email, authToken, createdAt: new Date() };
+    await col().updateOne({ email }, { $set: { newToken } }, { upsert: true });
+    try {
+      const result = await col().findOne({ email });
+      return result;
+    } catch (e) { throw new AuthError('AuthToken not found'); }
+  },
+
+  getEmailByToken: async function getEmailByToken(authToken) {
+    try {
+      const result = await col().findOne({ authToken });
+      return result.email;
+    } catch (e) { throw new AuthError('Email not found'); }
+  },
 });
-
-TokenSchema.statics.genNewToken = async function genNewToken(email) {
-  const authToken = Base64.randomString(24);
-  const newToken = { email, authToken, createdAt: new Date() };
-  await TokenModel.update({ email }, newToken, { upsert: true }).exec();
-  const result = await TokenModel.findOne({ email }).orFail(() => new AuthError('AuthToken not found')).exec();
-  return result;
-};
-
-TokenSchema.statics.getEmailByToken = async function getEmailByToken(authToken) {
-  const result = await TokenModel.findOne({ authToken }).orFail(() => new AuthError('Email not found')).exec();
-  return result.email;
-};
-
-const TokenModel = mongoose.model('Token', TokenSchema);
 
 export default TokenModel;

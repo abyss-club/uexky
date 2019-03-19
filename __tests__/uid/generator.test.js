@@ -1,17 +1,17 @@
-import mongoose from 'mongoose';
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 import generator from '~/uid/generator';
 
-jest.setTimeout(60000); // for boot replica sets
-let mongoServer;
+jest.setTimeout(60000);
+let replSet;
+let mongoClient;
 
 beforeAll(async () => {
-  mongoServer = await startRepl();
+  ({ replSet, mongoClient } = await startRepl());
 });
 
 afterAll(() => {
-  mongoose.disconnect();
-  mongoServer.stop();
+  mongoClient.close();
+  replSet.stop();
 });
 
 const getTimestamp = uid => parseInt(uid.substring(0, 8), 16);

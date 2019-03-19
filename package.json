@@ -19,6 +19,7 @@
   "dependencies": {
     "@koa/cors": "2",
     "apollo-server-koa": "^2.3.2",
+    "bson-ext": "^2.0.1",
     "dotenv": "^6.2.0",
     "graphql": "^14.0.2",
     "graphql-tag": "^2.10.1",
@@ -30,7 +31,7 @@
     "lodash": "^4.17.11",
     "mailgun-js": "^0.22.0",
     "module-alias": "^2.1.0",
-    "mongoose": "^5.4.5",
+    "mongodb": "^3.1.13",
     "validator": "^10.9.0",
     "winston": "^3.2.1"
   },
@@ -52,9 +53,9 @@
     "eslint-plugin-import": "^2.14.0",
     "eslint-plugin-jest": "^22.1.2",
     "eslint-plugin-node": "^8.0.0",
-    "jest": "^23.6.0",
+    "jest": "^24.1.0",
     "module-alias": "^2.1.0",
-    "mongodb-memory-server": "^3.1.1",
+    "mongodb-memory-server": "^4.0.2",
     "nodemon": "^1.18.7",
     "sleep-promise": "^8.0.1",
     "supertest": "^3.3.0"

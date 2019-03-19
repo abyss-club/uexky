@@ -1,15 +1,12 @@
 import ConfigModel from '~/models/config';
 
 const Query = {
-  config: (obj, args, ctx) => {
-    console.log({ config: ctx.config });
-    return ctx.config;
-  },
+  config: (obj, args, ctx) => ctx.config,
 };
 
 const Mutation = {
-  editConfig: async (obj, { config }) => {
-    const newConfig = await ConfigModel.setConfig(config);
+  editConfig: async (obj, { config }, ctx) => {
+    const newConfig = await ConfigModel(ctx).setConfig(config);
     return newConfig;
   },
 };
