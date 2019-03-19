@@ -1,19 +1,21 @@
 import gql from 'graphql-tag';
-import mongoose from 'mongoose';
-import { startMongo } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 
 import { mutate } from '../__utils__/apolloClient';
 import TagModel from '~/models/tag';
 
-let mongoServer;
+jest.setTimeout(60000);
+
+let replSet;
+let mongoClient;
 
 beforeAll(async () => {
-  mongoServer = await startMongo();
+  ({ replSet, mongoClient } = await startRepl());
 });
 
 afterAll(() => {
-  mongoose.disconnect();
-  mongoServer.stop();
+  mongoClient.close();
+  replSet.stop();
 });
 
 const mockTags = { mainTag: 'MainA', subTags: ['SubA', 'SubB'] };
@@ -39,9 +41,9 @@ const GET_TAGS = gql`
 
 describe('Insert Tags', () => {
   it('add tags', async () => {
-    await TagModel.addMainTag(mockTags.mainTag);
+    await TagModel().addMainTag(mockTags.mainTag);
     const tags = mockTags;
-    await TagModel.onPubThread(tags);
+    await TagModel().onPubThread(tags);
   });
   it('validate tags', async () => {
     const result = await mutate({ query: GET_TAGS });
