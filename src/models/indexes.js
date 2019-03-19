@@ -1,17 +1,17 @@
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
 
 // const index = (model, spec, opt) => model.collection.createIndex(
 //   spec, { ...opt, background: true },
 // );
 function createIndexes() {
-  const authCol = dbClient.collection('auth');
-  const notificationCol = dbClient.collection('notification');
-  const postCol = dbClient.collection('post');
-  const threadCol = dbClient.collection('thread');
-  const tokenCol = dbClient.collection('token');
-  const userCol = dbClient.collection('user');
-  const userAidCol = dbClient.collection('userAid');
-  const userPostsCol = dbClient.collection('userPosts');
+  const authCol = mongo.collection('auth');
+  const notificationCol = mongo.collection('notification');
+  const postCol = mongo.collection('post');
+  const threadCol = mongo.collection('thread');
+  const tokenCol = mongo.collection('token');
+  const userCol = mongo.collection('user');
+  const userAidCol = mongo.collection('userAid');
+  const userPostsCol = mongo.collection('userPosts');
 
   return Promise.all([
     // index(AuthModel, { email: 1 }, { unique: true }),

@@ -1,10 +1,10 @@
 // import Joi from 'joi';
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
 import { AuthError } from '~/utils/error';
 import { Base64 } from '~/uid';
 
 const TOKEN = 'token';
-const col = () => dbClient.collection(TOKEN);
+const col = () => mongo.collection(TOKEN);
 
 // const tagSchema = Joi.object().keys({
 //   email: Joi.string().email().required(),

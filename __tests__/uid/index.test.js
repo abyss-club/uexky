@@ -1,4 +1,4 @@
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 
 import Uid, { Base64 } from '~/uid';
 

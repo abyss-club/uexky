@@ -1,7 +1,7 @@
 import gql from 'graphql-tag';
-import { db } from '~/dbClient';
+import { db } from '~/utils/mongo';
 
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 import {
   mockUser, mockAltUser, query, mutate, altMutate,
 } from '../__utils__/apolloClient';

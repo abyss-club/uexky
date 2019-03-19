@@ -1,5 +1,5 @@
-import { startRepl } from '../__utils__/mongoServer';
-import dbClient, { db } from '~/dbClient';
+import startRepl from '../__utils__/mongoServer';
+import mongo, { db } from '~/utils/mongo';
 
 import UserModel from '~/models/user';
 // import UserPostsModel from '~/models/userPosts';
@@ -22,7 +22,7 @@ afterAll(() => {
 
 const THREAD = 'thread';
 const USERPOSTS = 'userPosts';
-const col = () => dbClient.collection(THREAD);
+const col = () => mongo.collection(THREAD);
 
 const mockUser = {
   email: 'test@example.com',
@@ -79,7 +79,7 @@ describe('Testing posting a thread', () => {
   });
   it('Validating the thread in UserPostsModel', async () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await dbClient.collection(USERPOSTS).find(
+    const result = await mongo.collection(USERPOSTS).find(
       { userId: user._id, threadSuid },
     ).toArray();
     expect(result.length).toEqual(1);
@@ -122,7 +122,7 @@ describe('Testing posting a thread without subTags', () => {
   });
   it('Validating the thread in UserPostsModel', async () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await dbClient.collection(USERPOSTS).find(
+    const result = await mongo.collection(USERPOSTS).find(
       { userId: user._id, threadSuid },
     ).toArray();
     expect(result.length).toEqual(1);

@@ -1,6 +1,6 @@
 import JoiBase from 'joi';
 import JoiObjectId from '~/utils/joiObjectId';
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
 import findSlice from '~/models/base';
 import { ParamsError } from '~/utils/error';
 import { timeZero } from '~/uid/generator';
@@ -13,7 +13,7 @@ import PostModel from './post';
 
 const Joi = JoiBase.extend(JoiObjectId);
 const NOTIFICATION = 'notification';
-const col = () => dbClient.collection(NOTIFICATION);
+const col = () => mongo.collection(NOTIFICATION);
 
 const notiTypes = ['system', 'replied', 'quoted'];
 const isValidType = type => notiTypes.findIndex(t => t === type) !== -1;

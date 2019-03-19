@@ -1,6 +1,6 @@
 import JoiBase from 'joi';
 import JoiObjectId from '~/utils/joiObjectId';
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
 import Uid from '~/uid';
 import { ParamsError, InternalError } from '~/utils/error';
 import log from '~/utils/log';
@@ -13,7 +13,7 @@ import NotificationModel from './notification';
 const Joi = JoiBase.extend(JoiObjectId);
 const THREAD = 'thread';
 const POST = 'post';
-const col = () => dbClient.collection(POST);
+const col = () => mongo.collection(POST);
 
 const postSchema = Joi.object().keys({
   suid: Joi.string().alphanum().length(15).required(),
@@ -49,7 +49,7 @@ const PostModel = ctx => ({
     } = input;
 
     const threadSuid = Uid.encode(threadUid);
-    const threadDoc = await dbClient.collection(THREAD).findOne({ suid: threadSuid });
+    const threadDoc = await mongo.collection(THREAD).findOne({ suid: threadSuid });
     if (!threadDoc) {
       throw new ParamsError('Thread not found.');
     }
@@ -90,7 +90,7 @@ const PostModel = ctx => ({
     }
     post = value;
 
-    const session = await dbClient.startSession();
+    const session = await mongo.startSession();
     session.startTransaction();
 
     try {

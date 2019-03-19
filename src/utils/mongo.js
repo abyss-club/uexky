@@ -6,6 +6,7 @@ import log from '~/utils/log';
 
 // let mongoServer;
 // let replSet;
+// eslint-disable-next-line import/no-mutable-exports
 let db;
 let mongoClient;
 
@@ -19,14 +20,13 @@ const connectDb = async (mongoUri, dbName) => {
   try {
     await mongoClient.connect();
   } catch (err) {
-    console.error(err.stack);
+    log.error(err.stack);
   }
   db = mongoClient.db(dbName);
   return mongoClient;
 };
 
 const collection = (name) => {
-  // console.log({ db });
   if (!db) {
     throw new ParamsError('MongoClient must be connected first.');
   }

@@ -1,5 +1,5 @@
 import gql from 'graphql-tag';
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 
 import { query, mutate } from '../__utils__/apolloClient';
 

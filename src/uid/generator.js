@@ -1,4 +1,4 @@
-import { newWorkerId } from '~/models/workerId';
+import WorkerIdModel from '~/models/workerId';
 
 const randomSeq = () => Math.floor(Math.random() * 1024);
 const timeZero = new Date('2018-03-01T00:00:00Z');
@@ -19,7 +19,7 @@ const generator = (function makeGenerator() {
   const run = async () => {
     const now = new Date();
     if ((store.workerID === '') && (now.getTime() > store.expiredAt)) {
-      store.workerID = await newWorkerId();
+      store.workerID = await WorkerIdModel().newWorkerId();
       store.expiredAt = now + workerExpireMilliSeconds;
     }
 

@@ -1,6 +1,6 @@
 import JoiBase from 'joi';
 import JoiObjectId from '~/utils/joiObjectId';
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
 import { ParamsError, InternalError } from '~/utils/error';
 import Uid from '~/uid';
 import validator from '~/utils/validator';
@@ -14,7 +14,7 @@ import TagModel from './tag';
 const Joi = JoiBase.extend(JoiObjectId);
 const THREAD = 'thread';
 const POST = 'post';
-const col = () => dbClient.collection(THREAD);
+const col = () => mongo.collection(THREAD);
 
 const threadSchema = Joi.object().keys({
   suid: Joi.string().alphanum().length(15).required(),
@@ -74,7 +74,7 @@ const ThreadModel = ctx => ({
     }
     thread = value;
 
-    const session = await dbClient.startSession();
+    const session = await mongo.startSession();
     session.startTransaction();
     try {
       await col().insertOne(thread);
@@ -136,7 +136,7 @@ const genDoc = (ctx, model, doc) => ({
       parse: Uid.encode,
       toCursor: Uid.decode,
     };
-    const result = await findSlice(query, dbClient.collection(POST), option);
+    const result = await findSlice(query, mongo.collection(POST), option);
     return result;
   },
 

@@ -1,8 +1,10 @@
 import Joi from 'joi';
-import dbClient from '~/dbClient';
+import mongo from '~/utils/mongo';
+import log from '~/utils/log';
+import { ParamsError } from '~/utils/error';
 
 const TAG = 'tag';
-const col = () => dbClient.collection(TAG);
+const col = () => mongo.collection(TAG);
 
 const tagSchema = Joi.object().keys({
   name: Joi.string().required(),
@@ -18,7 +20,12 @@ const TagModel = () => ({
   },
 
   addMainTag: async function addMainTag(name) {
-    const tag = await col().insertOne({ name, isMain: true });
+    const { value, error } = tagSchema.validate({ name, isMain: true });
+    if (error) {
+      log.error(error);
+      throw new ParamsError(`Tag validation failed, ${error}`);
+    }
+    const tag = await col().insertOne(value);
     return tag;
   },
 

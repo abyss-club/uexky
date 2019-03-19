@@ -1,4 +1,4 @@
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 import generator from '~/uid/generator';
 
 jest.setTimeout(60000);

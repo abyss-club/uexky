@@ -1,5 +1,5 @@
-import { startRepl } from '../__utils__/mongoServer';
-import { newWorkerId } from '~/models/workerId';
+import startRepl from '../__utils__/mongoServer';
+import WorkerIdModel from '~/models/workerId';
 
 jest.setTimeout(60000); // for boot replica sets
 let replSet;
@@ -18,6 +18,6 @@ afterAll(() => {
 // const WORKER_ID = 'workerid';
 
 test('get worker id', async () => {
-  const ids = await Promise.all([1, 2, 3, 4, 5].map(() => newWorkerId()));
+  const ids = await Promise.all([1, 2, 3, 4, 5].map(() => WorkerIdModel().newWorkerId()));
   expect(ids.sort()).toEqual([1, 2, 3, 4, 5]);
 });

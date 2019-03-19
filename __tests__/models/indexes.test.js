@@ -1,5 +1,5 @@
-import { startRepl } from '../__utils__/mongoServer';
-import dbClient from '~/dbClient';
+import startRepl from '../__utils__/mongoServer';
+import mongo from '~/utils/mongo';
 
 import createIndexes from '~/models/indexes';
 
@@ -60,43 +60,43 @@ describe('test creating indexes', () => {
     await createIndexes();
   });
   it('Testing auth indexes', async () => {
-    const indexes = await dbClient.collection('auth').indexes();
+    const indexes = await mongo.collection('auth').indexes();
     expect(indexes[1]).toMatchObject(expectedIndexes.auth[0]);
     expect(indexes[2]).toMatchObject(expectedIndexes.auth[1]);
     expect(indexes[3]).toMatchObject(expectedIndexes.auth[2]);
   });
   it('Testing notification indexes', async () => {
-    const indexes = await dbClient.collection('notification').indexes();
+    const indexes = await mongo.collection('notification').indexes();
     expect(indexes[1]).toMatchObject(expectedIndexes.notification[0]);
     expect(indexes[2]).toMatchObject(expectedIndexes.notification[1]);
   });
   it('Testing post indexes', async () => {
-    const indexes = await dbClient.collection('post').indexes();
+    const indexes = await mongo.collection('post').indexes();
     expect(indexes[1]).toMatchObject(expectedIndexes.post[0]);
     expect(indexes[2]).toMatchObject(expectedIndexes.post[1]);
   });
   it('Testing thread indexes', async () => {
-    const indexes = await dbClient.collection('thread').indexes();
+    const indexes = await mongo.collection('thread').indexes();
     expect(indexes[1]).toMatchObject(expectedIndexes.thread[0]);
     expect(indexes[2]).toMatchObject(expectedIndexes.thread[1]);
   });
   it('Testing token indexes', async () => {
-    const indexes = await dbClient.collection('token').indexes();
+    const indexes = await mongo.collection('token').indexes();
     expect(indexes[1]).toMatchObject(expectedIndexes.token[0]);
     expect(indexes[2]).toMatchObject(expectedIndexes.token[1]);
     expect(indexes[3]).toMatchObject(expectedIndexes.token[2]);
   });
   it('Testing user indexes', async () => {
-    const indexes = await dbClient.collection('user').indexes();
+    const indexes = await mongo.collection('user').indexes();
     expect(indexes[1]).toMatchObject(expectedIndexes.user[0]);
     expect(indexes[2]).toMatchObject(expectedIndexes.user[1]);
   });
   it('Testing userAid indexes', async () => {
-    const indexes = await dbClient.collection('userAid').indexes();
+    const indexes = await mongo.collection('userAid').indexes();
     expect(indexes[1]).toMatchObject(expectedIndexes.userAid[0]);
   });
   it('Testing userPosts indexes', async () => {
-    const indexes = await dbClient.collection('userPosts').indexes();
+    const indexes = await mongo.collection('userPosts').indexes();
     expect(indexes[1]).toMatchObject(expectedIndexes.userPosts[0]);
   });
 });

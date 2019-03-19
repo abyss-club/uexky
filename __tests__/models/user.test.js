@@ -1,4 +1,4 @@
-import { startRepl } from '../__utils__/mongoServer';
+import startRepl from '../__utils__/mongoServer';
 
 import UserModel from '~/models/user';
 import { ParamsError, InternalError } from '~/utils/error';
@@ -41,7 +41,6 @@ describe('Testing modifying tags subscription', () => {
 describe('Testing adding tags subscription', () => {
   it('add tags', async () => {
     let user = await UserModel().getUserByEmail(mockUser.email);
-    console.log({ user });
     const result = await UserModel({ user }).methods(user).addSubbedTags(['MainC']);
     user = await UserModel().getUserByEmail(mockUser.email);
     expect(JSON.stringify(result.tags)).toEqual(JSON.stringify(newSubbedTags));
