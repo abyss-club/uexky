@@ -9,34 +9,35 @@ const authSchema = Joi.object().keys({
   createdAt: Joi.date().required(),
 });
 
-const AUTH = 'authCode';
-const col = () => mongo.collection(AUTH);
-
 const expireTime = {
   code: 1200, // 20 minutes
   token: 86400 * 7, // one week
 };
 
 const AuthModel = () => ({
-  addToAuth: async function addToAuth({ email, authCode = Base64.randomString(36) }) {
+  col: function col() {
+    return mongo.collection('authCode');
+  },
+  addToAuth: async function addToAuth(email) {
+    const authCode = Base64.randomString(36);
     const newAuth = { email, authCode, createdAt: new Date() };
     const { error, value } = authSchema.validate(newAuth);
     if (error) {
       throw new ParamsError(`Invalid email or authCode, ${error}`);
     }
-    await col().updateOne({ email }, { $set: value }, { upsert: true });
+    await this.col().updateOne({ email }, { $set: value }, { upsert: true });
   },
-  getEmailByCode: async function getEmailByCode({ authCode }) {
-    const results = await col().find({ authCode }).toArray();
-    if (results.length !== 0) {
+  getEmailByCode: async function getEmailByCode(authCode) {
+    const result = await this.col().findOne({ authCode });
+    if (!result) {
       throw new AuthError('Corresponding email not found.');
     }
     try {
-      await col().deleteOne({ authCode });
+      await this.col().deleteOne({ authCode });
     } catch (e) {
       throw new Error('Failed to invalidate authCode.');
     }
-    return results[0].email;
+    return result.email;
   },
 });
 

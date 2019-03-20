@@ -8,7 +8,7 @@ const Query = {
 const Mutation = {
   auth: async (obj, { email }, ctx) => {
     if (ctx.user) throw new Error('Already signed in.');
-    await AuthModel(ctx).addToAuth({ email });
+    await AuthModel(ctx).addToAuth(email);
     return true;
   },
   setName: async (obj, { name }, ctx) => {
