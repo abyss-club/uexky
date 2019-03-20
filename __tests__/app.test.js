@@ -11,8 +11,8 @@ describe('Testing paths', () => {
 
 describe('Testing auth', () => {
   it(`Plain request to ${endpoints.auth}`, async () => {
-    const response = await request(app.callback()).get(endpoints.auth);
-    expect(response.status).toEqual(200);
-    expect(response.text).toEqual('Incorrect authentication code');
+    const response = await (await request(app.callback())).get(endpoints.auth);
+    expect(response.status).toEqual(400);
+    expect(response.text).toEqual('验证信息格式错误');
   });
 });

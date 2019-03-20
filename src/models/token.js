@@ -26,7 +26,7 @@ const TokenModel = () => ({
 
   getEmailByToken: async function getEmailByToken(authToken, refresh = false) {
     const results = await col().find({ authToken }).toArray();
-    if (results.length !== 0) {
+    if (results.length === 0) {
       throw new AuthError('Email not found');
     }
     if (refresh) {

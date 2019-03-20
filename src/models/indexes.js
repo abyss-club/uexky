@@ -1,41 +1,54 @@
 import mongo from '~/utils/mongo';
+import { expireTime } from './auth';
 
-const index = (collectionName, spec, opt) => {
-  mongo.collection(collectionName).createIndex(spec, { ...opt, background: true });
+const index = async (collectionName, indexes) => {
+  const idxes = indexes.map(idx => ({ ...idx, background: true }));
+  await mongo.collection(collectionName).createIndexes(idxes);
 };
 
 function createIndexes() {
   return Promise.all([
-    index('authCode', { email: 1 }, { unique: true }),
-    index('authCode', { authCode: 1 }, {}),
-    index('authCode', { createdAt: 1 }, { expireAfterSeconds: 1200 }), // 20 minutes
-
-    index('notification', { send_to: 1, type: 1, eventTime: 1 }, {}),
-    index('notification', { send_to_group: 1, type: 1, eventTime: 1 }, {
-      partialFilterExpression: { send_to_group: { $exists: true } },
-    }),
-
-    index('post', { suid: 1 }, { unique: true }),
-    index('post', { quoteSuids: 1 }, {}),
-
-    index('thread', { suid: 1 }, { unique: true }),
-    index('thread', { tags: 1, suid: -1 }, {}),
-
-
-    index('token', { email: 1 }, { unique: true }),
-    index('token', { authToken: 1 }, { unique: true }),
-    index('token', { createdAt: 1 }, { expireAfterSeconds: 172800 }), // 20 days
-
-    index('user', { email: 1 }, { unique: true }),
-    index('user', { name: 1 }, {
-      unique: true,
-      partialFilterExpression: { name: { $type: 'string' } },
-    }),
-
-    index('userAid', { userId: 1, threadSuid: 1 }, { unique: true }),
-
-    index('userPosts', { userId: 1, threadSuid: 1, updatedAt: -1 }, {}),
+    index('authCode', [
+      { key: { email: 1 }, unique: true },
+      { key: { authCode: 1 } },
+      { key: { createdAt: 1 }, expireAfterSeconds: expireTime.code },
+    ]),
+    index('notification', [
+      { key: { send_to: 1, type: 1, eventTime: 1 } },
+      {
+        key: { send_to_group: 1, type: 1, eventTime: 1 },
+        partialFilterExpression: { send_to_group: { $exists: true } },
+      },
+    ]),
+    index('post', [
+      { key: { suid: 1 }, unique: true },
+      { key: { quoteSuids: 1 } },
+    ]),
+    index('thread', [
+      { key: { suid: 1 }, unique: true },
+      { key: { tags: 1, suid: -1 } },
+    ]),
+    index('token', [
+      { key: { email: 1 }, unique: true },
+      { key: { authToken: 1 }, unique: true },
+      { key: { createdAt: 1 }, expireAfterSeconds: expireTime.token },
+    ]),
+    index('user', [
+      { key: { email: 1 }, unique: true },
+      {
+        key: { name: 1 },
+        unique: true,
+        partialFilterExpression: { name: { $type: 'string' } },
+      },
+    ]),
+    index('userAid', [
+      { key: { userId: 1, threadSuid: 1 }, unique: true },
+    ]),
+    index('userPosts', [
+      { key: { userId: 1, threadSuid: 1, updatedAt: -1 } },
+    ]),
   ]);
 }
 
 export default createIndexes;
+export { index };
