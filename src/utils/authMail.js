@@ -3,20 +3,21 @@ import Mailgun from 'mailgun-js';
 import env from '~/utils/env';
 import log from '~/utils/log';
 
-let mailgun = null;
+let mailgun;
 
-const init = (obj) => {
-  if (!obj) {
-    mailgun = new Mailgun({
-      apiKey: env.MAILGUN_PRIVATE_KEY,
-      domain: env.MAILGUN_DOMAIN,
-    });
-  } else {
-    mailgun = obj;
-  }
+const connectMailgun = () => {
+  mailgun = new Mailgun({
+    apiKey: env.MAILGUN_PRIVATE_KEY,
+    publicApiKey: env.MAILGUN_PUBLIC_KEY,
+    domain: env.MAILGUN_DOMAIN,
+  });
 };
 
-const sendAuthMail = (code, email) => new Promise(((resolve, reject) => {
+const mockMailgun = (obj) => {
+  mailgun = obj;
+};
+
+const sendAuthMail = (email, code) => new Promise(((resolve, reject) => {
   const codeUrl = `${env.API_DOMAIN}/auth/?code=${code}`;
   const mail = {
     from: `Abyss <auth@${env.MAILGUN_DOMAIN}>`,
@@ -33,9 +34,6 @@ const sendAuthMail = (code, email) => new Promise(((resolve, reject) => {
   </body>
 </html>`,
   };
-  if (!mailgun) {
-    init();
-  }
   mailgun.messages().send(mail, (err, body) => {
     if (err) {
       reject(err);
@@ -47,4 +45,4 @@ const sendAuthMail = (code, email) => new Promise(((resolve, reject) => {
 }));
 
 export default sendAuthMail;
-export { init };
+export { connectMailgun, mockMailgun };
