@@ -1,6 +1,8 @@
 import Joi from 'joi';
-import mongo from '~/utils/mongo';
+
 import { Base64 } from '~/uid';
+import mongo from '~/utils/mongo';
+import sendAuthMail from '~/utils/authMail';
 import { AuthError, ParamsError } from '~/utils/error';
 
 const authSchema = Joi.object().keys({
@@ -26,6 +28,7 @@ const AuthModel = () => ({
       throw new ParamsError(`Invalid email or authCode, ${error}`);
     }
     await this.col().updateOne({ email }, { $set: value }, { upsert: true });
+    await sendAuthMail(email, authCode);
   },
   getEmailByCode: async function getEmailByCode(authCode) {
     const result = await this.col().findOne({ authCode });

@@ -3,8 +3,9 @@ const env = {
   MONGODB_DBNAME: process.env.MONGODB_DBNAME || 'dev_uexky',
   REDIS_URI: process.env.REDIS_URI || 'redis://localhost:6379/0',
 
-  MAINGUN_PRIVATE_KEY: process.env.MAINGUN_PRIVATE_KEY,
-  MAINGUN_DOMAIN: process.env.MAINGUN_DOMAIN,
+  MAINGUN_PRIVATE_KEY: process.env.MAINGUN_PRIVATE_KEY || 'private_key',
+  MAINGUN_PUBLIC_KEY: process.env.MAINGUN_PUBLIC_KEY || 'public_key',
+  MAINGUN_DOMAIN: process.env.MAINGUN_DOMAIN || 'mail.abyss.club',
 
   DOMAIN: process.env.DOMAIN,
   API_DOMAIN: process.env.API_DOMAIN,
