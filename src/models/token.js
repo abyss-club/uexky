@@ -1,33 +1,41 @@
-// import Joi from 'joi';
+import Joi from 'joi';
 import mongo from '~/utils/mongo';
-import { AuthError } from '~/utils/error';
 import { Base64 } from '~/uid';
+import { AuthError, ParamsError } from '~/utils/error';
 
 const TOKEN = 'token';
 const col = () => mongo.collection(TOKEN);
 
-// const tagSchema = Joi.object().keys({
-//   email: Joi.string().email().required(),
-//   authToken: Joi.string().required(),
-//   createdAt: Joi.date().required(),
-// });
+const tokenSchema = Joi.object().keys({
+  email: Joi.string().email().required(),
+  authToken: Joi.string().required(),
+  createdAt: Joi.date().required(),
+});
 
 const TokenModel = () => ({
   genNewToken: async function genNewToken(email) {
     const authToken = Base64.randomString(24);
     const newToken = { email, authToken, createdAt: new Date() };
-    await col().updateOne({ email }, { $set: { newToken } }, { upsert: true });
-    try {
-      const result = await col().findOne({ email });
-      return result;
-    } catch (e) { throw new AuthError('AuthToken not found'); }
+    const { error, value } = tokenSchema.validate(newToken);
+    if (error) {
+      throw new ParamsError(`Invalid email or authCode, ${error}`);
+    }
+    await col().updateOne({ email }, { $set: value }, { upsert: true });
+    return newToken.authToken;
   },
 
-  getEmailByToken: async function getEmailByToken(authToken) {
-    try {
-      const result = await col().findOne({ authToken });
-      return result.email;
-    } catch (e) { throw new AuthError('Email not found'); }
+  getEmailByToken: async function getEmailByToken(authToken, refresh = false) {
+    const results = await col().find({ authToken }).toArray();
+    if (results.length === 0) {
+      throw new AuthError('Email not found');
+    }
+    if (refresh) {
+      await col().updateOne(
+        { authToken },
+        { $set: { createdAt: new Date() } },
+      );
+    }
+    return results[0].email;
   },
 });
 
