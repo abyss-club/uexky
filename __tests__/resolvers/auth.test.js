@@ -2,6 +2,7 @@ import gql from 'graphql-tag';
 
 import startRepl from '../__utils__/mongoServer';
 import { mockUser, mutate, guestMutate } from '../__utils__/apolloClient';
+import { mockMailgun } from '~/utils/authMail';
 
 jest.setTimeout(60000);
 let replSet;
@@ -24,8 +25,22 @@ const AUTH = gql`
   }
 `;
 
+const mailgun = {
+  mail: null,
+  messages: function messages() {
+    const that = this;
+    return {
+      send(mail, fallback) {
+        that.mail = mail;
+        fallback(null, 'success');
+      },
+    };
+  },
+};
+
 describe('Testing auth', () => {
   it('without context', async () => {
+    mockMailgun(mailgun);
     const { data } = await guestMutate({ mutation: AUTH, variables: { email: mockEmail } });
     expect(data.auth).toEqual(true);
   });

@@ -2,10 +2,7 @@ import { MongoClient } from 'mongodb';
 import { ParamsError } from '~/utils/error';
 
 import log from '~/utils/log';
-// import createIndexes from '~/models/indexes';
 
-// let mongoServer;
-// let replSet;
 // eslint-disable-next-line import/no-mutable-exports
 let db;
 let mongoClient;

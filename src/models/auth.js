@@ -1,6 +1,8 @@
 import Joi from 'joi';
-import mongo from '~/utils/mongo';
+
 import { Base64 } from '~/uid';
+import mongo from '~/utils/mongo';
+import sendAuthMail from '~/utils/authMail';
 import { AuthError, ParamsError } from '~/utils/error';
 
 const authSchema = Joi.object().keys({
@@ -9,22 +11,38 @@ const authSchema = Joi.object().keys({
   createdAt: Joi.date().required(),
 });
 
-const AUTH = 'auth';
-const col = () => mongo.collection(AUTH);
+const expireTime = {
+  code: 1200, // 20 minutes
+  token: 86400 * 7, // one week
+};
 
 const AuthModel = () => ({
-  addToAuth: async function addToAuth({ email, authCode = Base64.randomString(36) }) {
+  col: function col() {
+    return mongo.collection('authCode');
+  },
+  addToAuth: async function addToAuth(email) {
+    const authCode = Base64.randomString(36);
     const newAuth = { email, authCode, createdAt: new Date() };
     const { error, value } = authSchema.validate(newAuth);
-    if (error) throw new ParamsError(`Invalid email or authCode, ${error}`);
-    await col().updateOne({ email }, { $set: value }, { upsert: true });
+    if (error) {
+      throw new ParamsError(`Invalid email or authCode, ${error}`);
+    }
+    await this.col().updateOne({ email }, { $set: value }, { upsert: true });
+    await sendAuthMail(email, authCode);
   },
-  getEmailByCode: async function getEmailByCode({ authCode }) {
-    const result = await col().findOne({ authCode });
-    if (!result) throw new AuthError('Corresponding email not found.');
-    try { await col().deleteOne({ authCode }); } catch (e) { throw new Error('Failed to invalidate authCode.'); }
+  getEmailByCode: async function getEmailByCode(authCode) {
+    const result = await this.col().findOne({ authCode });
+    if (!result) {
+      throw new AuthError('Corresponding email not found.');
+    }
+    try {
+      await this.col().deleteOne({ authCode });
+    } catch (e) {
+      throw new Error('Failed to invalidate authCode.');
+    }
     return result.email;
   },
 });
 
 export default AuthModel;
+export { expireTime };
