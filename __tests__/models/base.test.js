@@ -1,7 +1,7 @@
 import { ObjectID } from 'mongodb';
 import startRepl from '../__utils__/mongoServer';
 import mongo from '~/utils/mongo';
-import Joi from 'joi';
+import Joi from '@hapi/joi';
 
 import findSlice from '~/models/base';
 

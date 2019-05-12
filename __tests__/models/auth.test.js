@@ -4,7 +4,6 @@ import { mockMailgun } from '~/utils/authMail';
 
 import startRepl from '../__utils__/mongoServer';
 
-
 jest.setTimeout(60000);
 
 let replSet;
@@ -32,7 +31,6 @@ const mailgun = {
     };
   },
 };
-
 
 describe('Testing auth', () => {
   const authCode = Base64.randomString(36);

@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import Joi from '@hapi/joi';
 import mongo from '~/utils/mongo';
 
 import { ParamsError } from '~/utils/error';

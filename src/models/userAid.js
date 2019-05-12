@@ -1,4 +1,4 @@
-import JoiBase from 'joi';
+import JoiBase from '@hapi/joi';
 import JoiObjectId from '~/utils/joiObjectId';
 import { ParamsError } from '~/utils/error';
 import mongo from '~/utils/mongo';
