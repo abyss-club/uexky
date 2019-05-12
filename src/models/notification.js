@@ -1,15 +1,15 @@
-import JoiBase from 'joi';
+import JoiBase from '@hapi/joi';
 import JoiObjectId from '~/utils/joiObjectId';
 import mongo from '~/utils/mongo';
 import findSlice from '~/models/base';
 import { ParamsError } from '~/utils/error';
 import { timeZero } from '~/uid/generator';
 import { ObjectId } from 'bson-ext';
+import Uid from '~/uid';
 import log from '~/utils/log';
 
 import ThreadModel from './thread';
 import UserModel from './user';
-import PostModel from './post';
 
 const Joi = JoiBase.extend(JoiObjectId);
 const NOTIFICATION = 'notification';
@@ -93,11 +93,11 @@ const NotificationModel = ctx => ({
   ) {
     if (quotedPosts.length < 1) return;
 
-    const postUid = PostModel(ctx).methods(post).uid();
+    const postUid = Uid.decode(post.suid);
     const threadUid = ThreadModel(ctx).methods(thread).uid();
 
     const validateQp = (qp) => {
-      const qpUid = PostModel(ctx).methods(qp).uid();
+      const qpUid = Uid.decode(qp.suid);
       const { value, error } = notificationSchema.validate({
         id: `quoted:${postUid}:${qpUid}`,
         type: 'quoted',
