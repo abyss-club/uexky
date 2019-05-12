@@ -1,7 +1,11 @@
 import request from 'supertest';
-import app, { endpoints, authMiddleware } from '~/app';
+import app, { endpoints, authMiddleware, configMiddleware } from '~/app';
 // import { deflateSync } from 'zlib';
 import Cookies from 'cookies';
+
+import TokenModel from '~/models/token';
+import UserModel from '~/models/user';
+import ConfigModel from '~/models/config';
 
 describe('Testing paths', () => {
   it('Get /invalid', async () => {
@@ -19,13 +23,39 @@ describe('Testing auth', () => {
   });
 });
 
+const getCtx = () => ({ url: endpoints.graphql });
+
 describe('test auth middleware', () => {
-  it('test auth middleware', async () => {
+  it('test not signed in', async () => {
     const middleware = authMiddleware();
-    const ctx = {};
+    const ctx = { url: endpoints.graphql };
     ctx.cookies = new Cookies();
-    const token = '';
+    await middleware(ctx, () => {});
+    expect(ctx.user).toBeNull();
+  });
+  it('test signed in', async () => {
+    // mock data
+    const mockEmail = 'test@example.com';
+    const user = await UserModel().getUserByEmail(mockEmail);
+    const token = await TokenModel(ctx).genNewToken(mockEmail);
+
+    const middleware = authMiddleware();
+    const ctx = { url: endpoints.graphql };
+    ctx.cookies = new Cookies();
     ctx.cookies.serialize('token', token);
     await middleware(ctx, () => {});
+
+    expect(ctx.user.email).toEqual(user.email);
+    expect(ctx.user).toEqual(user);
+  });
+});
+
+describe('test config middleware', () => {
+  it('get config', async () => {
+    const middleware = configMiddleware();
+    const ctx = getCtx();
+    await middleware(ctx, () => {});
+    const config = ConfigModel.getConfig();
+    expect(ctx.config).toEqual(config);
   });
 });
