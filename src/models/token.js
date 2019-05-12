@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import Joi from '@hapi/joi';
 import mongo from '~/utils/mongo';
 import { Base64 } from '~/uid';
 import { AuthError, ParamsError } from '~/utils/error';
