@@ -8,18 +8,22 @@ module.exports = {
   "env": {
     "es6": true,
   },
+  "globals": {
+    "Atomics": "readonly",
+    "SharedArrayBuffer": "readonly",
+  },
   "parser": "babel-eslint",
   "parserOptions": {
     "sourceType": "module",
     "ecmaVersion": 2018,
   },
-  settings: {
-    'import/resolver': {
-      alias: {
-        map: [
-          ['~', './src']
+  "settings": {
+    "import/resolver": {
+      "alias": {
+        "map": [
+          ["~", "./src"]
         ],
-        extensions: ['.js', '.jsx', '.json'],
+        "extensions": [".js", ".jsx", ".json"],
       },
     },
   },

@@ -1,4 +1,4 @@
-import Joi from 'joi';
+import Joi from '@hapi/joi';
 import mongo, { db } from '~/utils/mongo';
 import log from '~/utils/log';
 
