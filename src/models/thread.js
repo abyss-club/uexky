@@ -37,10 +37,11 @@ const threadSchema = Joi.object().keys({
 });
 
 const ThreadModel = ctx => ({
-  pubThread: async function pubThread({ user }, input) {
+  pubThread: async function pubThread(input) {
     const {
       anonymous, content, title, mainTag, subTags = [],
     } = input;
+    const { user } = ctx;
 
     const mainTags = await TagModel().getMainTags();
     if (!mainTags.includes(mainTag)) throw new ParamsError('Invalid mainTag');
