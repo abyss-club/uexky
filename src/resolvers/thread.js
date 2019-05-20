@@ -18,7 +18,7 @@ const Mutation = {
   pubThread: async (obj, { thread }, ctx) => {
     const { rateCost } = ctx.config;
     await ctx.limiter.take(rateCost.pubThread);
-    const newThread = await ThreadModel(ctx).pubThread(ctx, thread);
+    const newThread = await ThreadModel(ctx).pubThread(thread);
     newThread.replyCount = 0;
     return newThread;
   },

@@ -43,10 +43,11 @@ const postSchema = Joi.object().keys({
 // }, { autoCreate: true });
 
 const PostModel = ctx => ({
-  pubPost: async function pubPost({ user }, input) {
+  pubPost: async function pubPost(input) {
     const {
       threadId: threadUid, anonymous, content, quoteIds: quoteUids = [],
     } = input;
+    const { user } = ctx;
 
     const threadSuid = Uid.encode(threadUid);
     const threadDoc = await mongo.collection(THREAD).findOne({ suid: threadSuid });

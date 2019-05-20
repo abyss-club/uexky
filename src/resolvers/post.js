@@ -12,7 +12,7 @@ const Mutation = {
   pubPost: async (obj, { post }, ctx) => {
     const { rateCost } = ctx.config;
     await ctx.limiter.take(rateCost.pubPost);
-    const newPost = await PostModel(ctx).pubPost(ctx, post);
+    const newPost = await PostModel(ctx).pubPost(post);
     newPost.quoteCount = 0;
     return newPost;
   },
