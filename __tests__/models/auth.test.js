@@ -2,8 +2,6 @@ import { Base64 } from '~/uid';
 import AuthModel from '~/models/auth';
 import { mockMailgun } from '~/utils/authMail';
 
-import startRepl from '../__utils__/mongoServer';
-
 jest.setTimeout(60000);
 
 let replSet;

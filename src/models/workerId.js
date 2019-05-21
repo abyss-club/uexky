@@ -1,5 +1,5 @@
 // import Joi from '@hapi/joi';
-import mongo from '~/utils/mongo';
+import pg from '~/utils/pg';
 
 // const workerIdSchema = Joi.object().keys({
 //   count: Joi.number().integer().min(0),
