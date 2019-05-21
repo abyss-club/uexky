@@ -1,5 +1,20 @@
+import startRepl from './__utils__/mongoServer';
 import request from 'supertest';
-import app, { endpoints } from '~/app';
+import app, { endpoints, authMiddleware } from '~/app';
+
+jest.setTimeout(60000);
+
+let replSet;
+let mongoClient;
+
+beforeAll(async () => {
+  ({ replSet, mongoClient } = await startRepl());
+});
+
+afterAll(() => {
+  mongoClient.close();
+  replSet.stop();
+});
 
 describe('Testing paths', () => {
   it('Get /invalid', async () => {
