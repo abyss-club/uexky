@@ -15,14 +15,18 @@ test:
   tags:
     - docker
   services:
-    - mongo
+    - postgres:latest
     - redis:latest
   variables:
-    MONGO_URI: "mongodb://mongo"
+    PG_URI: "postgresql://runner@postgres"
     REDIS_URI: "redis://redis"
+    PG_DBNAME: "test_uexky"
+    POSTGRES_DB: test_uexky
+    POSTGRES_USER: runner
+    POSTGRES_PASSWORD: ""
   stage: test
   script:
-    - yarn test
+    - yarn test models/config.test
 
 build:
   image: docker:stable

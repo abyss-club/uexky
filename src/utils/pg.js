@@ -30,10 +30,9 @@ const getClient = () => pgPool.connect();
 // const startSession = () => mongoClient.startSession();
 
 export default {
-  query,
   getClient,
 };
 
 export {
-  connectDb, db,
+  query, connectDb,
 };
