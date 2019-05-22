@@ -78,7 +78,7 @@ describe('Testing posting a thread', () => {
   it('Posting a thread', async () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
     const newThread = mockThread;
-    const { _id } = await ThreadModel({ user }).pubThread({ user }, newThread);
+    const { _id } = await ThreadModel({ user }).pubThread(newThread);
     const threadResult = await mongo.collection(THREAD).findOne({ _id });
     const author = await UserModel({ user }).methods(user).author(threadResult.suid, true);
     expect(JSON.stringify(threadResult.subTags)).toEqual(JSON.stringify(newThread.subTags));
@@ -118,7 +118,7 @@ describe('Testing replying a thread', () => {
   it('Posting reply', async () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
     const newPost = mockPost;
-    const { _id } = await PostModel({ user }).pubPost({ user }, newPost);
+    const { _id } = await PostModel({ user }).pubPost(newPost);
     const postResult = await mongo.collection(POST).findOne({ _id });
 
     postSuid = postResult.suid;
@@ -138,7 +138,7 @@ describe('Testing replying a thread', () => {
   it('Posting reply with quotes', async () => {
     const user = await UserModel().getUserByEmail(mockReplier.email);
     const newPost = mockReply;
-    const { _id } = await PostModel({ user }).pubPost({ user }, newPost);
+    const { _id } = await PostModel({ user }).pubPost(newPost);
     const postResult = await mongo.collection(POST).findOne({ _id });
 
     replySuid = postResult.suid;
