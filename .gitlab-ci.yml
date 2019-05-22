@@ -1,4 +1,4 @@
-image: node:11.3-stretch
+image: node:lts
 
 variables:
   REGISTRY_NAME: 'registry.gitlab.com'

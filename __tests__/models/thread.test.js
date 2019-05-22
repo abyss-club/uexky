@@ -61,7 +61,7 @@ describe('Testing posting a thread', () => {
   it('Posting a thread', async () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
     const newThread = mockThread;
-    const { _id } = await ThreadModel({ user }).pubThread({ user }, newThread);
+    const { _id } = await ThreadModel({ user }).pubThread(newThread);
     const threadResult = await col().findOne({ _id });
     const author = await UserModel({ user }).methods(user).author(threadResult.suid, true);
     expect(JSON.stringify(threadResult.subTags)).toEqual(JSON.stringify(newThread.subTags));
@@ -102,7 +102,7 @@ describe('Testing posting a thread without subTags', () => {
   it('Posting a thread', async () => {
     const user = await UserModel().getUserByEmail(mockUser.email);
     const newThread = mockThreadNoSubTags;
-    const { _id } = await ThreadModel({ user }).pubThread({ user }, newThread);
+    const { _id } = await ThreadModel({ user }).pubThread(newThread);
     const threadResult = await col().findOne({ _id });
     const author = await UserModel({ user }).methods(user).author(threadResult.suid, true);
     expect(JSON.stringify(threadResult.subTags))
