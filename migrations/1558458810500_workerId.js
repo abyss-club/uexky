@@ -2,7 +2,14 @@ exports.shorthands = undefined;
 
 exports.up = (pgm) => {
   pgm.createTable('workerId', {
-    id: 'id',
+    id: {
+      type: 'integer',
+      primaryKey: true,
+      generated: {
+        precedence: 'BY DEFAULT',
+        increment: 1,
+      },
+    },
   });
 };
 
