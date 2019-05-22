@@ -1,26 +1,22 @@
 import ConfigModel from '~/models/config';
-import mongo from '~/utils/mongo';
 import { ParamsError } from '~/utils/error';
-import startRepl from '../__utils__/mongoServer';
+import startPg, { migrate } from '../__utils__/pgServer';
 
-// May require additional time for downloading MongoDB binaries
-jest.setTimeout(60000);
-
-let replSet;
-let mongoClient;
 let ctx;
+let pgPool;
 // let db;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
 
-const CONFIG = 'config';
+// const CONFIG = 'config';
 
 /* TODO(tangwenhan): may be useful in next work (tag model).
 describe('Testing mainTags', () => {
@@ -71,9 +67,9 @@ describe('Testing rateLimit', () => {
   };
   const checkConfig = async () => {
     const result = await ConfigModel().getConfig();
-    const resultInDb = await mongo.collection(CONFIG).findOne({}, { projection: { _id: 0 } });
+    const resultInDb = await pgPool.query('SELECT "rateLimit", "rateCost" from config where id = 1');
     expect(result).toEqual(expectedConfig);
-    expect(resultInDb).toEqual(expectedConfig);
+    expect(resultInDb.rows[0]).toEqual(expectedConfig);
   };
 
   it('get default config', async () => {

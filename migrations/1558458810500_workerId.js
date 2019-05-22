@@ -1,11 +1,11 @@
 exports.shorthands = undefined;
 
 exports.up = (pgm) => {
-  pgm.addColumns('workerId', {
+  pgm.createTable('workerId', {
     id: 'id',
   });
 };
 
 exports.down = (pgm) => {
-  pgm.dropColumns('workerId', ['id']);
+  pgm.dropTable('workerId');
 };
