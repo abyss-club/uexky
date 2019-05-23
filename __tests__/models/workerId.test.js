@@ -1,21 +1,18 @@
-import startRepl from '../__utils__/mongoServer';
 import WorkerIdModel from '~/models/workerId';
+import startPg, { migrate } from '../__utils__/pgServer';
 
-jest.setTimeout(60000); // for boot replica sets
-let replSet;
-let mongoClient;
+let pgPool;
 // let db;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
-
-// const WORKER_ID = 'workerid';
 
 test('get worker id', async () => {
   const ids = await Promise.all([1, 2, 3, 4, 5].map(() => WorkerIdModel().newWorkerId()));

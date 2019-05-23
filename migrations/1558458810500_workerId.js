@@ -1,7 +1,7 @@
 exports.shorthands = undefined;
 
 exports.up = (pgm) => {
-  pgm.createTable('workerId', {
+  pgm.createTable('workerid', {
     id: {
       type: 'integer',
       primaryKey: true,
@@ -14,5 +14,5 @@ exports.up = (pgm) => {
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('workerId');
+  pgm.dropTable('workerid');
 };
