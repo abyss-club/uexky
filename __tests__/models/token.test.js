@@ -1,19 +1,18 @@
-import startRepl from '../__utils__/mongoServer';
 import TokenModel from '~/models/token';
+import startPg, { migrate } from '../__utils__/pgServer';
 
-jest.setTimeout(60000);
-
-let replSet;
-let mongoClient;
 let ctx;
+let pgPool;
+// let db;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
 
 describe('Testing token', () => {

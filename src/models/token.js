@@ -1,10 +1,7 @@
 import Joi from '@hapi/joi';
-import mongo from '~/utils/mongo';
+import { query } from '~/utils/pg';
 import { Base64 } from '~/uid';
 import { AuthError, ParamsError } from '~/utils/error';
-
-const TOKEN = 'token';
-const col = () => mongo.collection(TOKEN);
 
 const tokenSchema = Joi.object().keys({
   email: Joi.string().email().required(),
@@ -20,22 +17,30 @@ const TokenModel = () => ({
     if (error) {
       throw new ParamsError(`Invalid email or authCode, ${error}`);
     }
-    await col().updateOne({ email }, { $set: value }, { upsert: true });
+    await query(
+      `
+      INSERT INTO token(email, "authToken") VALUES($1, $2)
+      ON CONFLICT (email)
+        DO UPDATE SET
+          "authToken" = $2;
+      `,
+      [value.email, value.authToken],
+    );
     return newToken.authToken;
   },
 
   getEmailByToken: async function getEmailByToken(authToken, refresh = false) {
-    const results = await col().find({ authToken }).toArray();
-    if (results.length === 0) {
+    const results = await query('SELECT email, "authToken" from token where "authToken" = $1', [authToken]);
+    if (results.rows.length < 1) {
       throw new AuthError('Email not found');
     }
-    if (refresh) {
-      await col().updateOne(
-        { authToken },
-        { $set: { createdAt: new Date() } },
-      );
-    }
-    return results[0].email;
+    // if (refresh) {
+    //   await col().updateOne(
+    //     { authToken },
+    //     { $set: { createdAt: new Date() } },
+    //   );
+    // }
+    return results.rows[0].email;
   },
 });
 
