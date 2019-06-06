@@ -1,21 +1,25 @@
-import startRepl from '../__utils__/mongoServer';
-import mongo from '~/utils/mongo';
 import Joi from '@hapi/joi';
-
 import findSlice from '~/models/base';
+import { ParamsError } from '~/utils/error';
+import startPg, { migrate } from '../__utils__/pgServer';
 
-jest.setTimeout(60000);
-
-let replSet;
-let mongoClient;
+let ctx;
+let pgPool;
+// let db;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await pgPool.query(`
+    CREATE TABLE base (
+      text text,
+      count integer
+    );
+  `);
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
 
 const BASE = 'base';

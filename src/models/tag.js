@@ -10,7 +10,7 @@ const tagSchema = Joi.object().keys({
   name: Joi.string().required(),
   isMain: Joi.boolean().required(),
   belongsTo: Joi.array().items(Joi.string()),
-  updateAt: Joi.date(),
+  updatedAt: Joi.date(),
 });
 
 const TagModel = () => ({
@@ -33,7 +33,7 @@ const TagModel = () => ({
     const option = { ...opt, upsert: true };
     const updateTags = thread.subTags.map(async tag => col().updateOne({ name: tag }, {
       $addToSet: { belongsTo: thread.mainTag },
-      $set: { updateAt: new Date(), isMain: false },
+      $set: { updatedAt: new Date(), isMain: false },
     }, option));
     await Promise.all(updateTags);
   },

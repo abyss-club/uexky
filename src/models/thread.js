@@ -1,6 +1,6 @@
 import JoiBase from '@hapi/joi';
 import JoiObjectId from '~/utils/joiObjectId';
-import mongo from '~/utils/mongo';
+import { query } from '~/utils/pg';
 import { ParamsError, InternalError } from '~/utils/error';
 import Uid from '~/uid';
 import validator from '~/utils/validator';
