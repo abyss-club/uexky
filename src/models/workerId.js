@@ -1,9 +1,17 @@
-// import Joi from '@hapi/joi';
 import { query } from '~/utils/pg';
+
+/* CREATE table counter(
+ *     name varchar(32) PRIMARY KEY,
+ *     count integer DEFAULT 0
+ * );
+*/
 
 const WorkerIdModel = () => ({
   newWorkerId: async function newWorkerId() {
-    const results = await query('INSERT INTO workerid (id) VALUES(default) RETURNING id;');
+    const results = await query(
+      'INSERT INTO counter (name) VALUES ("worker") ON CONFLICT (name)'
+      + 'DO UPDATE SET count = counter.count + 1 RETURNING count;',
+    );
     return results.rows[0].id % 512;
   },
 });

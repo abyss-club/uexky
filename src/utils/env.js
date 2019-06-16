@@ -1,6 +1,5 @@
 const env = {
   PG_URI: process.env.PG_URI || 'postgresql://localhost',
-  PG_DBNAME: process.env.PG_DBNAME || 'dev_uexky',
   REDIS_URI: process.env.REDIS_URI || 'redis://localhost:6379/0',
 
   MAINGUN_PRIVATE_KEY: process.env.MAINGUN_PRIVATE_KEY || 'private_key',
