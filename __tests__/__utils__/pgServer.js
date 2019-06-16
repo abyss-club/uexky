@@ -4,16 +4,17 @@ import env from '~/utils/env';
 import pgMigrate from 'node-pg-migrate';
 
 const startPg = async () => {
-  console.log(env.PG_URI);
   const pgPool = await connectDb(env.PG_URI);
   return pgPool;
 };
 
-const migrate = async () => pgMigrate({
+const migrate = () => pgMigrate({
   databaseUrl: env.PG_URI,
   direction: 'up',
   dir: path.join(__dirname, '../../migrations'),
-  migrationsTable: 'pgmigrations',
+  migrationsTable: 'migrations',
+}).catch((e) => {
+  console.error(e);
 });
 
 export { migrate };
