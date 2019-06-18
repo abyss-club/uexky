@@ -1,6 +1,5 @@
-import startRepl from '../__utils__/mongoServer';
-
 import Uid, { Base64 } from '~/uid';
+import startPg, { migrate } from '../__utils__/pgServer';
 
 describe('Base64', () => {
   const pairs = [
@@ -27,14 +26,14 @@ describe('Base64', () => {
 
 describe('decode/encode', () => {
   jest.setTimeout(60000);
-  let replSet;
-  let mongoClient;
+  let pgPool;
   beforeEach(async () => {
-    ({ replSet, mongoClient } = await startRepl());
+    await migrate();
+    pgPool = await startPg();
   });
-  afterEach(() => {
-    mongoClient.close();
-    replSet.stop();
+  afterEach(async () => {
+    await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+    pgPool.end();
   });
   test('Generator id, decode, and encode', async () => {
     const suid = await Uid.newSuid();

@@ -1,17 +1,16 @@
-import startRepl from '../__utils__/mongoServer';
+import startPg, { migrate } from '../__utils__/pgServer';
 import generator from '~/uid/generator';
 
-jest.setTimeout(60000);
-let replSet;
-let mongoClient;
+let pgPool;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
 
 const getTimestamp = uid => parseInt(uid.substring(0, 8), 16);
