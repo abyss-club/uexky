@@ -8,7 +8,8 @@ const workerExpireMilliSeconds = 1000 * 3600;
 // Random Bits
 const randomBits = () => Math.floor(Math.random() * 512);
 
-const generator = (function makeGenerator() {
+// async function newUID() -> BigInt
+const newSuid = (function makeGenerator() {
   const store = {
     workerID: '',
     expiredAt: 0,
@@ -42,17 +43,16 @@ const generator = (function makeGenerator() {
     store.firstSeqInTs = nextSeq;
   };
 
-  const newID = async () => {
+  return async () => {
     await run();
     const rb = randomBits();
-    return [
-      store.timestamp.toString(16).padStart(8, '0'),
-      (store.workerID * (2 ** 19)
-      + store.seq * (2 ** 9) + rb).toString(16).padStart(7, '0'),
-    ].join('');
+    let id = BigInt(store.timestamp * (2 ** 28));
+    id += BigInt(store.workerID * (2 ** 19));
+    id += BigInt(store.seq * (2 ** 9));
+    id += BigInt(rb);
+    return id;
   };
-  return { newID };
 }());
 
-export default generator;
+export default newSuid;
 export { timeZero };

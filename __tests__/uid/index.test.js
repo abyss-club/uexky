@@ -1,30 +1,30 @@
-import Uid, { Base64 } from '~/uid';
+import UID, { Base64 } from '~/uid';
 import startPg, { migrate } from '../__utils__/pgServer';
 
 describe('Base64', () => {
   const pairs = [
-    // 2000 = 31 * 64 + 16 = 0x7d0
-    ['7d0', Base64.code[31] + Base64.code[16]],
-    // 200 = 3 * 64 + 8 = 0xc8
-    ['0c8', Base64.code[3] + Base64.code[8]],
-    // 2 = 0 * 64 + 2 = 0x2
-    ['002', Base64.code[0] + Base64.code[2]],
+    // 2000 = 31 * 64 + 16
+    [BigInt(2000), Base64.code[31] + Base64.code[16]],
+    // 200 = 3 * 64 + 8
+    [BigInt(200), Base64.code[3] + Base64.code[8]],
+    // 2 = 0 * 64 + 2
+    [BigInt(2), Base64.code[0] + Base64.code[2]],
   ];
-  test('convertTohex3', () => {
+  test('convertToBigInt', () => {
     pairs.forEach((p) => {
-      const hex = Base64.convertTohex3(p[1]);
-      expect(hex).toEqual(p[0]);
+      const n = Base64.convertToBigInt(p[1]);
+      expect(n).toEqual(p[0]);
     });
   });
-  test('parseFromHex3', () => {
+  test('parseFromBigInt', () => {
     pairs.forEach((p) => {
-      const b = Base64.parseFromHex3(p[0]);
-      expect(b).toEqual(p[1]);
+      const s = Base64.parseFromBigInt(p[0], 2);
+      expect(s).toEqual(p[1]);
     });
   });
 });
 
-describe('decode/encode', () => {
+describe('UID', () => {
   jest.setTimeout(60000);
   let pgPool;
   beforeEach(async () => {
@@ -35,20 +35,21 @@ describe('decode/encode', () => {
     await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
     pgPool.end();
   });
-  test('Generator id, decode, and encode', async () => {
-    const suid = await Uid.newSuid();
-    expect(suid).toMatch(/[0-9a-f]{15}/);
-    const uid = Uid.decode(suid);
-    expect(uid).toMatch(/[0-9a-zA-Z-_]{10}/);
-    const suid1 = Uid.encode(uid);
-    expect(suid1).toEqual(suid);
+  test('new id', async () => {
+    const uid = await UID.new();
+    expect(typeof uid.suid).toEqual('bigint');
+    expect(uid.duid).toMatch(/[0-9a-zA-Z-_]{6,}/);
   });
-});
-
-test('timestamp reverse', () => {
-  const suid = '800000000000000';
-  // 1000-0000-0000-0000-0000-0000-0000-0000 = 80000000
-  // 000000-000000-000000-000000-0000000-010000 = AAAAAQ
-  const uid = Uid.decode(suid);
-  expect(uid.substring(0, 6)).toEqual('AAAAAQ');
+  test('parse duid', async () => {
+    const uid = await UID.new();
+    const uid2 = UID.parseFromDuid(uid.duid);
+    expect(uid2.duid).toEqual(uid.duid);
+    expect(uid2.suid.toString()).toEqual(uid.suid.toString());
+  });
+  test('parse suid', async () => {
+    const uid = await UID.new();
+    const uid3 = UID.parseFromSuid(uid.suid);
+    expect(uid3.duid).toEqual(uid.duid);
+    expect(uid3.suid.toString()).toEqual(uid.suid.toString());
+  });
 });
