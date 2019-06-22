@@ -12,8 +12,12 @@ as a 10-character long base64-like string.
  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |0 0 0 0|                      Timestamp                         
++---------------------------------------------------------------+
+        |    10     |     9     |     8     |     7     |   6    
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
         |   Worker ID     |  Sequence Number  |   Random Bits   |
++---------------------------------------------------------------+
+  6 |     5     |     4     |     3     |     2     |     1     |
 +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 ```
 #### 1. Timestamp: 32-bit
@@ -47,7 +51,9 @@ No special requirements.
 
 ### Display Format
 
-Storage format is designed for conveniently saving, indexing and comparing in  the database. When displaying to users, storage format is converted to a base64-like string for better readability.
+Storage format is designed for conveniently saving, indexing and comparing in
+the database. When displaying to users, storage format is converted to a
+base64-like string for better readability.
   
 Frequently variable parts of the string are placed at the beginning and the end
 of it on purpose, so it looks like a complete random ID.
@@ -62,7 +68,10 @@ ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_
 
 #### Rule
 
-Decoding from the storage format to display format: reverse 32-bit timestamp,
-and convert every 6 bits to characters in order.  
+Decoding from the storage format to display format: convert to base64 string,
+and move last one character to the base64 string's header.
 
 Encoding is the reverse of decoding.
+
+For example, generated an new storage format which is "11093174944930914",
+convert it to base64 is "naS8QBhxi":, and the display format is: "inaS8QBhx".
