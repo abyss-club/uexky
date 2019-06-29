@@ -3,9 +3,10 @@ import getRedis from '~/utils/redis';
 
 import mockMailgun from '../__utils__/mailgun';
 
-afterAll(async () => {
+afterAll(() => {
   const redis = getRedis();
   redis.flushall();
+  redis.disconnect();
 });
 
 describe('Testing auth', () => {

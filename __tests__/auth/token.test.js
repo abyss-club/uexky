@@ -1,9 +1,10 @@
 import Token from '~/auth/token';
 import getRedis from '~/utils/redis';
 
-afterAll(async () => {
+afterAll(() => {
   const redis = getRedis();
-  await redis.flushall();
+  redis.flushall();
+  redis.disconnect();
 });
 
 describe('Testing token', () => {
