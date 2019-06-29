@@ -10,9 +10,10 @@ import log from '~/utils/log';
 import env from '~/utils/env';
 import mockMailgun from '../__utils__/mailgun';
 
-afterAll(async () => {
+afterAll(() => {
   const redis = getRedis();
   redis.flushall();
+  redis.disconnect();
 });
 
 it('test auth middleware/without token', async () => {
