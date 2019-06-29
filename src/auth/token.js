@@ -14,7 +14,7 @@ import { expireTime, emailSchema } from './code';
 //   Key: token
 //   Value: email
 //   TTL: expireTime.token
-const Token = () => ({
+const Token = {
   genNewToken: async function genNewToken(email) {
     const { error } = emailSchema.validate({ email });
     if (error) {
@@ -36,6 +36,6 @@ const Token = () => ({
     }
     return email;
   },
-});
+};
 
 export default Token;

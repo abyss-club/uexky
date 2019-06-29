@@ -4,15 +4,22 @@ import log from '~/utils/log';
 import Code, { expireTime } from './code';
 import Token from './token';
 
+// TODO: just for test, use real UserModel to replace this one
+const UserModel = () => ({
+  getUserByEmail: async function getUserByEmail(email) {
+    return { email };
+  },
+});
+
 function authMiddleware(endpoint) {
   return async (ctx, next) => {
     const token = ctx.cookies.get('token') || '';
     if ((ctx.url === endpoint) && (token !== '')) {
       try {
         const email = await Token.getEmailByToken(token);
-        const user = await UserModel.getUserByEmail(email, true);
+        const user = await UserModel().getUserByEmail(email, true);
         ctx.user = user;
-        setCookie(ctx, token);
+        ctx.response.set({ 'Set-Cookie': genCookie(token) });
       } catch (e) {
         if (e.authError) ctx.user = null;
         else throw new Error(e);
@@ -30,9 +37,11 @@ function authHandler() {
       try {
         const email = await Code.getEmailByCode(ctx.query.code);
         const token = await Token.genNewToken(email);
-        setCookie(ctx, token);
-        ctx.response.header.set('Location', `${env.PROTO}://${env.DOMAIN}`);
-        ctx.response.header.set('Cache-Control', 'no-cache, no-store');
+        ctx.response.set({
+          Location: `${env.PROTO}://${env.DOMAIN}`,
+          'Cache-Control': 'no-cache, no-store',
+          'Set-Cookie': genCookie(token),
+        });
         ctx.response.status = 302;
       } catch (e) {
         log.error(e);
@@ -43,18 +52,18 @@ function authHandler() {
   };
 }
 
-function setCookie(ctx, token) {
-  const opts = {
-    path: '/',
-    domain: env.DOMAIN,
-    maxAge: expireTime.token,
-    httpOnly: true,
-    overwrite: true,
-  };
+function genCookie(token) {
+  const cookie = [
+    `token=${token}`,
+    ';Path=/',
+    `;Max-Age=${expireTime.token}`,
+    `;Domain=${env.DOMAIN}`,
+    ';HttpOnly',
+  ];
   if (env.PROTO === 'https') {
-    opts.secure = true;
+    cookie.push(';Secure');
   }
-  ctx.cookies.set('token', token, opts);
+  return cookie.join('');
 }
 
 
