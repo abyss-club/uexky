@@ -13,6 +13,7 @@ const migrate = () => pgMigrate({
   direction: 'up',
   dir: path.join(__dirname, '../../migrations'),
   migrationsTable: 'migrations',
+  log: () => {}, // do not to log migration
 }).catch((e) => {
   console.error(e);
 });

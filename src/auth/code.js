@@ -1,9 +1,9 @@
 import Joi from '@hapi/joi';
-
 import { Base64 } from '~/uid';
 import sendAuthMail from './mail';
 import { AuthError, ParamsError } from '~/utils/error';
 import getRedis from '~/utils/redis';
+import log from '~/utils/log';
 
 
 const emailSchema = Joi.object().keys({
@@ -24,7 +24,7 @@ const expireTime = {
 //   Value: email
 //   TTL: expireTime.code
 
-const Code = () => ({
+const Code = {
   addToAuth: async function addToAuth(email) {
     const { error } = emailSchema.validate({ email });
     if (error) {
@@ -32,8 +32,13 @@ const Code = () => ({
     }
     const code = Base64.randomString(36);
     const redis = getRedis();
-    await redis.set(code, email, 'EX', expireTime.code);
+    try {
+      await redis.set(code, email, 'EX', expireTime.code);
+    } catch (e) {
+      log.error('set redis error', e);
+    }
     await sendAuthMail(email, code);
+    return code;
   },
   getEmailByCode: async function getEmailByCode(code) {
     const redis = getRedis();
@@ -44,7 +49,7 @@ const Code = () => ({
     await redis.del(code);
     return email;
   },
-});
+};
 
 export default Code;
 export { expireTime, emailSchema };
