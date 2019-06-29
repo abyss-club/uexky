@@ -3,9 +3,9 @@ import getRedis from '~/utils/redis';
 
 import mockMailgun from '../__utils__/mailgun';
 
-afterAll(() => {
+afterAll(async () => {
   const redis = getRedis();
-  redis.flushall();
+  await redis.flushall();
   redis.disconnect();
 });
 
