@@ -4,12 +4,11 @@ exports.up = (pgm) => {
   pgm.createTable('user', {
     id: { type: 'serial', primaryKey: true },
     email: { type: 'text', notNull: true, unique: true },
-    name: { type: 'varchar(16)', unique: true },
+    name: { type: 'text', unique: true },
     role: { type: 'text' },
-    blocked: { type: 'bool', default: false },
-    lastReadSystemNoti: { type: 'timestamp' },
-    lastReadRepliedNoti: { type: 'timestamp' },
-    lastReadQuotedNoti: { type: 'timestamp' },
+    lastReadSystemNoti: { type: 'timestamp', default: 'now()' },
+    lastReadRepliedNoti: { type: 'timestamp', default: 'now()' },
+    lastReadQuotedNoti: { type: 'timestamp', default: 'now()' },
   });
 
   pgm.createTable('thread', {

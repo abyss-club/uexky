@@ -1,3 +1,4 @@
+import Joi from '@hapi/joi';
 import { ParamsError } from '~/utils/error';
 
 function unicodeLength(str) {
@@ -19,6 +20,19 @@ function isUnicodeLength(str, { min = 0, max }) {
   return len >= min && len <= max;
 }
 
+const emailSchema = Joi.object().keys({
+  email: Joi.string().email().required(),
+});
+
+function isValidEmail(email) {
+  const { error } = emailSchema.validate({ email });
+  if (error) {
+    return false;
+  }
+  return true;
+}
+
 export default {
   isUnicodeLength,
+  isValidEmail,
 };

@@ -1,3 +1,65 @@
+import { NotFoundError } from '~/utils/error';
+import { query } from '~/utils/pg';
+import { ACTION } from '~/models/user';
+
+// pgm.createTable('thread', {
+//   id: { type: 'bigint', primaryKey: true },
+//   createdAt: { type: 'timestamp', notNull: true },
+//   updatedAt: { type: 'timestamp', notNull: true },
+//
+//   anonymous: { type: 'boolean', notNull: true },
+//   userId: { type: 'integer', notNull: true, references: 'user(id)' },
+//   userName: { type: 'varchar(16)', references: 'user(name)' },
+//   anonymousId: { type: 'bigint', references: 'anonymous_id(anonymous_id)' },
+//
+//   title: { type: 'text', notNull: true },
+//   locked: { type: 'bool', notNull: true },
+//   blocked: { type: 'bool', notNull: true },
+//   content: { type: 'text', notNull: true },
+// });
+// pgm.createIndex('title', 'anonymous', 'userId', 'blocked');
+
+async function findById({ threadId }) {
+  // TODO: care uid
+  const { rows } = await query('SELECT * FROM thread WHERE id=$1', [threadId]);
+  if ((rows || []).length === 0) {
+    throw NotFoundError(`cant find thread ${threadId}`);
+  }
+  return rows[0];
+}
+
+async function findUserThreads({ user, query }) {
+  // TODO: slice query
+  // TODO: need by resolvers/user
+}
+
+async function lockThread({ ctx, threadId }) {
+  // TODO: care uid
+  ctx.auth.ensurePermission(ACTION.LOCK_THREAD);
+  await query('UPDATE thread SET lock=$1 WHERE id=$2', [true, threadId]);
+}
+
+async function blockThread({ ctx, threadId }) {
+  // TODO: care uid
+  ctx.auth.ensurePermission(ACTION.BLOCK_THREAD);
+  await query('UPDATE thread SET lock=$1 WHERE id=$2', [true, threadId]);
+}
+
+async function editTags({
+  ctx, threadId, mainTag, subTags,
+}) {
+  // TODO: need by resolvers/user
+}
+
+export default {
+  findById,
+  findUserThreads,
+  lockThread,
+  blockThread,
+  editTags,
+};
+
+/*
 import JoiBase from '@hapi/joi';
 import JoiObjectId from '~/utils/joiObjectId';
 import { query } from '~/utils/pg';
@@ -153,3 +215,4 @@ const genDoc = (ctx, model, doc) => ({
 });
 
 export default ThreadModel;
+*/

@@ -17,12 +17,20 @@ const connectDb = async (pgUri) => {
 
 const query = (text, params) => pgPool.query(text, params);
 
-const getClient = () => pgPool.connect();
-
-export default {
-  getClient,
+const doTransaction = async (transcation) => {
+  const client = pgPool.connect();
+  try {
+    await client.query('BEGIN');
+    await transcation(client);
+    await client.query('COMMIT');
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
 };
 
 export {
-  query, connectDb,
+  query, connectDb, doTransaction,
 };

@@ -1,6 +1,6 @@
 import { query } from '~/utils/pg';
 
-/* CREATE table counter(
+/* CREATE TABLE counter(
  *     name varchar(32) PRIMARY KEY,
  *     count integer DEFAULT 0
  * );

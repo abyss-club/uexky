@@ -1,65 +1,98 @@
-import UserModel, { ensureSignIn } from '../models/user';
-import AuthModel from '../models/auth';
+import UserModel from '~/models/user';
+import ThreadModel from '~/models/thread';
+import PostModel from '~/models/post';
+import Code from '~/auth/code';
+import { ParamsError } from '~/utils/error';
 
 const Query = {
-  profile: (_, __, ctx) => ensureSignIn(ctx),
+  profile: (_obj, _args, ctx) => ctx.auth.signedInUser(),
 };
+
 
 const Mutation = {
-  auth: async (obj, { email }, ctx) => {
+  auth: async (_obj, { email }, ctx) => {
     if (ctx.user) throw new Error('Already signed in.');
-    await AuthModel(ctx).addToAuth(email);
+    await Code.addToAuth(email);
     return true;
   },
-  setName: async (obj, { name }, ctx) => {
-    const user = ensureSignIn(ctx);
-    const result = await UserModel(ctx).methods(user).setName(name);
-    return result;
+  setName: async (_obj, { name }, ctx) => {
+    await UserModel.setName({ ctx, name });
+    return ctx.auth.signedInUser();
   },
-  syncTags: async (obj, { tags }, ctx) => {
-    const user = ensureSignIn(ctx);
-    const result = await UserModel(ctx).methods(user).syncTags(tags);
-    return result;
+  syncTags: async (_obj, { tags }, ctx) => {
+    await UserModel.syncTags({ ctx, tags });
+    return ctx.auth.signedInUser();
   },
-  addSubbedTags: async (obj, { tags }, ctx) => {
-    const user = ensureSignIn(ctx);
-    const result = await UserModel(ctx).methods(user).addSubbedTags(tags);
-    return result;
+  addSubbedTags: async (_obj, { tags }, ctx) => {
+    await UserModel.addSubbedTags({ ctx, tags });
+    return ctx.auth.signedInUser();
   },
-  delSubbedTags: async (obj, { tags }, ctx) => {
-    const user = ensureSignIn(ctx);
-    const result = await UserModel(ctx).methods(user).delSubbedTags(tags);
-    return result;
+  delSubbedTags: async (_obj, { tags }, ctx) => {
+    await UserModel.delSubbedTags({ ctx, tags });
+    return ctx.auth.signedInUser();
   },
 
-  // admin's apis:
-  banUser: async (obj, { postId }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).banUser(postId);
+  // mod's apis:
+  banUser: async (_obj, { postId, threadId }, ctx) => {
+    let id;
+    if (!postId) {
+      const { userId } = await PostModel.findById({ postId });
+      id = userId;
+    } else if (!threadId) {
+      const { userId } = await ThreadModel.findById({ threadId });
+      id = userId;
+    } else {
+      throw ParamsError('postId and threadId are both empty');
+    }
+    await UserModel.banUser({ ctx, userId: id });
+    return true;
   },
-  blockPost: async (obj, { postId }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).blockPost(postId);
+  blockPost: async (_obj, { postId }, ctx) => {
+    await PostModel.blockPost({ ctx, postId });
+    const post = await PostModel.findById({ postId });
+    return post;
   },
-  lockThread: async (obj, { threadId }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).lockThread(threadId);
+  lockThread: async (_obj, { threadId }, ctx) => {
+    await ThreadModel.lockThread({ ctx, threadId });
+    const thread = await ThreadModel.findById({ threadId });
+    return thread;
   },
-  blockThread: async (obj, { threadId }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).blockThread(threadId);
+  blockThread: async (_obj, { threadId }, ctx) => {
+    await ThreadModel.blockThread({ ctx, threadId });
+    const thread = await ThreadModel.findById({ threadId });
+    return thread;
   },
-  editTags: async (obj, { threadId, mainTag, subTags }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).editTags(threadId, mainTag, subTags);
+  editTags: async (_obj, { threadId, mainTag, subTags }, ctx) => {
+    await ThreadModel.editTags({
+      ctx, threadId, mainTag, subTags,
+    });
+    const thread = await ThreadModel.findById({ threadId });
+    return thread;
   },
 };
 
-// Default Types Resolver:
-//   User:
-//     email, name, tags
+const User = {
+  email: user => user.email,
+  name: user => user.name,
+  tags: async (user) => {
+    const tags = await UserModel.getTags({ user });
+    return tags;
+  },
+  role: user => user.role,
+  threads: async (user, { query }) => {
+    const threadSlice = ThreadModel.findUserThreads({ user, query });
+    return threadSlice;
+  },
+  /* TODO
+  posts: async (user, { query }) => {
+    const threadSlice = ThreadModel.findUserPosts({ user, query });
+    return threadSlice;
+  },
+  */
+};
 
 export default {
   Query,
   Mutation,
+  User,
 };
