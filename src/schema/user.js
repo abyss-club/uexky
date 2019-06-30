@@ -17,8 +17,8 @@ export default `
     # Delete tags subscribed by user.
     delSubbedTags(tags: [String!]!): User!
 
-    # admin's apis:
-    banUser(postId: String!): User!
+    # mod's apis:
+    banUser(postId: String, threadId: String): Boolean!
     blockPost(postId: String!): Post!
     lockThread(threadId: String!): Thread!
     blockThread(threadId: String!): Thread!
@@ -31,15 +31,14 @@ export default `
     name: String
     # Tags saved by user.
     tags: [String!]
-    role: UserRole
-  }
-
-  # user roles:
-  # role: 'SuperAdmin': modify config, manage all tags.
-  #       'TagAdmin':   manage several mainTags.
-  #       None:         normal user. (won't have "role" field)
-  type UserRole {
-    role: String!
-    params: [String!]
+    # user roles:
+    # role: admin: modify config, manage mods.
+    #       mod:   lock/block thread, lock/block post, ban user.
+    #       null:  normal user.
+    role: String
+    # these threads is published by user.
+    threads(query: SliceQuery!): ThreadSlice!
+    # posts in these threads is published by user.
+    posts(query: SliceQuery!): ThreadSlice!
   }
 `;

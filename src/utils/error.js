@@ -38,6 +38,16 @@ class PermissionError extends Error {
   }
 }
 
+class NotFoundError extends Error {
+  constructor(...params) {
+    super(...params);
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, NotFoundError);
+    }
+    this.notFoundError = true;
+  }
+}
+
 export {
-  AuthError, ParamsError, InternalError, PermissionError,
+  AuthError, ParamsError, InternalError, PermissionError, NotFoundError,
 };

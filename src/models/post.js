@@ -1,3 +1,45 @@
+import { NotFoundError } from '~/utils/error';
+import { query } from '~/utils/pg';
+import { ACTION } from '~/models/user';
+
+// pgm.createTable('post', {
+//   id: { type: 'bigint', primaryKey: true },
+//   createdAt: { type: 'timestamp', notNull: true },
+//   updatedAt: { type: 'timestamp', notNull: true },
+//   threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
+//
+//   anonymous: { type: 'bool', notNull: true },
+//   userId: { type: 'integer', notNull: true, references: 'user(id)' },
+//   userName: { type: 'varchar(16)', references: 'user(name)' },
+//   anonymousId: { type: 'bigint', references: 'anonymous_id(anonymousId)' },
+//
+//   locked: { type: 'bool', default: false },
+//   blocked: { type: 'bool', default: false },
+//   content: { type: 'text', notNull: true },
+// });
+// pgm.createIndex('threadId', 'userId', 'anonymous');
+
+async function findById({ postId }) {
+  // TODO: care uid
+  const { rows } = await query('SELECT * FROM post WHERE id=$1', [postId]);
+  if ((rows || []).length === 0) {
+    throw NotFoundError(`cant find post ${postId}`);
+  }
+  return rows[0];
+}
+
+async function blockPost({ ctx, postId }) {
+  // TODO: care uid
+  ctx.auth.ensurePermission(ACTION.BLOCK_POST);
+  await query('UPDATE post SET lock=$1 WHERE id=$2', [true, postId]);
+}
+
+export default {
+  findById,
+  blockPost,
+};
+
+/*
 import JoiBase from '@hapi/joi';
 import JoiObjectId from '~/utils/joiObjectId';
 import mongo from '~/utils/mongo';
@@ -149,3 +191,4 @@ const genDoc = (ctx, model, doc) => ({
 });
 
 export default PostModel;
+*/

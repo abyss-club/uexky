@@ -1,29 +1,19 @@
+import UserModel from '~/models/user';
 import env from '~/utils/env';
 import log from '~/utils/log';
 
 import Code, { expireTime } from './code';
 import Token from './token';
 
-// TODO: just for test, use real UserModel to replace this one
-const UserModel = () => ({
-  getUserByEmail: async function getUserByEmail(email) {
-    return { email };
-  },
-});
-
 function authMiddleware(endpoint) {
   return async (ctx, next) => {
     const token = ctx.cookies.get('token') || '';
     if ((ctx.url === endpoint) && (token !== '')) {
-      try {
-        const email = await Token.getEmailByToken(token);
-        const user = await UserModel().getUserByEmail(email, true);
-        ctx.user = user;
-        ctx.response.set({ 'Set-Cookie': genCookie(token) });
-      } catch (e) {
-        if (e.authError) ctx.user = null;
-        else throw new Error(e);
-      }
+      const email = await Token.getEmailByToken(token);
+      ctx.auth = await UserModel.authContext({ email });
+      ctx.response.set({ 'Set-Cookie': genCookie(token) });
+    } else {
+      ctx.auth = await UserModel.authContext();
     }
     await next();
   };
