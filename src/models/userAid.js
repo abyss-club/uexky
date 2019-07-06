@@ -1,45 +1,26 @@
-import JoiBase from '@hapi/joi';
-import JoiObjectId from '~/utils/joiObjectId';
-import { ParamsError } from '~/utils/error';
-import mongo from '~/utils/mongo';
-import log from '~/utils/log';
+import UID from '~/uid';
+import { query } from '~/utils/pg';
 
-import Uid from '~/uid';
-
-const Joi = JoiBase.extend(JoiObjectId);
-const USERAID = 'userAid';
-const col = () => mongo.collection(USERAID);
-
-const userAidSchema = Joi.object().keys({
-  userId: Joi.objectId().required(),
-  threadSuid: Joi.string().alphanum().length(15),
-  anonymousId: Joi.string().alphanum(),
-});
-
-// MODEL: UserAid
-//        used for save anonymousId for user in threads.
-// const UserAidSchema = new mongoose.Schema({
-//   userId: SchemaObjectId,
-//   threadSuid: String,
-//   anonymousId: String, // format: Uid
+// pgm.createTable('anonymous_id', {
+//   id: { type: 'serial', primaryKey: true },
+//   createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+//   updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+//   threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
+//   userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
+//   anonymousId: { type: 'bigint', notNull: true, unique: true },
 // });
 
-const UserAidModel = () => ({
-  getAid: async function getAid(userId, threadSuid) {
-    const { value, error } = userAidSchema.validate({ userId, threadSuid });
-    if (error) {
-      log.error(error);
-      throw new ParamsError(`Thread validation failed, ${error}`);
-    }
-    const result = await col().findOneAndUpdate(value, {
-      $setOnInsert: {
-        ...value,
-        anonymousId: Uid.decode(await Uid.newSuid()),
-      },
-      $set: { updatedAt: Date() },
-    }, { returnOriginal: false, upsert: true });
-    return result.value.anonymousId;
+const UserAidModel = {
+  async new({ txn, userId, threadId }) {
+    const q = txn ? txn.query : query;
+    const tid = UID.parse(threadId);
+    const aid = await UID.new();
+    const { row } = await q(`INSERT INTO anonymous_id
+      ("threadId", "userId", "anonymousId") VALUES ($1, $2, $3)
+      ON CONFLICT DO NOTHING RETURNING *`,
+    [tid.suid, userId, aid.suid]);
+    return UID.parse(row.anonymousId);
   },
-});
+};
 
 export default UserAidModel;
