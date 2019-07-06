@@ -1,6 +1,7 @@
 import { NotFoundError, ParamsError } from '~/utils/error';
 import { query, doTransaction } from '~/utils/pg';
 import { ACTION } from '~/models/user';
+import UserAidModel from '~/models/userAid';
 import UID from '~/uid';
 
 // pgm.createTable('thread', {
@@ -106,13 +107,13 @@ const ThreadModel = {
       title: input.title,
       content: input.content,
     };
-    if (input.anonymous) {
-      raw.anonymousId = null; // TODO new anonymousId
-    } else {
-      raw.userName = user.name;
-    }
     let newThread;
     await doTransaction(async (txn) => {
+      if (input.anonymous) {
+        raw.anonymousId = await UserAidModel.new({ txn, userId: user.id, threadId: raw.id });
+      } else {
+        raw.userName = user.name;
+      }
       const { rows } = await txn.query(`INSERT INTO thread 
       (id, anonymous, "userId", "userName", "anonymousId", title, content)
       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
