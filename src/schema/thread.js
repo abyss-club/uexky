@@ -27,18 +27,18 @@ export default `
   type Thread {
     # UUID with 8 chars in length, and will increase to 9 after 30 years.
     id: String!
+    createdAt: Time!
     # Thread was published anonymously or not.
     anonymous: Boolean!
     # Same format as id if anonymous, name of User otherwise.
     author: String!
+    # Default to '无题'.
+    title: String
     content: String!
-    createdAt: Time!
     # Only one mainTag is allowed.
     mainTag: String!
     # Optional, maximum of 4.
     subTags: [String!]
-    # Default to '无题'.
-    title: String
     replies(query: SliceQuery!): PostSlice!
     replyCount: Int!
     catalog: [ThreadCatalogItem!]

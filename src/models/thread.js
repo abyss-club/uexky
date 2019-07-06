@@ -1,218 +1,186 @@
-import { NotFoundError } from '~/utils/error';
-import { query } from '~/utils/pg';
+import { NotFoundError, ParamsError } from '~/utils/error';
+import { query, doTransaction } from '~/utils/pg';
 import { ACTION } from '~/models/user';
+import UID from '~/uid';
 
 // pgm.createTable('thread', {
 //   id: { type: 'bigint', primaryKey: true },
-//   createdAt: { type: 'timestamp', notNull: true },
-//   updatedAt: { type: 'timestamp', notNull: true },
+//   createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+//   updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
 //
 //   anonymous: { type: 'boolean', notNull: true },
-//   userId: { type: 'integer', notNull: true, references: 'user(id)' },
-//   userName: { type: 'varchar(16)', references: 'user(name)' },
-//   anonymousId: { type: 'bigint', references: 'anonymous_id(anonymous_id)' },
+//   userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
+//   userName: { type: 'varchar(16)', references: 'public.user(name)' },
+//   anonymousId: { type: 'bigint' },
 //
-//   title: { type: 'text', notNull: true },
-//   locked: { type: 'bool', notNull: true },
-//   blocked: { type: 'bool', notNull: true },
+//   title: { type: 'text', default: '' },
 //   content: { type: 'text', notNull: true },
+//   locked: { type: 'bool', notNull: true, default: false },
+//   blocked: { type: 'bool', notNull: true, default: false },
 // });
-// pgm.createIndex('title', 'anonymous', 'userId', 'blocked');
+// pgm.createTable('threads_tags', {
+//   id: { type: 'serial', primaryKey: true },
+//   createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+//   updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+//   threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
+//   tagName: { type: 'text', notNull: true, references: 'tag(name)' },
+// });
 
-async function findById({ threadId }) {
-  // TODO: care uid
-  const { rows } = await query('SELECT * FROM thread WHERE id=$1', [threadId]);
-  if ((rows || []).length === 0) {
-    throw NotFoundError(`cant find thread ${threadId}`);
-  }
-  return rows[0];
-}
+const makeThread = function makeThread(raw) {
+  return {
+    id: UID.parse(raw.id),
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+    anonymous: raw.anonymous,
+    author: raw.anonymous ? UID.parse(raw.anonymousId) : raw.userName,
+    title: raw.title === '' ? '无题' : raw.title,
+    content: raw.blocked ? '[此内容已被屏蔽]' : raw.content,
 
-async function findUserThreads({ user, query }) {
-  // TODO: slice query
-  // TODO: need by resolvers/user
-}
+    async getMainTag() {
+      const { rows } = await query(`SELECT *
+        FROM threads_tags inner join tag ON threads_tags."tagName" = tag.name
+        WHERE threads_tags."threadId" = $1 AND tag."isMain" = true`,
+      [this.id.suid]);
+      return rows[0].tagName;
+    },
 
-async function lockThread({ ctx, threadId }) {
-  // TODO: care uid
-  ctx.auth.ensurePermission(ACTION.LOCK_THREAD);
-  await query('UPDATE thread SET lock=$1 WHERE id=$2', [true, threadId]);
-}
+    async getSubTags() {
+      const { rows } = await query(`SELECT *
+        FROM threads_tags inner join tag ON threads_tags."tagName" = tag.name
+        WHERE threads_tags."threadId" = $1 AND tag."isMain" = false`,
+      [this.id.suid]);
+      return rows.map(row => row.tagName);
+    },
 
-async function blockThread({ ctx, threadId }) {
-  // TODO: care uid
-  ctx.auth.ensurePermission(ACTION.BLOCK_THREAD);
-  await query('UPDATE thread SET lock=$1 WHERE id=$2', [true, threadId]);
-}
+    async getReplyCount() {
+      const { rows } = await query(`SELECT count(*) FROM post
+        WHERE "threadId"=$1`, [this.id.suid]);
+      return rows[0].count;
+    },
 
-async function editTags({
-  ctx, threadId, mainTag, subTags,
-}) {
-  // TODO: need by resolvers/user
-}
+    async getCatelog() {
+      const { rows } = await query(`SELECT ("postId, createdAt")
+      FROM post WHERE "threadId=$1" ORDER BY id DESC`, [this.id.suid]);
+      return rows;
+    },
 
-export default {
-  findById,
-  findUserThreads,
-  lockThread,
-  blockThread,
-  editTags,
+    blocked: raw.blocked,
+    locked: raw.locked,
+  };
 };
 
-/*
-import JoiBase from '@hapi/joi';
-import JoiObjectId from '~/utils/joiObjectId';
-import { query } from '~/utils/pg';
-import { ParamsError, InternalError } from '~/utils/error';
-import Uid from '~/uid';
-import validator from '~/utils/validator';
-import findSlice from '~/models/base';
-import log from '~/utils/log';
+const ThreadModel = {
 
-import UserPostsModel from './userPosts';
-import UserModel from './user';
-import TagModel from './tag';
-
-const Joi = JoiBase.extend(JoiObjectId);
-const THREAD = 'thread';
-const POST = 'post';
-const col = () => mongo.collection(THREAD);
-
-const threadSchema = Joi.object().keys({
-  suid: Joi.string().alphanum().length(15).required(),
-  anonymous: Joi.boolean().required(),
-  author: Joi.string().required(),
-  userId: Joi.objectId().required(),
-  mainTag: Joi.string().required(),
-  subTags: Joi.array().items(Joi.string()).required(),
-  tags: Joi.array().items(Joi.string()).required(),
-  title: Joi.string().required(),
-  locked: Joi.boolean().default(false),
-  blocked: Joi.boolean().default(false),
-  createdAt: Joi.date().required(),
-  updatedAt: Joi.date().required(),
-  content: Joi.string().required(),
-  catalog: Joi.array().items(Joi.object().keys({
-    postSuid: Joi.string().alphanum().length(15).required(),
-    createdAt: Joi.date().required(),
-  })),
-});
-
-const ThreadModel = ctx => ({
-  pubThread: async function pubThread(input) {
-    const {
-      anonymous, content, title, mainTag, subTags = [],
-    } = input;
-    const { user } = ctx;
-
-    const mainTags = await TagModel().getMainTags();
-    if (!mainTags.includes(mainTag)) throw new ParamsError('Invalid mainTag');
-    if (!validator.isUnicodeLength(title, { max: 28 })) {
-      throw new ParamsError('Max length of title is 28.');
+  async findById({ threadId }) {
+    const id = UID.parse(threadId);
+    const { rows } = await query('SELECT * FROM thread WHERE id=$1', [id]);
+    if ((rows || []).length === 0) {
+      throw NotFoundError(`cant find thread ${threadId}`);
     }
+    return makeThread(rows[0]);
+  },
 
-    const now = new Date();
-    let thread = {
-      suid: await Uid.newSuid(),
-      anonymous,
-      userId: user._id,
-      tags: [mainTag, ...(subTags)],
-      mainTag,
-      subTags,
-      locked: false,
-      blocked: false,
-      createdAt: now,
-      updatedAt: now,
-      content,
-      title,
+  async findSlice({ tags, query: sq }) {
+    const sql = [
+      'SELECT *',
+      'FROM thread inner join threads_tags',
+      'ON thread.id = threads_tags."threadId"',
+      'WHERE threads_tags."tagName" IN $1',
+      sq.before && 'AND thread.id > $2',
+      sq.after && 'AND thread.id < $3',
+      'ORDERED BY thread."updatedAt" DESC',
+      `LIMIT ${sq.limit || 0}`,
+    ].join(' ');
+    const { rows } = await query(sql, [tags, sq.before, sq.after]);
+    return rows.map(row => makeThread(row));
+  },
+
+  async new({ ctx, thread: input }) {
+    const user = ctx.auth.signedInUser();
+    const raw = {
+      id: UID.new(),
+      anonymous: input.anonymous,
+      userId: input.userId,
+      userName: null,
+      anonymousId: null,
+      title: input.title,
+      content: input.content,
     };
-
-    // console.log({ user });
-    thread.author = await UserModel(ctx).methods(user).author(thread.suid, anonymous);
-
-    const { value, error } = threadSchema.validate(thread);
-    if (error) {
-      log.error(error);
-      throw new ParamsError(`Thread validation failed, ${error}`);
+    if (input.anonymous) {
+      raw.anonymousId = null; // TODO new anonymousId
+    } else {
+      raw.userName = user.name;
     }
-    thread = value;
+    let newThread;
+    await doTransaction(async (txn) => {
+      const { rows } = await txn.query(`INSERT INTO thread 
+      (id, anonymous, "userId", "userName", "anonymousId", title, content)
+      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [raw.id.suid, raw.anonymous, raw.userId, raw.userName, raw.anonymousId,
+        raw.title, raw.content]);
+      newThread = makeThread(rows[0]);
+      await this.setTags({
+        ctx, txn, isNew: true, mainTag: input.mainTag, subTags: input.subTags,
+      });
+    });
+    return newThread;
+  },
 
-    const session = await mongo.startSession();
-    session.startTransaction();
-    try {
-      await col().insertOne(thread);
-      await UserPostsModel(ctx).methods(user).onPubThread(thread, { session });
-      await TagModel().onPubThread(thread, { session });
-      await session.commitTransaction();
-      session.endSession();
+  async findUserThreads({ user, query: sq }) {
+    const sql = [
+      'SELECT *',
+      'FROM thread inner join threads_tags',
+      'ON thread.id = threads_tags."threadId"',
+      'WHERE thread."userId" == $1',
+      sq.before && 'AND thread.id > $2',
+      sq.after && 'AND thread.id < $3',
+      'ORDERED BY thread."updatedAt" DESC',
+      `LIMIT ${sq.limit || 0}`,
+    ].join(' ');
+    const { threads } = await query(sql, [user.id, sq.before, sq.after]);
+    return threads;
+  },
 
-      return thread;
-    } catch (e) {
-      await session.abortTransaction();
-      session.endSession();
-      throw new InternalError(`Transaction Failed: ${e}`);
+  async lockThread({ ctx, threadId }) {
+    ctx.auth.ensurePermission(ACTION.LOCK_THREAD);
+    await query('UPDATE thread SET lock=$1 WHERE id=$2', [true, UID.parse(threadId).suid]);
+  },
+
+  async blockThread({ ctx, threadId }) {
+    ctx.auth.ensurePermission(ACTION.BLOCK_THREAD);
+    await query('UPDATE thread SET block=$1 WHERE id=$2', [true, UID.parse(threadId).suid]);
+  },
+
+  async setTags({
+    ctx, txn, isNew, threadId, mainTag, subTags,
+  }) {
+    const id = UID.parse(threadId);
+    const q = txn ? txn.query : query;
+    if (!isNew) {
+      ctx.auth.ensurePermission({ action: ACTION.EDIT_TAG });
     }
+    const { rows: mainTags } = q(
+      'SELECT name FROM tag WHERE "isMain" = true AND name IN $1',
+      [[mainTag, ...subTags]],
+    );
+    if (mainTags.length !== 1) {
+      throw ParamsError('you must specified one and only one main tag');
+    } else if (mainTags[0].name !== mainTag) {
+      throw ParamsError(`${mainTag} is not main tag`);
+    }
+    if (!isNew) {
+      await q('DELETE FROM threads_tags WHERE "threadId" = $1', [id.suid]);
+    }
+    await Promise.all(subTags.forEach(
+      tag => q(`INSERT INTO tag (name) VALUES ($1)
+        ON CONFLICT UPDATE "updatedAt" = now()`, [tag]),
+    ));
+    await Promise.all([mainTag, ...subTags].forEach(
+      tag => q(`INSERT INTO threads_tags ("threadId", "tagName")
+        VALUES ($1, $2) ON CONFLICT UPDATE SET "updatedAt" = now()`,
+      [id.suid, tag]),
+    ));
   },
-
-  findByUid: async function findByUid(uid) {
-    const thread = await col().findOne({ suid: Uid.encode(uid) });
-    return thread;
-  },
-
-  getThreadSlice: async function getThreadSlice(
-    tags = [], sliceQuery,
-  ) {
-    const option = {
-      query: tags.length > 0 ? { tags: { $in: tags } } : {},
-      desc: true,
-      field: 'suid',
-      sliceName: 'threads',
-      parse: Uid.encode,
-      toCursor: Uid.decode,
-    };
-    const result = await findSlice(sliceQuery, this, option);
-    return result;
-  },
-
-  methods: function methods(doc) {
-    return genDoc(ctx, this, doc);
-  },
-});
-
-const genDoc = (ctx, model, doc) => ({
-  CACHED_UID: '',
-
-  uid: function uid() {
-    if (!this.CACHED_UID) this.CACHED_UID = Uid.decode(doc.suid);
-    return this.CACHED_UID;
-  },
-
-  getContent: function getContent() {
-    return doc.blocked ? '' : doc.content;
-  },
-
-  replies: async function replies(query) {
-    const option = {
-      query: { threadId: doc.suid },
-      field: '_id',
-      sliceName: 'posts',
-      parse: Uid.encode,
-      toCursor: Uid.decode,
-    };
-    const result = await findSlice(query, mongo.collection(POST), option);
-    return result;
-  },
-
-  replyCount: function replyCount() {
-    return doc.catalog.length;
-  },
-
-  onPubPost: async function onPubPost(post, opt) {
-    await col().updateOne({ suid: doc.suid }, {
-      $push: { catalog: { postId: post.suid, createdAt: post.createdAt } },
-    }, opt);
-  },
-});
+};
 
 export default ThreadModel;
-*/
