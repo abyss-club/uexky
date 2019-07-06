@@ -25,13 +25,12 @@ describe('Base64', () => {
 });
 
 describe('UID', () => {
-  jest.setTimeout(60000);
   let pgPool;
-  beforeEach(async () => {
+  beforeAll(async () => {
     await migrate();
     pgPool = await startPg();
   });
-  afterEach(async () => {
+  afterAll(async () => {
     await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
     pgPool.end();
   });
@@ -42,13 +41,19 @@ describe('UID', () => {
   });
   test('parse duid', async () => {
     const uid = await UID.new();
-    const uid2 = UID.parseFromDuid(uid.duid);
+    const uid2 = UID.parse(uid.duid);
     expect(uid2.duid).toEqual(uid.duid);
     expect(uid2.suid.toString()).toEqual(uid.suid.toString());
   });
   test('parse suid', async () => {
     const uid = await UID.new();
-    const uid3 = UID.parseFromSuid(uid.suid);
+    const uid3 = UID.parse(uid.suid);
+    expect(uid3.duid).toEqual(uid.duid);
+    expect(uid3.suid.toString()).toEqual(uid.suid.toString());
+  });
+  test('parse uid from uid', async () => {
+    const uid = await UID.new();
+    const uid3 = UID.parse(uid);
     expect(uid3.duid).toEqual(uid.duid);
     expect(uid3.suid.toString()).toEqual(uid.suid.toString());
   });

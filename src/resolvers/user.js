@@ -47,21 +47,25 @@ const Mutation = {
     await UserModel.banUser({ ctx, userId: id });
     return true;
   },
+
   blockPost: async (_obj, { postId }, ctx) => {
     await PostModel.blockPost({ ctx, postId });
     const post = await PostModel.findById({ postId });
     return post;
   },
+
   lockThread: async (_obj, { threadId }, ctx) => {
     await ThreadModel.lockThread({ ctx, threadId });
     const thread = await ThreadModel.findById({ threadId });
     return thread;
   },
+
   blockThread: async (_obj, { threadId }, ctx) => {
     await ThreadModel.blockThread({ ctx, threadId });
     const thread = await ThreadModel.findById({ threadId });
     return thread;
   },
+
   editTags: async (_obj, { threadId, mainTag, subTags }, ctx) => {
     await ThreadModel.editTags({
       ctx, threadId, mainTag, subTags,
@@ -72,23 +76,10 @@ const Mutation = {
 };
 
 const User = {
-  email: user => user.email,
-  name: user => user.name,
-  tags: async (user) => {
-    const tags = await UserModel.getTags({ user });
-    return tags;
-  },
-  role: user => user.role,
-  threads: async (user, { query }) => {
-    const threadSlice = ThreadModel.findUserThreads({ user, query });
-    return threadSlice;
-  },
-  /* TODO
-  posts: async (user, { query }) => {
-    const threadSlice = ThreadModel.findUserPosts({ user, query });
-    return threadSlice;
-  },
-  */
+  // auto field resolvers: email, name, role
+  tags: user => user.getTags(),
+  threads: (user, { query }) => ThreadModel.findUserThreads({ user, query }),
+  posts: (user, { query }) => PostModel.findUserReplies({ user, query }),
 };
 
 export default {

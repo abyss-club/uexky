@@ -5,87 +5,103 @@ exports.up = (pgm) => {
     id: { type: 'serial', primaryKey: true },
     email: { type: 'text', notNull: true, unique: true },
     name: { type: 'text', unique: true },
-    role: { type: 'text' },
-    lastReadSystemNoti: { type: 'timestamp', default: 'now()' },
-    lastReadRepliedNoti: { type: 'timestamp', default: 'now()' },
-    lastReadQuotedNoti: { type: 'timestamp', default: 'now()' },
+    role: { type: 'text', notNull: true, default: '' },
+    lastReadSystemNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    lastReadRepliedNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    lastReadQuotedNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
   });
+  pgm.createIndex('user', 'email');
 
   pgm.createTable('thread', {
     id: { type: 'bigint', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true },
-    updatedAt: { type: 'timestamp', notNull: true },
+    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
 
     anonymous: { type: 'boolean', notNull: true },
-    userId: { type: 'integer', notNull: true, references: 'user(id)' },
-    userName: { type: 'varchar(16)', references: 'user(name)' },
-    anonymousId: { type: 'bigint', references: 'anonymous_id(anonymous_id)' },
+    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
+    userName: { type: 'varchar(16)', references: 'public.user(name)' },
+    anonymousId: { type: 'bigint' },
 
-    title: { type: 'text', notNull: true },
-    locked: { type: 'bool', notNull: true },
-    blocked: { type: 'bool', notNull: true },
+    title: { type: 'text', default: '' },
     content: { type: 'text', notNull: true },
+    locked: { type: 'bool', notNull: true, default: false },
+    blocked: { type: 'bool', notNull: true, default: false },
   });
-  pgm.createIndex('title', 'anonymous', 'userId', 'blocked');
+  pgm.createIndex('thread', 'title');
+  pgm.createIndex('thread', 'anonymous');
+  pgm.createIndex('thread', 'userId');
+  pgm.createIndex('thread', 'blocked');
 
   pgm.createTable('post', {
     id: { type: 'bigint', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true },
-    updatedAt: { type: 'timestamp', notNull: true },
+    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
     threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
 
     anonymous: { type: 'bool', notNull: true },
-    userId: { type: 'integer', notNull: true, references: 'user(id)' },
-    userName: { type: 'varchar(16)', references: 'user(name)' },
-    anonymousId: { type: 'bigint', references: 'anonymous_id(anonymousId)' },
+    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
+    userName: { type: 'varchar(16)', references: 'public.user(name)' },
+    anonymousId: { type: 'bigint' },
 
     locked: { type: 'bool', default: false },
     blocked: { type: 'bool', default: false },
     content: { type: 'text', notNull: true },
   });
-  pgm.createIndex('threadId', 'userId', 'anonymous');
+  pgm.createIndex('post', ['threadId', 'userId', 'anonymous']);
 
   pgm.createTable('anonymous_id', {
     id: { type: 'serial', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true },
-    updatedAt: { type: 'timestamp', notNull: true },
+    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
     threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
-    userId: { type: 'integer', notNull: true, references: 'user(id)' },
-    anonymousId: { type: 'bigint', notNull: true },
+    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
+    anonymousId: { type: 'bigint', notNull: true, unique: true },
+  });
+  pgm.addConstraint('thread', 'thread_anonymous_id', {
+    foreignKeys: {
+      columns: 'anonymousId',
+      references: 'anonymous_id("anonymousId")',
+    },
+  });
+  pgm.addConstraint('post', 'post_anonymous_id', {
+    foreignKeys: {
+      columns: 'anonymousId',
+      references: 'anonymous_id("anonymousId")',
+    },
   });
 
   pgm.createTable('tag', {
     name: { type: 'text', primaryKey: true, notNull: true },
     isMain: { type: 'bool', notNull: true },
-    createdAt: { type: 'timestamp', notNull: true },
-    updatedAt: { type: 'timestamp', notNull: true },
+    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
   });
 
   pgm.createTable('threads_tags', {
     id: { type: 'serial', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true },
-    updatedAt: { type: 'timestamp', notNull: true },
+    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
     threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
     tagName: { type: 'text', notNull: true, references: 'tag(name)' },
   });
 
   pgm.createTable('users_tags', {
     id: { type: 'serial', primaryKey: true },
-    userId: { type: 'integer', notNull: true, references: 'user(id)' },
+    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
     tagName: { type: 'text', notNull: true, references: 'tag(name)' },
   });
 
   pgm.createTable('managers_tags', {
     id: { type: 'serial', primaryKey: true },
-    userId: { type: 'integer', notNull: true, references: 'user(id)' },
+    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
     tagName: { type: 'text', notNull: true, references: 'tag(name)' },
   });
 
   pgm.createTable('notification', {
     id: { type: 'serial', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true },
+    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
     type: { type: 'text', notNull: true },
-    sendTo: { type: 'integer', references: 'user(id)' },
+    sendTo: { type: 'integer', references: 'public.user(id)' },
     sendToGroup: { type: 'text' },
     content: { type: 'jsonb' },
   });
@@ -103,15 +119,17 @@ exports.up = (pgm) => {
 };
 
 exports.down = (pgm) => {
-  pgm.dropTable('user');
-  pgm.dropTable('thread');
-  pgm.dropTable('post');
-  pgm.dropTable('anonymous_id');
-  pgm.dropTable('tag');
-  pgm.dropTable('threads_tags');
-  pgm.dropTable('users_tags');
-  pgm.dropTable('managers_tags');
-  pgm.dropTable('notification');
-  pgm.dropTable('config');
   pgm.dropTable('counter');
+  pgm.dropTable('config');
+  pgm.dropTable('notification');
+  pgm.dropTable('managers_tags');
+  pgm.dropTable('users_tags');
+  pgm.dropTable('threads_tags');
+  pgm.dropTable('tag');
+  pgm.dropConstraint('thread', 'thread_anonymous_id');
+  pgm.dropConstraint('post', 'post_anonymous_id');
+  pgm.dropTable('anonymous_id');
+  pgm.dropTable('post');
+  pgm.dropTable('thread');
+  pgm.dropTable('user');
 };

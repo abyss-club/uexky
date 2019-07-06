@@ -1,3 +1,4 @@
+import { ParamsError } from '~/utils/error';
 import newSuid from './generator';
 
 const Base64 = {
@@ -55,18 +56,27 @@ const storage2display = (suid) => {
 };
 
 const UID = {
-  parseFromSuid: suid => ({
-    suid,
-    duid: storage2display(suid),
-  }),
-  parseFromDuid: duid => ({
-    suid: display2storage(duid),
-    duid,
-  }),
-  new: async () => {
+  parse(input) {
+    if (typeof input === 'string') {
+      return {
+        duid: input,
+        suid: display2storage(input),
+        type: 'uid',
+      };
+    } if (typeof input === typeof BigInt(0)) {
+      return {
+        suid: input,
+        duid: storage2display(input),
+        type: 'uid',
+      };
+    } if (typeof input === 'object' && input.type === 'uid') {
+      return input;
+    }
+    throw ParamsError(`unknown value: ${input}`);
+  },
+  async new() {
     const suid = await newSuid();
-    const duid = storage2display(suid);
-    return { suid, duid };
+    return this.parse(suid);
   },
 };
 
