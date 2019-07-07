@@ -36,9 +36,10 @@ export default `
     #       mod:   lock/block thread, lock/block post, ban user.
     #       null:  normal user.
     role: String
-    # these threads is published by user.
+
+    # return threads published by user.
     threads(query: SliceQuery!): ThreadSlice!
-    # posts in these threads is published by user.
-    posts(query: SliceQuery!): ThreadSlice!
+    # return threads replied by user
+    posts(query: SliceQuery!): PostSlice!
   }
 `;

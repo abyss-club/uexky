@@ -33,7 +33,7 @@ const makeThread = function makeThread(raw) {
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     anonymous: raw.anonymous,
-    author: raw.anonymous ? UID.parse(raw.anonymousId) : raw.userName,
+    author: raw.anonymous ? UID.parse(raw.anonymousId).duid : raw.userName,
     title: raw.title === '' ? '无题' : raw.title,
     content: raw.blocked ? '[此内容已被屏蔽]' : raw.content,
 
@@ -47,7 +47,7 @@ const makeThread = function makeThread(raw) {
 
     async getSubTags() {
       const { rows } = await query(`SELECT *
-        FROM threads_tags inner join tag ON threads_tags."tagName" = tag.name
+        FROM threads_tags INNER JOIN tag ON threads_tags."tagName" = tag.name
         WHERE threads_tags."threadId" = $1 AND tag."isMain" = false`,
       [this.id.suid]);
       return rows.map(row => row.tagName);
@@ -89,7 +89,7 @@ const ThreadModel = {
       'WHERE threads_tags."tagName" IN $1',
       sq.before && 'AND thread.id > $2',
       sq.after && 'AND thread.id < $3',
-      'ORDERED BY thread."updatedAt" DESC',
+      'ORDER BY thread.id DESC',
       `LIMIT ${sq.limit || 0}`,
     ].join(' ');
     const { rows } = await query(sql, [tags, sq.before, sq.after]);
@@ -97,6 +97,7 @@ const ThreadModel = {
   },
 
   async new({ ctx, thread: input }) {
+    ctx.auth.ensurePermission(ACTION.PUB_THREAD);
     const user = ctx.auth.signedInUser();
     const raw = {
       id: UID.new(),
@@ -110,15 +111,15 @@ const ThreadModel = {
     let newThread;
     await doTransaction(async (txn) => {
       if (input.anonymous) {
-        raw.anonymousId = await UserAidModel.new({ txn, userId: user.id, threadId: raw.id });
+        raw.anonymousId = await UserAidModel.getAid({ txn, userId: user.id, threadId: raw.id });
       } else {
         raw.userName = user.name;
       }
       const { rows } = await txn.query(`INSERT INTO thread 
-      (id, anonymous, "userId", "userName", "anonymousId", title, content)
-      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [raw.id.suid, raw.anonymous, raw.userId, raw.userName, raw.anonymousId,
-        raw.title, raw.content]);
+        (id, anonymous, "userId", "userName", "anonymousId", title, content)
+        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [raw.id.suid, raw.anonymous, raw.userId, raw.userName,
+        raw.anonymousId && raw.anonymous.suid, raw.title, raw.content]);
       newThread = makeThread(rows[0]);
       await this.setTags({
         ctx, txn, isNew: true, mainTag: input.mainTag, subTags: input.subTags,

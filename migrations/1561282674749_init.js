@@ -43,7 +43,6 @@ exports.up = (pgm) => {
     userName: { type: 'varchar(16)', references: 'public.user(name)' },
     anonymousId: { type: 'bigint' },
 
-    locked: { type: 'bool', default: false },
     blocked: { type: 'bool', default: false },
     content: { type: 'text', notNull: true },
   });
@@ -68,6 +67,12 @@ exports.up = (pgm) => {
       columns: 'anonymousId',
       references: 'anonymous_id("anonymousId")',
     },
+  });
+
+  pgm.createTable('posts_quotes', {
+    id: { type: 'serial', primaryKey: true },
+    quoterId: { type: 'bigint', notNull: true, references: 'post(id)' },
+    quotedId: { type: 'bigint', notNull: true, references: 'post(id)' },
   });
 
   pgm.createTable('tag', {
@@ -126,6 +131,7 @@ exports.down = (pgm) => {
   pgm.dropTable('users_tags');
   pgm.dropTable('threads_tags');
   pgm.dropTable('tag');
+  pgm.dropTable('posts_quotes');
   pgm.dropConstraint('thread', 'thread_anonymous_id');
   pgm.dropConstraint('post', 'post_anonymous_id');
   pgm.dropTable('anonymous_id');

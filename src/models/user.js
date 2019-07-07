@@ -76,6 +76,9 @@ const UserModel = {
         return makeUser(user);
       },
       ensurePermission(action) {
+        if (!user) {
+          throw AuthError('not login');
+        }
         if (user.role !== ROLE.MOD) {
           throw PermissionError('you are not mod');
         }

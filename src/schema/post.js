@@ -21,10 +21,10 @@ export default `
   # Object describing a Post.
   type Post {
       id: String!
+      createdAt: Time!
       anonymous: Boolean!
       author: String!
       content: String!
-      createdAt: Time!
       quotes: [Post!]
       quoteCount: Int!
       blocked: Boolean!

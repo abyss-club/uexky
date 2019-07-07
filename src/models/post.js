@@ -1,6 +1,8 @@
 import { NotFoundError } from '~/utils/error';
-import { query } from '~/utils/pg';
+import { query, doTransaction } from '~/utils/pg';
 import { ACTION } from '~/models/user';
+import UID from '~/uid';
+import UserAidModel from '~/models/userAid';
 
 // pgm.createTable('post', {
 //   id: { type: 'bigint', primaryKey: true },
@@ -13,182 +15,136 @@ import { ACTION } from '~/models/user';
 //   userName: { type: 'varchar(16)', references: 'user(name)' },
 //   anonymousId: { type: 'bigint', references: 'anonymous_id(anonymousId)' },
 //
-//   locked: { type: 'bool', default: false },
 //   blocked: { type: 'bool', default: false },
 //   content: { type: 'text', notNull: true },
 // });
 // pgm.createIndex('threadId', 'userId', 'anonymous');
+// pgm.createTable('posts_quotes', {
+//   id: { type: 'serial', primaryKey: true },
+//   quoterId: { type: 'bigint', notNull: true, references: 'post(id)' },
+//   quotedId: { type: 'bigint', notNull: true, references: 'post(id)' },
+// });
+//
+// type Post {
+//     id: String!
+//     createdAt: Time!
+//     anonymous: Boolean!
+//     author: String!
+//     content: String!
+//     quotes: [Post!]
+//     quoteCount: Int!
+//     blocked: Boolean!
+// }
 
-async function findById({ postId }) {
-  // TODO: care uid
-  const { rows } = await query('SELECT * FROM post WHERE id=$1', [postId]);
-  if ((rows || []).length === 0) {
-    throw NotFoundError(`cant find post ${postId}`);
-  }
-  return rows[0];
-}
+const makePost = function makePost(raw) {
+  return {
+    id: UID.parse(raw.id),
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+    anonymous: raw.anonymous,
+    author: raw.anonymous ? UID.parse(raw.anonymousId).duid : raw.userName,
+    content: raw.blocked ? '[此内容已被屏蔽]' : raw.content,
+    blocked: raw.blocked,
 
-async function blockPost({ ctx, postId }) {
-  // TODO: care uid
-  ctx.auth.ensurePermission(ACTION.BLOCK_POST);
-  await query('UPDATE post SET lock=$1 WHERE id=$2', [true, postId]);
-}
+    async getQuotes() {
+      const { rows } = await query(`SELECT *
+        FROM post INNER JOIN posts_quotes
+        ON post.id = posts_quotes."quoterId"
+        WHERE posts_quotes."quoterId" = $1 ORDER BY post.id`,
+      [this.id.suid]);
+      return rows.map(row => makePost(row));
+    },
 
-export default {
-  findById,
-  blockPost,
+    async getQuotedCount() {
+      const { rows } = await query(`SELECT count(*) FROM posts_quotes
+        WHERE "quotedId"=$1`, [this.id.suid]);
+      return rows[0].count;
+    },
+  };
 };
 
-/*
-import JoiBase from '@hapi/joi';
-import JoiObjectId from '~/utils/joiObjectId';
-import mongo from '~/utils/mongo';
-import Uid from '~/uid';
-import { ParamsError, InternalError } from '~/utils/error';
-import log from '~/utils/log';
+const PostModel = {
 
-import UserPostsModel from './userPosts';
-import UserModel from './user';
-import ThreadModel from './thread';
-import NotificationModel from './notification';
-
-const Joi = JoiBase.extend(JoiObjectId);
-const THREAD = 'thread';
-const POST = 'post';
-const col = () => mongo.collection(POST);
-
-const postSchema = Joi.object().keys({
-  suid: Joi.string().alphanum().length(15).required(),
-  threadSuid: Joi.string().alphanum().length(15).required(),
-  anonymous: Joi.boolean().required(),
-  author: Joi.string().required(),
-  userId: Joi.objectId().required(),
-  locked: Joi.boolean().default(false),
-  blocked: Joi.boolean().default(false),
-  createdAt: Joi.date().required(),
-  updatedAt: Joi.date().required(),
-  content: Joi.string().required(),
-  quoteSuids: Joi.array().items(Joi.string().alphanum().length(15)).default([]),
-});
-
-// const PostSchema = new mongoose.Schema({
-//   suid: { type: String, required: true },
-//   userId: SchemaObjectId,
-//   threadSuid: String,
-//   anonymous: Boolean,
-//   author: String,
-//   createdAt: Date,
-//   updatedAt: Date,
-//   blocked: Boolean,
-//   quoteSuids: [String],
-//   content: String,
-// }, { autoCreate: true });
-
-const PostModel = ctx => ({
-  pubPost: async function pubPost(input) {
-    const {
-      threadId: threadUid, anonymous, content, quoteIds: quoteUids = [],
-    } = input;
-    const { user } = ctx;
-
-    const threadSuid = Uid.encode(threadUid);
-    const threadDoc = await mongo.collection(THREAD).findOne({ suid: threadSuid });
-    if (!threadDoc) {
-      throw new ParamsError('Thread not found.');
+  async findById({ postId }) {
+    const { rows } = await query('SELECT * FROM post WHERE id=$1', [UID.parse(postId).suid]);
+    if ((rows || []).length === 0) {
+      throw NotFoundError(`can't find post ${postId}`);
     }
-    if (threadDoc.locked) {
-      throw new ParamsError('Thread is locked.');
-    }
+    return makePost(rows[0]);
+  },
 
-    const now = new Date();
-    let post = {
-      suid: await Uid.newSuid(),
-      userId: user._id,
-      threadSuid,
-      anonymous,
-      author: await UserModel(ctx).methods(user).author(threadSuid, anonymous),
-      createdAt: now,
-      updatedAt: now,
-      blocked: false,
-      quoteSuids: [],
-      content,
+  async findThreadPosts({ threadId, query: sq }) {
+    const sql = [
+      'SELECT * FROM post',
+      'WHERE post."threadId" = $1',
+      sq.before && 'AND post.id < $2',
+      sq.after && 'AND post.id > $3',
+      'ORDER BY post.id DESC',
+      `LIMIT ${sq.limit || 0}`,
+    ].join(' ');
+    const { rows } = await query(sql, [UID.parse(threadId).suid, sq.before, sq.after]);
+    return rows.map(row => makePost(row));
+  },
+
+  async findUserPosts({ user, query: sq }) {
+    const sql = [
+      'SELECT * FROM post',
+      'WHERE post."userId" = $1',
+      sq.before && 'AND post.id < $2',
+      sq.after && 'AND post.id > $3',
+      'ORDER BY post.id DESC',
+      `LIMIT ${sq.limit || 0}`,
+    ].join(' ');
+    const { rows } = await query(sql, [user.id, sq.before, sq.after]);
+    return rows.map(row => makePost(row));
+  },
+
+  // input PostInput {
+  //     threadId: String!
+  //     anonymous: Boolean!
+  //     content: String!
+  //     # Set quoting PostIDs.
+  //     quoteIds: [String!]
+  // }
+  async new({ ctx, post: input }) {
+    ctx.auth.ensurePermission(ACTION.PUB_POST);
+    const user = ctx.auth.signedInUser();
+    const threadId = UID.parse(input.threadId);
+    const postId = UID.new();
+    const raw = {
+      id: postId.suid,
+      threadId: threadId.suid,
+      anonymous: input.anonymous,
+      userId: user.id,
+      content: input.content,
     };
-
-    let quotedPosts = [];
-    if (quoteUids.length > 0) {
-      quotedPosts = await col().find({
-        suid: {
-          $in: quoteUids.map(
-            q => Uid.encode(q),
-          ),
-        },
-      }).toArray();
-      post.quoteSuids = quotedPosts.map(qp => qp.suid);
-    }
-
-    const { value, error } = postSchema.validate(post);
-    if (error) {
-      log.error(error);
-      throw new ParamsError(`Thread validation failed, ${error}`);
-    }
-    post = value;
-
-    const session = await mongo.startSession();
-    session.startTransaction();
-
-    try {
-      await col().insertOne(post);
-      await ThreadModel(ctx).methods(threadDoc).onPubPost(post, { session });
-      await UserPostsModel(ctx).methods(user).onPubPost(threadDoc, post, { session });
-      await NotificationModel(ctx).sendRepliedNoti(post, threadDoc, { session });
-      await NotificationModel(ctx).sendQuotedNoti(post, threadDoc, quotedPosts, { session });
-      await session.commitTransaction();
-      session.endSession();
-      return post;
-    } catch (e) {
-      await session.abortTransaction();
-      session.endSession();
-      throw new InternalError(`Transaction Failed: ${e}`);
-    }
+    let newPost;
+    await doTransaction(async (txn) => {
+      if (input.anonymous) {
+        raw.anonymousId = await UserAidModel.getAid({ txn, userId: user.id, threadId: raw.id });
+      } else {
+        raw.userName = user.name;
+      }
+      const { rows } = await txn.query(`INSERT INTO post
+        (id, anonymous, "userId", "userName", "anonymousId", content)
+        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [raw.id.suid, raw.anonymous, raw.userId, raw.userName,
+        raw.anonymous || raw.anonymousId.suid, raw.content]);
+      newPost = makePost(rows[0]);
+      if (raw.quoteIds.length > 0) {
+        await Promise.all(raw.quoteIds.map(qid => txn.query(`INSERT
+           INTO posts_quotes ("quoterId", "quotedId")
+           VALUES ($1, $2)`, [newPost.id.suid, UID.parse(qid).suid])));
+      }
+    });
+    return newPost;
   },
 
-  findByUid: async function findByUid(uid) {
-    const post = await col().findOne({ suid: Uid.encode(uid) });
-    return post;
+  async block({ ctx, postId }) {
+    ctx.auth.ensurePermission(ACTION.BLOCK_POST);
+    await query('UPDATE post SET lock=$1 WHERE id=$2', [true, UID.parse(postId).suid]);
+    return true;
   },
-
-  methods: function methods(doc) {
-    return genDoc(ctx, this, doc);
-  },
-});
-
-const genDoc = (ctx, model, doc) => ({
-  CACHED_UID: '',
-
-  uid: function uid() {
-    if (!this.CACHED_UID) this.CACHED_UID = Uid.decode(doc.suid);
-    return this.CACHED_UID;
-  },
-
-  getQuotes: async function getQuotes() {
-    let qs = [];
-    if (doc.quoteSuids.length > 0) {
-      qs = await col().find(
-        { suid: { $in: doc.quoteSuids } },
-      ).sort({ suid: 1 }).toArray();
-    }
-    return qs;
-  },
-
-  getContent: async function getContent() {
-    return doc.blocked ? '' : doc.content;
-  },
-
-  quoteCount: async function quoteCount() {
-    const count = await col().find({ quoteSuids: doc.suid }).count();
-    return count;
-  },
-});
+};
 
 export default PostModel;
-*/

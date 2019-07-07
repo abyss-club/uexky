@@ -79,7 +79,7 @@ const User = {
   // auto field resolvers: email, name, role
   tags: user => user.getTags(),
   threads: (user, { query }) => ThreadModel.findUserThreads({ user, query }),
-  posts: (user, { query }) => PostModel.findUserReplies({ user, query }),
+  posts: (user, { query }) => PostModel.findUserPosts({ user, query }),
 };
 
 export default {
