@@ -11,7 +11,7 @@ import { query } from '~/utils/pg';
 // });
 
 const UserAidModel = {
-  async new({ txn, userId, threadId }) {
+  async getAid({ txn, userId, threadId }) {
     const q = txn ? txn.query : query;
     const tid = UID.parse(threadId);
     const aid = await UID.new();

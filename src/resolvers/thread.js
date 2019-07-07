@@ -25,7 +25,8 @@ const Mutation = {
 };
 
 const Thread = {
-  // auto filed resolvers: id, createdAt, anonymous, author, title, content
+  // auto field resolvers: createdAt, anonymous, author, title, content, blocked, locked
+  id: thread => thread.id.duid,
   mainTag: async (thread) => {
     const mainTag = await ThreadModel.getMainTag({ thread });
     return mainTag;
@@ -37,7 +38,7 @@ const Thread = {
   title: thread => thread.title,
   replies: async (thread, query, ctx) => {
     await ctx.limiter.take(query.limit);
-    const result = await PostModel.findThreadReplies({ thread, query });
+    const result = await PostModel.findThreadPosts({ thread, query });
     return result;
   },
   replyCount: async (thread) => {
