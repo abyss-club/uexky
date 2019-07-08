@@ -3,6 +3,7 @@ import { query, doTransaction } from '~/utils/pg';
 import { ACTION } from '~/models/user';
 import UID from '~/uid';
 import UserAidModel from '~/models/userAid';
+import NotificationModel from '~/models/notification';
 
 // pgm.createTable('post', {
 //   id: { type: 'bigint', primaryKey: true },
@@ -121,7 +122,9 @@ const PostModel = {
     let newPost;
     await doTransaction(async (txn) => {
       if (input.anonymous) {
-        raw.anonymousId = await UserAidModel.getAid({ txn, userId: user.id, threadId: raw.id });
+        raw.anonymousId = await UserAidModel.getAid({
+          txn, userId: user.id, threadId: raw.id,
+        });
       } else {
         raw.userName = user.name;
       }
@@ -135,7 +138,11 @@ const PostModel = {
         await Promise.all(raw.quoteIds.map(qid => txn.query(`INSERT
            INTO posts_quotes ("quoterId", "quotedId")
            VALUES ($1, $2)`, [newPost.id.suid, UID.parse(qid).suid])));
+        await NotificationModel.newQuotedNoti({
+          txn, threadId, postId, quotedIds: raw.quoteIds,
+        });
       }
+      await NotificationModel.newRepliedNoti({ txn, threadId });
     });
     return newPost;
   },

@@ -1,5 +1,6 @@
 import { ParamsError } from '~/utils/error';
 import { query } from '~/utils/pg';
+import UID from '~/uid';
 
 
 const USER_GROUPS = { ALL_USER: 'all_user' };
@@ -85,25 +86,31 @@ const NotificationModel = {
     }
   },
 
-  async newRepliedNoti({ txn, sendTo, threadId }) {
+  async newRepliedNoti({ txn, threadId }) {
     const q = txn ? txn.query : query;
+    const { rows } = q('SELECT "userId" FROM thread WHERE id=$1',
+      [UID.parse(threadId).suid]);
     await q(`INSERT INTO notification
       (type, sendTo, content) VALUES ($1, $2, $3)
       ON CONFLICT UPDATE SET "updatedAt"=now()`,
-    [NOTI_TYPES.REPLIED, sendTo, { threadId: threadId.suid }]);
+    [NOTI_TYPES.REPLIED, rows[0].userId, { threadId: threadId.suid }]);
   },
 
   async newQuotedNoti({
-    txn, sendTo, threadId, quotedId, postId,
+    txn, threadId, postId, quotedIds,
   }) {
     const q = txn ? txn.query : query;
-    await q(`INSERT INTO notification
+    const { rows } = await q(
+      'SELECT (id, "userId") FROM posts WHERE id IN $1', [quotedIds],
+    );
+    await Promise.all(rows.map(row => q(`INSERT INTO notification
       (type, sendTo, content) VALUES ($1, $2, $3)`,
-    [NOTI_TYPES.QUOTED, sendTo, {
+    [NOTI_TYPES.QUOTED, row.userId, {
       threadId: threadId.suid,
-      quotedId: quotedId.suid,
+      quotedId: row.id,
       postId: postId.suid,
-    }]);
+    },
+    ])));
   },
 };
 
