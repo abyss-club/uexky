@@ -83,8 +83,5 @@ export default `
     quotedPost: Post!
     # The post object that made this notification.
     post: Post!
-    # the user that quoted the post. Same as the corresponding author field in
-    # the object "Post".
-    quoter: String!
   }
 `;
