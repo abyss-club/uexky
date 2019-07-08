@@ -1,175 +1,111 @@
-import JoiBase from '@hapi/joi';
-import JoiObjectId from '~/utils/joiObjectId';
-import mongo from '~/utils/mongo';
-import findSlice from '~/models/base';
 import { ParamsError } from '~/utils/error';
-import { timeZero } from '~/uid/generator';
-import { ObjectId } from 'bson-ext';
-import Uid from '~/uid';
-import log from '~/utils/log';
+import { query } from '~/utils/pg';
 
-import ThreadModel from './thread';
-import UserModel from './user';
 
-const Joi = JoiBase.extend(JoiObjectId);
-const NOTIFICATION = 'notification';
-const col = () => mongo.collection(NOTIFICATION);
+const USER_GROUPS = { ALL_USER: 'all_user' };
+const NOTI_TYPES = {
+  SYSTEM: 'system',
+  REPLIED: 'replied',
+  QUOTED: 'quoted',
+};
+const isValidType = type => (NOTI_TYPES[type] || '') === '';
 
-const notiTypes = ['system', 'replied', 'quoted'];
-const isValidType = type => notiTypes.findIndex(t => t === type) !== -1;
-const userGroups = {
-  AllUser: 'all_user',
+const makeNoti = (raw, type, user) => {
+  const base = {
+    id: raw.id,
+    type: NOTI_TYPES.SYSTEM,
+    eventTime: raw.createdAt,
+    hasRead: user.readNotiTime.system >= raw.createdAt,
+  };
+  if (type === NOTI_TYPES.SYSTEM) {
+    return {
+      ...base,
+      title: raw.content.title,
+      content: raw.content.content,
+    };
+  } if (type === NOTI_TYPES.REPLIED) {
+    return {
+      ...base,
+      threadId: raw.content.threadId,
+      quotedId: raw.content.quotedId,
+      postId: raw.content.postId,
+    };
+  } if (type === NOTI_TYPES.QUOTED) {
+    return {
+      ...base,
+      quotedId: user.content.quotedId,
+      postId: user.content.postId,
+    };
+  }
+  throw ParamsError(`unknown notification type: ${type}`);
 };
 
-const notificationSchema = Joi.object().keys({
-  id: Joi.string().required(),
-  type: Joi.string().valid(notiTypes).required(),
-  sendTo: Joi.objectId(),
-  sendToGroup: Joi.string().valid('all'),
-  eventTime: Joi.date(),
-  system: Joi.object().keys({
-    title: Joi.string(),
-    content: Joi.string(),
-  }),
-  replied: Joi.object().keys({
-    threadId: Joi.string(),
-    repliers: Joi.array().items(Joi.string()),
-    replierIds: Joi.array().items(Joi.objectId()),
-  }),
-  quoted: {
-    threadId: Joi.string(),
-    postId: Joi.string(),
-    quotedPostId: Joi.string(),
-    quoter: Joi.string(),
-    quoterId: Joi.objectId(),
-  },
-});
+const NotificationModel = {
 
-const NotificationModel = ctx => ({
-  sendRepliedNoti: async function sendRepliedNoti(
-    post, thread, opt,
-  ) {
-    const option = { ...opt, upsert: true };
-    const threadUid = ThreadModel(ctx).methods(thread).uid();
-
-    const { error } = notificationSchema.validate({
-      id: `replied:${threadUid}`,
-      type: 'replied',
-      sendTo: thread.userId,
-      eventTime: post.createdAt,
-      replied: {
-        threadId: threadUid,
-        repliers: [post.author],
-        replierIds: [post.userId],
-      },
-    });
-
-    if (error) {
-      log.error(error);
-      throw new ParamsError(`Notification validation failed, ${error}`);
-    }
-
-    await col().updateOne({
-      id: `replied:${threadUid}`,
-    }, {
-      $setOnInsert: {
-        id: `replied:${threadUid}`,
-        type: 'replied',
-        sendTo: thread.userId,
-        'replied.threadId': threadUid,
-      },
-      $set: {
-        eventTime: post.createdAt,
-      },
-      $addToSet: {
-        'replied.repliers': post.author,
-        'replied.replierIds': post.userId,
-      },
-    }, option);
-  },
-
-  sendQuotedNoti: async function sendQuotedNoti(
-    post, thread, quotedPosts, opt,
-  ) {
-    if (quotedPosts.length < 1) return;
-
-    const postUid = Uid.decode(post.suid);
-    const threadUid = ThreadModel(ctx).methods(thread).uid();
-
-    const validateQp = (qp) => {
-      const qpUid = Uid.decode(qp.suid);
-      const { value, error } = notificationSchema.validate({
-        id: `quoted:${postUid}:${qpUid}`,
-        type: 'quoted',
-        sendTo: qp.userId,
-        eventTime: post.createdAt,
-        quoted: {
-          threadId: threadUid,
-          postId: postUid,
-          quotedPostId: qpUid,
-          quoter: post.author,
-          quoterId: post.userId,
-        },
-      });
-      if (error) {
-        log.error(error);
-        throw new ParamsError(`Notification validation failed, ${error}`);
-      }
-      return value;
-    };
-
-    const docs = quotedPosts.map(qp => (validateQp(qp)));
-    await col().insertMany(docs, opt);
-  },
-
-  getUnreadCount: async function getUnreadCount(
-    user, type,
-  ) {
+  async getUnreadCount({ ctx, type }) {
     if (!isValidType(type)) {
-      throw new ParamsError(`Invalid type: ${type}`);
+      throw ParamsError(`unknown notification type: ${type}`);
     }
-
-    let userReadNotiTime;
-    if (!user.readNotiTime || !user.readNotiTime[type]) {
-      userReadNotiTime = timeZero;
-    } else {
-      userReadNotiTime = user.readNotiTime[type];
-    }
-
-    const count = await col().find({
-      $or: [
-        { sendTo: user._id },
-        { sendToGroup: userGroups.AllUser },
-      ],
-      type,
-      eventTime: { $gt: userReadNotiTime },
-    }).count();
-
-    return count;
+    const user = ctx.auth.signedInUser();
+    const { rows } = await query(
+      `SELECT count(*) FROM notification
+      WHERE "updatedAt" < $1`,
+      [user.readNotiTime[type]],
+    );
+    return rows[0].count;
   },
 
-  getNotiSlice: async function getNotiSlice(
-    user, type, sliceQuery,
-  ) {
+  async findNotiSlice({ ctx, type, query: sq }) {
     if (!isValidType(type)) {
-      throw new ParamsError(`Invalid type: ${type}`);
+      throw ParamsError(`unknown notification type: ${type}`);
     }
-    if (!sliceQuery) {
-      throw new ParamsError('Invalid SliceQuery.');
-    }
-    const option = {
-      query: { type, $or: [{ sendTo: user._id }, { sendToGroup: 'all' }] },
-      desc: true,
-      field: '_id',
-      sliceName: type,
-      parse: value => ObjectId(value),
-      toCursor: value => value.toHexString(),
-    };
-    const result = await findSlice(sliceQuery, col(), option);
-    await UserModel(ctx).methods(user).setReadNotiTime(type, new Date());
-    return result;
+    const user = ctx.auth.signedInUser();
+    const { rows } = await query([
+      'SELECT * FROM notification',
+      `WHERE ("sendTo"=$1 OR "sendToGroup"=${USER_GROUPS.ALL_USER}')`,
+      'AND type=$2',
+      sq.before && `AND id < ${sq.before}`,
+      sq.after && `AND id > ${sq.after}`,
+      `ORDER BY id DESC LIMIT ${sq.limit || 0}`,
+    ].join(' '), [user.id, type]);
+    return rows.map(raw => makeNoti(raw, type, user));
   },
-});
+
+  async newSystemNoti({
+    sendTo, sendToGroup, title, content,
+  }) {
+    if (sendTo) {
+      await query(`INSERT INTO notification
+      (type, sendTo, content) VALUES ($1, $2, $3)`,
+      [NOTI_TYPES.SYSTEM, sendTo, { title, content }]);
+    } if (sendToGroup) {
+      await query(`INSERT INTO notification
+      (type, sendToGroup, content) VALUES ($1, $2, $3)`,
+      [NOTI_TYPES.SYSTEM, sendToGroup, { title, content }]);
+    }
+  },
+
+  async newRepliedNoti({ txn, sendTo, threadId }) {
+    const q = txn ? txn.query : query;
+    await q(`INSERT INTO notification
+      (type, sendTo, content) VALUES ($1, $2, $3)
+      ON CONFLICT UPDATE SET "updatedAt"=now()`,
+    [NOTI_TYPES.REPLIED, sendTo, { threadId: threadId.suid }]);
+  },
+
+  async newQuotedNoti({
+    txn, sendTo, threadId, quotedId, postId,
+  }) {
+    const q = txn ? txn.query : query;
+    await q(`INSERT INTO notification
+      (type, sendTo, content) VALUES ($1, $2, $3)`,
+    [NOTI_TYPES.QUOTED, sendTo, {
+      threadId: threadId.suid,
+      quotedId: quotedId.suid,
+      postId: postId.suid,
+    }]);
+  },
+};
 
 export default NotificationModel;
-export { notiTypes };
+export { NOTI_TYPES };

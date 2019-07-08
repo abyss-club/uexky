@@ -105,6 +105,7 @@ exports.up = (pgm) => {
   pgm.createTable('notification', {
     id: { type: 'serial', primaryKey: true },
     createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
     type: { type: 'text', notNull: true },
     sendTo: { type: 'integer', references: 'public.user(id)' },
     sendToGroup: { type: 'text' },

@@ -22,6 +22,11 @@ const makeUser = function makeUser(raw) {
       return rows.map(row => row.tagName);
     },
     role: raw.role,
+    readNotiTime: {
+      system: raw.lastReadSystemNoti,
+      replied: raw.lastReadRepliedNoti,
+      quoted: raw.lastReadQuotedNoti,
+    },
   };
 };
 
