@@ -82,6 +82,12 @@ exports.up = (pgm) => {
     updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
   });
 
+  pgm.createTable('tags_main_tags', {
+    id: { type: 'serial', primaryKey: true },
+    name: { type: 'text', notNull: true, references: 'tag(name)' },
+    belongsTo: { type: 'text', notNull: true, references: 'tag(name)' },
+  });
+
   pgm.createTable('threads_tags', {
     id: { type: 'serial', primaryKey: true },
     createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
@@ -91,12 +97,6 @@ exports.up = (pgm) => {
   });
 
   pgm.createTable('users_tags', {
-    id: { type: 'serial', primaryKey: true },
-    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
-    tagName: { type: 'text', notNull: true, references: 'tag(name)' },
-  });
-
-  pgm.createTable('managers_tags', {
     id: { type: 'serial', primaryKey: true },
     userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
     tagName: { type: 'text', notNull: true, references: 'tag(name)' },
@@ -128,9 +128,10 @@ exports.down = (pgm) => {
   pgm.dropTable('counter');
   pgm.dropTable('config');
   pgm.dropTable('notification');
-  pgm.dropTable('managers_tags');
   pgm.dropTable('users_tags');
-  pgm.dropTable('threads_tags');
+  pgm.dropTable('tags_main_tags');
+  pgm.dropConstraint('thread_main_tag');
+  pgm.dropTable('threads_sub_tags');
   pgm.dropTable('tag');
   pgm.dropTable('posts_quotes');
   pgm.dropConstraint('thread', 'thread_anonymous_id');

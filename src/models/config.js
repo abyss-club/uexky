@@ -1,10 +1,8 @@
 import Joi from '@hapi/joi';
-import { query } from '~/utils/pg';
 
+import { query } from '~/utils/pg';
 import { ParamsError } from '~/utils/error';
 import log from '~/utils/log';
-
-const CONFIG = 'config';
 
 const rateLimitObjSchema = Joi.object().keys({
   httpHeader: Joi.string().regex(/^[a-zA-Z0-9-]*$/).default(''),
@@ -25,16 +23,8 @@ const configSchema = Joi.object().keys({
   rateCost: rateCostObjSchema.default(rateCostObjSchema.validate({}).value),
 });
 
-const ConfigModel = () => ({
-  // getConfig: async function getConfig() {
-  //   const results = await col().find({}, { projection: { _id: 0 } }).toArray();
-  //   if (results.length === 0) {
-  //     return configSchema.validate({}).value;
-  //   }
-  //   return results[0];
-  // },
-
-  getConfig: async function getConfig() {
+const ConfigModel = {
+  async getConfig() {
     const results = await query('SELECT "rateLimit", "rateCost" from config where id = 1');
     if (results.rows.length < 1) {
       return configSchema.validate({}).value;
@@ -42,7 +32,7 @@ const ConfigModel = () => ({
     return results.rows[0];
   },
 
-  setConfig: async function setConfig(input) {
+  async setConfig(input) {
     const config = await this.getConfig();
     Object.keys(input).forEach((key) => {
       config[key] = Object.assign(config[key] || {}, input[key] || {});
@@ -53,9 +43,6 @@ const ConfigModel = () => ({
       log.error(error);
       throw new ParamsError(`JSON validation failed, ${error}`);
     }
-    // await col().findOneAndUpdate({}, { $set: newConfig }, {
-    //   upsert: true, w: 'majority', j: true, wtimeout: 1000,
-    // });
     await query(
       `
       INSERT INTO config(id, "rateLimit", "rateCost") VALUES(1, $1, $2)
@@ -69,6 +56,6 @@ const ConfigModel = () => ({
     log.info('config updated!', newConfig);
     return newConfig;
   },
-});
+};
 
 export default ConfigModel;

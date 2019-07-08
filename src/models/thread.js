@@ -1,7 +1,8 @@
-import { NotFoundError, ParamsError } from '~/utils/error';
+import { NotFoundError } from '~/utils/error';
 import { query, doTransaction } from '~/utils/pg';
 import { ACTION } from '~/models/user';
 import UserAidModel from '~/models/userAid';
+import TagModel from '~/models/tag';
 import UID from '~/uid';
 
 // pgm.createTable('thread', {
@@ -121,7 +122,7 @@ const ThreadModel = {
       [raw.id.suid, raw.anonymous, raw.userId, raw.userName,
         raw.anonymousId && raw.anonymous.suid, raw.title, raw.content]);
       newThread = makeThread(rows[0]);
-      await this.setTags({
+      await TagModel.setThreadTags({
         ctx, txn, isNew: true, mainTag: input.mainTag, subTags: input.subTags,
       });
     });
@@ -153,36 +154,6 @@ const ThreadModel = {
     await query('UPDATE thread SET block=$1 WHERE id=$2', [true, UID.parse(threadId).suid]);
   },
 
-  async setTags({
-    ctx, txn, isNew, threadId, mainTag, subTags,
-  }) {
-    const id = UID.parse(threadId);
-    const q = txn ? txn.query : query;
-    if (!isNew) {
-      ctx.auth.ensurePermission({ action: ACTION.EDIT_TAG });
-    }
-    const { rows: mainTags } = q(
-      'SELECT name FROM tag WHERE "isMain" = true AND name IN $1',
-      [[mainTag, ...subTags]],
-    );
-    if (mainTags.length !== 1) {
-      throw ParamsError('you must specified one and only one main tag');
-    } else if (mainTags[0].name !== mainTag) {
-      throw ParamsError(`${mainTag} is not main tag`);
-    }
-    if (!isNew) {
-      await q('DELETE FROM threads_tags WHERE "threadId" = $1', [id.suid]);
-    }
-    await Promise.all(subTags.forEach(
-      tag => q(`INSERT INTO tag (name) VALUES ($1)
-        ON CONFLICT UPDATE "updatedAt" = now()`, [tag]),
-    ));
-    await Promise.all([mainTag, ...subTags].forEach(
-      tag => q(`INSERT INTO threads_tags ("threadId", "tagName")
-        VALUES ($1, $2) ON CONFLICT UPDATE SET "updatedAt" = now()`,
-      [id.suid, tag]),
-    ));
-  },
 };
 
 export default ThreadModel;
