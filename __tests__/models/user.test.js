@@ -46,12 +46,12 @@ describe('user name', () => {
     const userInDb = await UserModel.findByEmail({ email: mockEmail });
     expect(userInDb.name).toEqual(mockName);
   });
-  it('name stable', async () => {
+  it('name is unchangeable', async () => {
     const auth = await UserModel.authContext({ email: mockEmail });
     const ctx = { auth };
     expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(ParamsError);
   });
-  it('name unique', async () => {
+  it('name is unique', async () => {
     const auth = await UserModel.authContext({ email: 'test2@example.com' });
     const ctx = { auth };
     expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(InternalError);
