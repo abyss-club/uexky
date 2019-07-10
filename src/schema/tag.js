@@ -3,7 +3,7 @@ export default `
     # main tags
     mainTags: [String!]!
     # Containing mainTags and tagTree.
-    tag(query: String, limit: Int): [Tag]!
+    tags(query: String, limit: Int): [Tag]!
   }
 
   type Tag {
