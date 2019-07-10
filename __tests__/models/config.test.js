@@ -1,8 +1,9 @@
 import ConfigModel from '~/models/config';
+import { ROLE } from '~/models/user';
 import { ParamsError } from '~/utils/error';
 import startPg, { migrate } from '../__utils__/pgServer';
+import mockContext from '../__utils__/context';
 
-let ctx;
 let pgPool;
 // let db;
 
@@ -34,11 +35,16 @@ describe('Testing rateLimit', () => {
   };
   const checkConfig = async () => {
     const result = await ConfigModel.getConfig();
-    const resultInDb = await pgPool.query('SELECT "rateLimit", "rateCost" from config where id = 1');
+    const resultInDb = await pgPool.query(
+      'SELECT "rateLimit", "rateCost" from config where id = 1',
+    );
     expect(result).toEqual(expectedConfig);
     expect(resultInDb.rows[0]).toEqual(expectedConfig);
   };
-
+  let ctx;
+  it('prepare', async () => {
+    ctx = await mockContext({ email: 'uexky@uexky.com', role: ROLE.ADMIN });
+  });
   it('get default config', async () => {
     const result = await ConfigModel.getConfig();
     expect(result).toEqual(expectedConfig);

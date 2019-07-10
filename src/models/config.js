@@ -34,7 +34,7 @@ const ConfigModel = {
   },
 
   async setConfig(ctx, input) {
-    ctx.ensurePermission(ACTION.EDIT_SETTING);
+    ctx.auth.ensurePermission(ACTION.EDIT_SETTING);
     const config = await this.getConfig();
     Object.keys(input).forEach((key) => {
       config[key] = Object.assign(config[key] || {}, input[key] || {});
