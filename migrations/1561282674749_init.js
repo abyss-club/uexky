@@ -10,7 +10,8 @@ exports.up = (pgm) => {
     lastReadRepliedNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
     lastReadQuotedNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
   });
-  pgm.createIndex('user', 'email');
+  pgm.createIndex('user', ['email']);
+  pgm.createIndex('user', ['name']);
 
   pgm.createTable('thread', {
     id: { type: 'bigint', primaryKey: true },
@@ -101,6 +102,7 @@ exports.up = (pgm) => {
     userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
     tagName: { type: 'text', notNull: true, references: 'tag(name)' },
   });
+  pgm.createIndex('users_tags', ['userId', 'tagName'], { unique: true });
 
   pgm.createTable('notification', {
     id: { type: 'serial', primaryKey: true },

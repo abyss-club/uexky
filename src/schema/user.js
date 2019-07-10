@@ -13,9 +13,9 @@ export default `
     # Directly edit tags subscribed by user.
     syncTags(tags: [String]!): User!
     # Add tags subscribed by user.
-    addSubbedTags(tags: [String!]!): User!
+    addSubbedTag(tags: String!): User!
     # Delete tags subscribed by user.
-    delSubbedTags(tags: [String!]!): User!
+    delSubbedTag(tags: String!): User!
 
     # mod's apis:
     banUser(postId: String, threadId: String): Boolean!
