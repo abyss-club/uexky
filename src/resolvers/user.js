@@ -23,12 +23,12 @@ const Mutation = {
     await UserModel.syncTags({ ctx, tags });
     return ctx.auth.signedInUser();
   },
-  addSubbedTags: async (_obj, { tags }, ctx) => {
-    await UserModel.addSubbedTags({ ctx, tags });
+  addSubbedTag: async (_obj, { tag }, ctx) => {
+    await UserModel.addSubbedTag({ ctx, tag });
     return ctx.auth.signedInUser();
   },
-  delSubbedTags: async (_obj, { tags }, ctx) => {
-    await UserModel.delSubbedTags({ ctx, tags });
+  delSubbedTag: async (_obj, { tag }, ctx) => {
+    await UserModel.delSubbedTag({ ctx, tag });
     return ctx.auth.signedInUser();
   },
 

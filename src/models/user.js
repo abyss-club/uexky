@@ -15,11 +15,14 @@ import validator from '~/utils/validator';
 const makeUser = function makeUser(raw) {
   return {
     id: raw.id,
+    name: raw.name,
     email: raw.email,
     async getTags() {
-      const { rows } = query(`SELECT "tagName" 
-        FROM users_tags WHERE "userId" = $1`, [raw.id]);
-      return rows.map(row => row.tagName);
+      const { rows } = await query(
+        'SELECT "tagName" FROM users_tags WHERE "userId"=$1',
+        [raw.id],
+      );
+      return (rows || []).map(row => row.tagName);
     },
     role: raw.role,
     readNotiTime: {
@@ -36,6 +39,7 @@ const ACTION = {
   LOCK_THREAD: 'LOCK_THREAD',
   BLOCK_THREAD: 'BLOCK_THREAD',
   EDIT_TAG: 'EDIT_TAG',
+  EDIT_SETTING: 'EDIT_SETTING',
   PUB_POST: 'PUB_POST',
   PUB_THREAD: 'PUB_THREAD',
 };
@@ -43,12 +47,13 @@ const ACTION = {
 const ROLE = {
   MOD: 'mod',
   BANNED: 'banned',
+  ADMIN: 'admin',
 };
 
 const UserModel = {
 
   async findByEmail({ email }) {
-    const { rows } = await query('SELECT * FROM user WHERE email = $1', [email]);
+    const { rows } = await query('SELECT * FROM public.user WHERE email=$1', [email]);
     if (rows.length !== 0) {
       return makeUser(rows[0]);
     }
@@ -72,7 +77,9 @@ const UserModel = {
     }
     let user = await this.findByEmail({ email });
     if (!user) { // new user
-      const { rows } = await query('INSERT INTO user (email) VALUES ($1) RETURNING *', [email]);
+      const text = 'INSERT INTO public.user (email) VALUES ($1) RETURNING *';
+      const values = [email];
+      const { rows } = await query(text, values);
       // TODO: send welcome message
       [user] = rows;
     }
@@ -83,6 +90,12 @@ const UserModel = {
       ensurePermission(action) {
         if (!user) {
           throw AuthError('not login');
+        }
+        if (action === ACTION.EDIT_SETTING) {
+          if (user.role !== ROLE.ADMIN) {
+            throw PermissionError('you are not admin');
+          }
+          return;
         }
         if (user.role !== ROLE.MOD) {
           throw PermissionError('you are not mod');
@@ -107,19 +120,20 @@ const UserModel = {
     return user;
   },
 
-  async addSubbedTags({ ctx, tags }) {
+  async addSubbedTag({ ctx, tag }) {
     const user = ctx.auth.signedInUser();
-    await doTransaction(async (client) => {
-      await Promise.all(tags.map(tag => client.query(
-        'INSERT INTO users_tags ("userId", "tagName") VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [user.id, tag],
-      )));
-    });
+    await query(
+      'INSERT INTO users_tags ("userId", "tagName") VALUES ($1, $2)',
+      [user.id, tag],
+    );
   },
 
-  async delSubbedTags({ ctx, tags }) {
+  async delSubbedTag({ ctx, tag }) {
     const user = ctx.auth.signedInUser();
-    await query('DELETE FROM users_tags WHERE "userId" = $1 "tagName" IN $2', [user.id, tags]);
+    await query(
+      'DELETE FROM users_tags WHERE "userId"=$1 AND "tagName"=$2',
+      [user.id, tag],
+    );
   },
 
   async syncTags({ ctx, tags }) {
@@ -140,4 +154,4 @@ const UserModel = {
 };
 
 export default UserModel;
-export { ACTION };
+export { ACTION, ROLE };

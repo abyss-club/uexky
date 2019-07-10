@@ -3,6 +3,7 @@ import Joi from '@hapi/joi';
 import { query } from '~/utils/pg';
 import { ParamsError } from '~/utils/error';
 import log from '~/utils/log';
+import { ACTION } from '~/models/user';
 
 const rateLimitObjSchema = Joi.object().keys({
   httpHeader: Joi.string().regex(/^[a-zA-Z0-9-]*$/).default(''),
@@ -32,7 +33,8 @@ const ConfigModel = {
     return results.rows[0];
   },
 
-  async setConfig(input) {
+  async setConfig(ctx, input) {
+    ctx.ensurePermission(ACTION.EDIT_SETTING);
     const config = await this.getConfig();
     Object.keys(input).forEach((key) => {
       config[key] = Object.assign(config[key] || {}, input[key] || {});
