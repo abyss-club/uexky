@@ -42,7 +42,7 @@ const Mutation = {
       const { userId } = await ThreadModel.findById({ threadId });
       id = userId;
     } else {
-      throw ParamsError('postId and threadId are both empty');
+      throw new ParamsError('postId and threadId are both empty');
     }
     await UserModel.banUser({ ctx, userId: id });
     return true;

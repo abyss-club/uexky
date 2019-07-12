@@ -3,6 +3,7 @@ import { query, doTransaction } from '~/utils/pg';
 import { ACTION } from '~/models/user';
 import UserAidModel from '~/models/userAid';
 import TagModel from '~/models/tag';
+import querySlice from '~/models/slice';
 import UID from '~/uid';
 
 // pgm.createTable('thread', {
@@ -51,19 +52,19 @@ const makeThread = function makeThread(raw) {
         FROM threads_tags INNER JOIN tag ON threads_tags."tagName" = tag.name
         WHERE threads_tags."threadId" = $1 AND tag."isMain" = false`,
       [this.id.suid]);
-      return rows.map(row => row.tagName);
+      return (rows || []).map(row => row.tagName);
     },
 
     async getReplyCount() {
       const { rows } = await query(`SELECT count(*) FROM post
         WHERE "threadId"=$1`, [this.id.suid]);
-      return rows[0].count;
+      return parseInt(rows[0].count || '0', 10);
     },
 
     async getCatelog() {
-      const { rows } = await query(`SELECT ("postId, createdAt")
-      FROM post WHERE "threadId=$1" ORDER BY id DESC`, [this.id.suid]);
-      return rows;
+      const { rows } = await query(`SELECT id "postId", "createdAt"
+      FROM post WHERE "threadId"=$1 ORDER BY id DESC`, [this.id.suid]);
+      return rows || [];
     },
 
     blocked: raw.blocked,
@@ -71,39 +72,48 @@ const makeThread = function makeThread(raw) {
   };
 };
 
+const threadSliceOpt = {
+  select: 'SELECT * FROM thread',
+  before: before => `thread.id > ${UID.parse(before).suid}`,
+  after: after => `thread.id < ${UID.parse(after).suid}`,
+  order: 'ORDER BY thread.id',
+  desc: true,
+  name: 'threads',
+  make: makeThread,
+  toCursor: thread => thread.id.duid,
+};
+
 const ThreadModel = {
 
   async findById({ threadId }) {
     const id = UID.parse(threadId);
-    const { rows } = await query('SELECT * FROM thread WHERE id=$1', [id]);
+    const { rows } = await query('SELECT * FROM thread WHERE id=$1', [id.suid]);
     if ((rows || []).length === 0) {
-      throw NotFoundError(`cant find thread ${threadId}`);
+      throw new NotFoundError(`cant find thread ${threadId}`);
     }
     return makeThread(rows[0]);
   },
 
   async findSlice({ tags, query: sq }) {
-    const sql = [
-      'SELECT *',
-      'FROM thread inner join threads_tags',
-      'ON thread.id = threads_tags."threadId"',
-      'WHERE threads_tags."tagName" IN $1',
-      sq.before && 'AND thread.id > $2',
-      sq.after && 'AND thread.id < $3',
-      'ORDER BY thread.id DESC',
-      `LIMIT ${sq.limit || 0}`,
-    ].join(' ');
-    const { rows } = await query(sql, [tags, sq.before, sq.after]);
-    return rows.map(row => makeThread(row));
+    const slice = await querySlice(sq, {
+      ...threadSliceOpt,
+      where: `WHERE id IN (
+        SELECT "threadId" FROM threads_tags
+        WHERE threads_tags."tagName"=ANY($1)
+      )`,
+      params: [tags],
+    });
+    return slice;
   },
 
   async new({ ctx, thread: input }) {
     ctx.auth.ensurePermission(ACTION.PUB_THREAD);
     const user = ctx.auth.signedInUser();
+    const threadId = await UID.new();
     const raw = {
-      id: UID.new(),
+      id: threadId,
       anonymous: input.anonymous,
-      userId: input.userId,
+      userId: user.id,
       userName: null,
       anonymousId: null,
       title: input.title,
@@ -120,28 +130,27 @@ const ThreadModel = {
         (id, anonymous, "userId", "userName", "anonymousId", title, content)
         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [raw.id.suid, raw.anonymous, raw.userId, raw.userName,
-        raw.anonymousId && raw.anonymous.suid, raw.title, raw.content]);
+        raw.anonymousId && raw.anonymousId.suid, raw.title, raw.content]);
       newThread = makeThread(rows[0]);
       await TagModel.setThreadTags({
-        ctx, txn, isNew: true, mainTag: input.mainTag, subTags: input.subTags,
+        ctx,
+        txn,
+        isNew: true,
+        threadId: newThread.id,
+        mainTag: input.mainTag,
+        subTags: input.subTags,
       });
     });
     return newThread;
   },
 
   async findUserThreads({ user, query: sq }) {
-    const sql = [
-      'SELECT *',
-      'FROM thread inner join threads_tags',
-      'ON thread.id = threads_tags."threadId"',
-      'WHERE thread."userId" == $1',
-      sq.before && 'AND thread.id > $2',
-      sq.after && 'AND thread.id < $3',
-      'ORDERED BY thread."updatedAt" DESC',
-      `LIMIT ${sq.limit || 0}`,
-    ].join(' ');
-    const { threads } = await query(sql, [user.id, sq.before, sq.after]);
-    return threads;
+    const slice = await querySlice(sq, {
+      ...threadSliceOpt,
+      where: 'WHERE "userId"=$1',
+      params: [user.id],
+    });
+    return slice;
   },
 
   async lockThread({ ctx, threadId }) {

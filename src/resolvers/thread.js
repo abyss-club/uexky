@@ -51,7 +51,9 @@ const Thread = {
   },
 };
 
-// auto type resolvers: ThreadCatalogItem, with fields: postId, createdAt
+// auto type resolvers:
+//   ThreadSlice
+//   ThreadCatalogItem, with fields: postId, createdAt
 
 export default {
   Query,

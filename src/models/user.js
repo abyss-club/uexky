@@ -50,6 +50,15 @@ const ROLE = {
   ADMIN: 'admin',
 };
 
+const actionRole = {
+  [ACTION.BAN_USER]: 'mod',
+  [ACTION.BLOCK_POST]: 'mod',
+  [ACTION.LOCK_THREAD]: 'mod',
+  [ACTION.BLOCK_THREAD]: 'mod',
+  [ACTION.EDIT_TAG]: 'mod',
+  [ACTION.EDIT_SETTING]: 'admin',
+};
+
 const UserModel = {
 
   async findByEmail({ email }) {
@@ -91,17 +100,19 @@ const UserModel = {
         if (!user) {
           throw AuthError('not login');
         }
-        if (action === ACTION.EDIT_SETTING) {
+        const ar = actionRole[action] || '';
+        if (ar === ROLE.ADMIN) {
           if (user.role !== ROLE.ADMIN) {
             throw PermissionError('you are not admin');
           }
           return;
-        }
-        if (user.role !== ROLE.MOD) {
-          throw PermissionError('you are not mod');
-        }
-        if (!ACTION[action]) {
-          throw ParamsError(`unknown action ${action}`);
+        } if (ar === ROLE.MOD) {
+          if ((user.role !== ROLE.ADMIN) && (user.role !== ROLE.MOD)) {
+            throw PermissionError('you are not mod');
+          }
+          return;
+        } if (user.role === ROLE.BANNED) {
+          throw PermissionError('you are banned');
         }
       },
     };
