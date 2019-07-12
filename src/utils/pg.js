@@ -15,13 +15,18 @@ const connectDb = async (pgUri) => {
   return pgPool;
 };
 
-const query = async (text, params) => {
+const query = async (text, params, client) => {
+  let result;
   try {
-    const result = await pgPool.query(text, params);
-    return result;
+    if (client) {
+      result = await client.query(text, params);
+    } else {
+      result = await pgPool.query(text, params);
+    }
   } catch (e) {
     throw new InternalError(`pg query '${text}' error: ${e.stack}`);
   }
+  return result || {};
 };
 
 const doTransaction = async (transcation) => {

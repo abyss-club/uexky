@@ -42,36 +42,35 @@ const TagModel = {
     ctx, txn, isNew, threadId, mainTag, subTags,
   }) {
     const id = UID.parse(threadId);
-    const q = txn ? txn.query : query;
     if (!isNew) {
       ctx.auth.ensurePermission({ action: ACTION.EDIT_TAG });
     }
-    const { rows: mainTags } = q(
-      'SELECT name FROM tag WHERE "isMain" = true AND name IN $1',
-      [[mainTag, ...subTags]],
+    const { rows: mainTags } = await query(
+      'SELECT name FROM tag WHERE "isMain" = true AND name = ANY ($1)',
+      [[mainTag, ...subTags]], txn,
     );
     if (mainTags.length !== 1) {
-      throw ParamsError('you must specified one and only one main tag');
+      throw new ParamsError('you must specified one and only one main tag');
     } else if (mainTags[0].name !== mainTag) {
-      throw ParamsError(`${mainTag} is not main tag`);
+      throw new ParamsError(`${mainTag} is not main tag`);
     }
     if (!isNew) {
-      await q('DELETE FROM threads_tags WHERE "threadId" = $1', [id.suid]);
+      await query('DELETE FROM threads_tags WHERE "threadId" = $1', [id.suid], txn);
     }
     await Promise.all([
-      ...subTags.forEach(
-        tag => q(`INSERT INTO tag (name) VALUES ($1)
-        ON CONFLICT UPDATE "updatedAt" = now()`, [tag]),
+      ...(subTags || []).map(
+        tag => query(`INSERT INTO tag (name) VALUES ($1)
+        ON CONFLICT (name) DO UPDATE SET "updatedAt" = now()`, [tag], txn),
       ),
-      ...[mainTag, ...subTags].forEach(
-        tag => q(`INSERT INTO threads_tags ("threadId", "tagName")
-        VALUES ($1, $2) ON CONFLICT UPDATE SET "updatedAt" = now()`,
-        [id.suid, tag]),
+      ...[mainTag, ...(subTags || [])].map(
+        tag => query(`INSERT INTO threads_tags ("threadId", "tagName")
+        VALUES ($1, $2) ON CONFLICT ("threadId", "tagName") DO UPDATE SET "updatedAt"=now()`,
+        [id.suid, tag], txn),
       ),
-      ...subTags.map(subTag => query(`
-        INSERT INTO tags_main_tags (name, belongsTo)
-        VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-      [subTag, mainTag])),
+      ...(subTags || []).map(subTag => query(`
+        INSERT INTO tags_main_tags (name, "belongsTo") VALUES ($1, $2)
+        ON CONFLICT (name, "belongsTo") DO UPDATE SET "updatedAt"=now()`,
+      [subTag, mainTag], txn)),
     ]);
   },
 

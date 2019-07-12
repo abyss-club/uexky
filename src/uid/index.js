@@ -55,24 +55,27 @@ const storage2display = (suid) => {
   return [raw[len - 1], raw.substring(0, len - 1)].join('');
 };
 
+const suidRegex = /^\d{11,}$/;
+
 const UID = {
   parse(input) {
-    if (typeof input === 'string') {
+    if (typeof input === typeof BigInt(0) || typeof input === 'number'
+    || (typeof input === 'string' && suidRegex.test(input))) {
       return {
-        duid: input,
+        suid: BigInt(input),
+        duid: storage2display(BigInt(input)),
+        type: 'UID',
+      };
+    } if (typeof input === 'string') {
+      return {
         suid: display2storage(input),
-        type: 'uid',
+        duid: input,
+        type: 'UID',
       };
-    } if (typeof input === typeof BigInt(0)) {
-      return {
-        suid: input,
-        duid: storage2display(input),
-        type: 'uid',
-      };
-    } if (typeof input === 'object' && input.type === 'uid') {
+    } if (typeof input === 'object' && (input || {}).type === 'UID') {
       return input;
     }
-    throw ParamsError(`unknown value: ${input}`);
+    throw new ParamsError(`unknown value: ${input}`);
   },
   async new() {
     const suid = await newSuid();

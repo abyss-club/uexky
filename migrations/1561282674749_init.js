@@ -6,17 +6,17 @@ exports.up = (pgm) => {
     email: { type: 'text', notNull: true, unique: true },
     name: { type: 'text', unique: true },
     role: { type: 'text', notNull: true, default: '' },
-    lastReadSystemNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-    lastReadRepliedNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-    lastReadQuotedNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    lastReadSystemNoti: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    lastReadRepliedNoti: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    lastReadQuotedNoti: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
   });
   pgm.createIndex('user', ['email']);
   pgm.createIndex('user', ['name']);
 
   pgm.createTable('thread', {
     id: { type: 'bigint', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
 
     anonymous: { type: 'boolean', notNull: true },
     userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
@@ -35,8 +35,8 @@ exports.up = (pgm) => {
 
   pgm.createTable('post', {
     id: { type: 'bigint', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
 
     anonymous: { type: 'bool', notNull: true },
@@ -51,24 +51,15 @@ exports.up = (pgm) => {
 
   pgm.createTable('anonymous_id', {
     id: { type: 'serial', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-    threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
-    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
+    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    threadId: { type: 'bigint', notNull: true },
+    userId: { type: 'integer', notNull: true },
     anonymousId: { type: 'bigint', notNull: true, unique: true },
   });
-  pgm.addConstraint('thread', 'thread_anonymous_id', {
-    foreignKeys: {
-      columns: 'anonymousId',
-      references: 'anonymous_id("anonymousId")',
-    },
-  });
-  pgm.addConstraint('post', 'post_anonymous_id', {
-    foreignKeys: {
-      columns: 'anonymousId',
-      references: 'anonymous_id("anonymousId")',
-    },
-  });
+  pgm.createIndex('anonymous_id', ['threadId']);
+  pgm.createIndex('anonymous_id', ['userId']);
+  pgm.createIndex('anonymous_id', ['threadId', 'userId'], { unique: true });
 
   pgm.createTable('posts_quotes', {
     id: { type: 'serial', primaryKey: true },
@@ -78,24 +69,28 @@ exports.up = (pgm) => {
 
   pgm.createTable('tag', {
     name: { type: 'text', primaryKey: true, notNull: true },
-    isMain: { type: 'bool', notNull: true },
-    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    isMain: { type: 'bool', notNull: true, default: false },
+    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
   });
 
   pgm.createTable('tags_main_tags', {
     id: { type: 'serial', primaryKey: true },
+    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     name: { type: 'text', notNull: true, references: 'tag(name)' },
     belongsTo: { type: 'text', notNull: true, references: 'tag(name)' },
   });
+  pgm.createIndex('tags_main_tags', ['name', 'belongsTo'], { unique: true });
 
   pgm.createTable('threads_tags', {
     id: { type: 'serial', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
     tagName: { type: 'text', notNull: true, references: 'tag(name)' },
   });
+  pgm.createIndex('threads_tags', ['threadId', 'tagName'], { unique: true });
 
   pgm.createTable('users_tags', {
     id: { type: 'serial', primaryKey: true },
@@ -106,8 +101,8 @@ exports.up = (pgm) => {
 
   pgm.createTable('notification', {
     id: { type: 'serial', primaryKey: true },
-    createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
+    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     type: { type: 'text', notNull: true },
     sendTo: { type: 'integer', references: 'public.user(id)' },
     sendToGroup: { type: 'text' },
@@ -136,8 +131,6 @@ exports.down = (pgm) => {
   pgm.dropTable('threads_sub_tags');
   pgm.dropTable('tag');
   pgm.dropTable('posts_quotes');
-  pgm.dropConstraint('thread', 'thread_anonymous_id');
-  pgm.dropConstraint('post', 'post_anonymous_id');
   pgm.dropTable('anonymous_id');
   pgm.dropTable('post');
   pgm.dropTable('thread');

@@ -38,14 +38,14 @@ const makeNoti = (raw, type, user) => {
       postId: user.content.postId,
     };
   }
-  throw ParamsError(`unknown notification type: ${type}`);
+  throw new ParamsError(`unknown notification type: ${type}`);
 };
 
 const NotificationModel = {
 
   async getUnreadCount({ ctx, type }) {
     if (!isValidType(type)) {
-      throw ParamsError(`unknown notification type: ${type}`);
+      throw new ParamsError(`unknown notification type: ${type}`);
     }
     const user = ctx.auth.signedInUser();
     const { rows } = await query(
@@ -58,7 +58,7 @@ const NotificationModel = {
 
   async findNotiSlice({ ctx, type, query: sq }) {
     if (!isValidType(type)) {
-      throw ParamsError(`unknown notification type: ${type}`);
+      throw new ParamsError(`unknown notification type: ${type}`);
     }
     const user = ctx.auth.signedInUser();
     const { rows } = await query([
@@ -87,30 +87,28 @@ const NotificationModel = {
   },
 
   async newRepliedNoti({ txn, threadId }) {
-    const q = txn ? txn.query : query;
-    const { rows } = q('SELECT "userId" FROM thread WHERE id=$1',
-      [UID.parse(threadId).suid]);
-    await q(`INSERT INTO notification
+    const { rows } = query('SELECT "userId" FROM thread WHERE id=$1',
+      [UID.parse(threadId).suid], txn);
+    await query(`INSERT INTO notification
       (type, sendTo, content) VALUES ($1, $2, $3)
       ON CONFLICT UPDATE SET "updatedAt"=now()`,
-    [NOTI_TYPES.REPLIED, rows[0].userId, { threadId: threadId.suid }]);
+    [NOTI_TYPES.REPLIED, rows[0].userId, { threadId: threadId.suid }], txn);
   },
 
   async newQuotedNoti({
     txn, threadId, postId, quotedIds,
   }) {
-    const q = txn ? txn.query : query;
-    const { rows } = await q(
-      'SELECT (id, "userId") FROM posts WHERE id IN $1', [quotedIds],
+    const { rows } = await query(
+      'SELECT (id, "userId") FROM posts WHERE id IN $1', [quotedIds], txn,
     );
-    await Promise.all(rows.map(row => q(`INSERT INTO notification
+    await Promise.all(rows.map(row => query(`INSERT INTO notification
       (type, sendTo, content) VALUES ($1, $2, $3)`,
     [NOTI_TYPES.QUOTED, row.userId, {
       threadId: threadId.suid,
       quotedId: row.id,
       postId: postId.suid,
     },
-    ])));
+    ], txn)));
   },
 };
 
