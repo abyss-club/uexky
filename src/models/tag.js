@@ -22,18 +22,24 @@ const makeTag = function makeTag(raw) {
 const TagModel = {
 
   async getMainTags() {
-    const { rows } = await query('SELECT name FROM tag WHERE isMain=true');
+    const { rows } = await query(
+      'SELECT name FROM tag WHERE "isMain"=true ORDER BY "createdAt"',
+    );
     return rows.map(row => row.name);
   },
 
   async findTags({ query: qtext, limit = 10 }) {
     if (qtext) {
-      const { rows } = await query(`SELECT (name, isMain) FROM tag
-        WHERE name LIKE %$1% ORDER BY "updatedAt" DESC LIMIT $2`, [qtext, limit]);
+      const { rows } = await query(
+        `SELECT name as name, "isMain" as "isMain" FROM tag
+        WHERE name LIKE $1 ORDER BY "updatedAt" DESC LIMIT $2`,
+        [`%${qtext}%`, limit],
+      );
       return rows.map(row => makeTag(row));
     }
     const { rows } = await query(
-      'SELECT (name, isMain) FROM tag ORDER BY "updatedAt" DESC LIMIT $1', [limit],
+      'SELECT name, "isMain" FROM tag ORDER BY "updatedAt" DESC LIMIT $1',
+      [limit],
     );
     return rows.map(row => makeTag(row));
   },
@@ -58,7 +64,7 @@ const TagModel = {
       await query('DELETE FROM threads_tags WHERE "threadId" = $1', [id.suid], txn);
     }
     await Promise.all([
-      ...(subTags || []).map(
+      ...[mainTag, ...(subTags || [])].map(
         tag => query(`INSERT INTO tag (name) VALUES ($1)
         ON CONFLICT (name) DO UPDATE SET "updatedAt" = now()`, [tag], txn),
       ),
