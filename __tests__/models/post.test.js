@@ -24,7 +24,7 @@ describe('publish post and read', () => {
   let thread;
   const postIds = [];
   it('parpare data', async () => {
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['MainA', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
     ctx = await mockContext(mockUser);
     thread = await ThreadModel.new({
       ctx,

@@ -6,55 +6,32 @@ import TagModel from '~/models/tag';
 import querySlice from '~/models/slice';
 import UID from '~/uid';
 
-// pgm.createTable('thread', {
-//   id: { type: 'bigint', primaryKey: true },
-//   createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-//   updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-//
-//   anonymous: { type: 'boolean', notNull: true },
-//   userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
-//   userName: { type: 'varchar(16)', references: 'public.user(name)' },
-//   anonymousId: { type: 'bigint' },
-//
-//   title: { type: 'text', default: '' },
-//   content: { type: 'text', notNull: true },
-//   locked: { type: 'bool', notNull: true, default: false },
-//   blocked: { type: 'bool', notNull: true, default: false },
-// });
-// pgm.createTable('threads_tags', {
-//   id: { type: 'serial', primaryKey: true },
-//   createdAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-//   updatedAt: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-//   threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
-//   tagName: { type: 'text', notNull: true, references: 'tag(name)' },
-// });
-
 const blockedContent = '[此内容已被管理员屏蔽]';
 
 const makeThread = function makeThread(raw) {
   return {
     id: UID.parse(raw.id),
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
     anonymous: raw.anonymous,
-    author: raw.anonymous ? UID.parse(raw.anonymousId).duid : raw.userName,
+    author: raw.anonymous ? UID.parse(raw.anonymous_id).duid : raw.user_name,
     title: raw.title === '' ? '无题' : raw.title,
     content: raw.blocked ? blockedContent : raw.content,
 
     async getMainTag() {
       const { rows } = await query(`SELECT *
-        FROM threads_tags inner join tag ON threads_tags."tagName" = tag.name
-        WHERE threads_tags."threadId" = $1 AND tag."isMain" = true`,
+        FROM threads_tags inner join tag ON threads_tags.tag_name = tag.name
+        WHERE threads_tags.thread_id = $1 AND tag.is_main = true`,
       [this.id.suid]);
-      return rows[0].tagName;
+      return rows[0].tag_name;
     },
 
     async getSubTags() {
       const { rows } = await query(`SELECT *
-        FROM threads_tags INNER JOIN tag ON threads_tags."tagName" = tag.name
-        WHERE threads_tags."threadId" = $1 AND tag."isMain" = false`,
+        FROM threads_tags INNER JOIN tag ON threads_tags.tag_name = tag.name
+        WHERE threads_tags.thread_id = $1 AND tag.is_main = false`,
       [this.id.suid]);
-      return (rows || []).map(row => row.tagName);
+      return (rows || []).map(row => row.tag_name);
     },
 
     blocked: raw.blocked,
@@ -88,8 +65,8 @@ const ThreadModel = {
     const slice = await querySlice(sq, {
       ...threadSliceOpt,
       where: `WHERE id IN (
-        SELECT "threadId" FROM threads_tags
-        WHERE threads_tags."tagName"=ANY($1)
+        SELECT thread_id FROM threads_tags
+        WHERE threads_tags.tag_name=ANY($1)
       )`,
       params: [tags],
     });
@@ -117,7 +94,7 @@ const ThreadModel = {
         raw.userName = user.name;
       }
       const { rows } = await txn.query(`INSERT INTO thread 
-        (id, anonymous, "userId", "userName", "anonymousId", title, content)
+        (id, anonymous, user_id, user_name, anonymous_id, title, content)
         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [raw.id.suid, raw.anonymous, raw.userId, raw.userName,
         raw.anonymousId && raw.anonymousId.suid, raw.title, raw.content]);
@@ -137,7 +114,7 @@ const ThreadModel = {
   async findUserThreads({ user, query: sq }) {
     const slice = await querySlice(sq, {
       ...threadSliceOpt,
-      where: 'WHERE "userId"=$1',
+      where: 'WHERE user_id=$1',
       params: [user.id],
     });
     return slice;

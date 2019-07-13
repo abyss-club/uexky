@@ -26,7 +26,9 @@ const configSchema = Joi.object().keys({
 
 const ConfigModel = {
   async getConfig() {
-    const results = await query('SELECT "rateLimit", "rateCost" from config where id = 1');
+    const results = await query(
+      'SELECT rate_limit "rateLimit", rate_cost "rateCost" from config where id = 1',
+    );
     if (results.rows.length < 1) {
       return configSchema.validate({}).value;
     }
@@ -47,11 +49,11 @@ const ConfigModel = {
     }
     await query(
       `
-      INSERT INTO config(id, "rateLimit", "rateCost") VALUES(1, $1, $2)
+      INSERT INTO config(id, rate_limit, rate_cost) VALUES(1, $1, $2)
       ON CONFLICT (id)
         DO UPDATE SET
-          "rateLimit" = $1,
-          "rateCost" = $2;
+          rate_limit = $1,
+          rate_cost = $2;
       `,
       [newConfig.rateLimit, newConfig.rateCost],
     );

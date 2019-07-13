@@ -36,7 +36,7 @@ describe('Testing rateLimit', () => {
   const checkConfig = async () => {
     const result = await ConfigModel.getConfig();
     const resultInDb = await pgPool.query(
-      'SELECT "rateLimit", "rateCost" from config where id = 1',
+      'SELECT rate_limit "rateLimit", rate_cost "rateCost" from config where id = 1',
     );
     expect(result).toEqual(expectedConfig);
     expect(resultInDb.rows[0]).toEqual(expectedConfig);

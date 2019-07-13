@@ -18,12 +18,12 @@ afterAll(async () => {
 
 describe('tags query', () => {
   it('parpare data', async () => {
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['MainA', true]);
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['MainB', true]);
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['SubA', false]);
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['SubB', false]);
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['SubC', false]);
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['SubD', false]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainB', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubA', false]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubB', false]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubC', false]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubD', false]);
   });
   it('find one tag', async () => {
     const tags = await TagModel.findTags({ query: 'SubA' });
@@ -49,9 +49,9 @@ describe('set thread tags', () => {
   let thread;
   it('parpare data', async () => {
     await query('DELETE FROM tag');
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['MainA', true]);
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['MainB', true]);
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['SubA', false]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainB', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubA', false]);
     const ctx = await mockContext({ email: 'test@uexky.com' });
     thread = await ThreadModel.new({
       ctx,
@@ -71,7 +71,7 @@ describe('set thread tags', () => {
   });
   it('check threads_tags', async () => {
     const { rows } = await query(
-      'SELECT "tagName" as name FROM threads_tags WHERE "threadId"=$1',
+      'SELECT tag_name as name FROM threads_tags WHERE thread_id=$1',
       [thread.id.suid],
     );
     const tags = rows.map(row => row.name);
@@ -82,11 +82,11 @@ describe('set thread tags', () => {
   });
   it('check tags_main_tags', async () => {
     const { rows } = await query(
-      'SELECT name, "belongsTo" FROM tags_main_tags WHERE "belongsTo"=$1',
+      'SELECT name, belongs_to FROM tags_main_tags WHERE belongs_to=$1',
       ['MainA'],
     );
     expect(rows.length).toEqual(2);
-    expect(rows).toContainEqual({ name: 'SubA', belongsTo: 'MainA' });
-    expect(rows).toContainEqual({ name: 'SubB', belongsTo: 'MainA' });
+    expect(rows).toContainEqual({ name: 'SubA', belongs_to: 'MainA' });
+    expect(rows).toContainEqual({ name: 'SubB', belongs_to: 'MainA' });
   });
 });

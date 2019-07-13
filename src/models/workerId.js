@@ -1,11 +1,5 @@
 import { query } from '~/utils/pg';
 
-/* CREATE TABLE counter(
- *     name varchar(32) PRIMARY KEY,
- *     count integer DEFAULT 0
- * );
-*/
-
 const WorkerIdModel = () => ({
   newWorkerId: async function newWorkerId() {
     const results = await query(

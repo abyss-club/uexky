@@ -29,7 +29,7 @@ const makeNoti = (raw, type, user) => {
   const base = {
     id: raw.id,
     key: raw.key,
-    eventTime: raw.createdAt,
+    eventTime: raw.created_at,
     hasRead: user.lastReadNoti[type] >= raw.id,
   };
   if (type === NOTI_TYPES.SYSTEM) {
@@ -87,20 +87,15 @@ const NotificationModel = {
     const user = ctx.auth.signedInUser();
     const opt = {
       ...notiSliceOpt,
-      where: 'WHERE ("sendTo"=$1 OR "sendToGroup"=$2) AND type=$3',
+      where: 'WHERE (send_to=$1 OR send_to_group=$2) AND type=$3',
       params: [user.id, USER_GROUPS.ALL_USER, type],
       name: type,
       make: raw => makeNoti(raw, type, user),
     };
     const slice = await querySlice(sq, opt);
-    const column = {
-      system: 'lastReadSystemNoti',
-      replied: 'lastReadRepliedNoti',
-      quoted: 'lastReadQuotedNoti',
-    };
     if (slice.sliceInfo.lastCursor !== '') {
       await query(
-        `UPDATE public.user SET "${column[type]}"=$1`,
+        `UPDATE public.user SET "last_read_${type}_noti"=$1`,
         [slice.sliceInfo.lastCursor],
       );
     }
@@ -113,11 +108,11 @@ const NotificationModel = {
     const key = `system:${(await UID.new()).duid}`;
     if (sendTo) {
       await query(`INSERT INTO notification
-      (key, type, "sendTo", content) VALUES ($1, $2, $3, $4)`,
+      (key, type, send_to, content) VALUES ($1, $2, $3, $4)`,
       [key, NOTI_TYPES.SYSTEM, sendTo, { title, content }]);
     } if (sendToGroup) {
       await query(`INSERT INTO notification
-      (key, type, "sendToGroup", content) VALUES ($1, $2, $3, $4)`,
+      (key, type, send_to_group, content) VALUES ($1, $2, $3, $4)`,
       [key, NOTI_TYPES.SYSTEM, sendToGroup, { title, content }]);
     }
   },
@@ -130,16 +125,16 @@ const NotificationModel = {
       'SELECT * FROM thread WHERE id=$1', [tid.suid], txn,
     );
     await query(`INSERT INTO notification
-      (key, type, "sendTo", content) VALUES ($1, $2, $3, $4)
-      ON CONFLICT (key) DO UPDATE SET "updatedAt"=now() RETURNING *`,
-    [key, NOTI_TYPES.REPLIED, rows[0].userId, content], txn);
+      (key, type, send_to, content) VALUES ($1, $2, $3, $4)
+      ON CONFLICT (key) DO UPDATE SET updated_at=now() RETURNING *`,
+    [key, NOTI_TYPES.REPLIED, rows[0].user_id, content], txn);
   },
 
   async newQuotedNoti({
     txn, threadId, postId, quotedIds,
   }) {
     const { rows } = await query(
-      'SELECT id id, "userId" "userId" FROM post WHERE id=ANY($1)',
+      'SELECT id, user_id FROM post WHERE id=ANY($1)',
       [quotedIds.map(qid => qid.suid)], txn,
     );
     await Promise.all(rows.map((row) => {
@@ -152,9 +147,9 @@ const NotificationModel = {
         postId: postId.suid.toString(),
       };
       return query(
-        `INSERT INTO notification (key, type, "sendTo", content)
+        `INSERT INTO notification (key, type, send_to, content)
         VALUES ($1, $2, $3, $4)`,
-        [key, NOTI_TYPES.QUOTED, row.userId, content], txn,
+        [key, NOTI_TYPES.QUOTED, row.user_id, content], txn,
       );
     }));
   },

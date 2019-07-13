@@ -35,8 +35,8 @@ describe('query thread', () => {
   ];
   const threadIds = [];
   it('parpare data', async () => {
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['MainA', true]);
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['MainB', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainB', true]);
     const ctx = await mockContext({ email: 'test@uexky.com' });
     for (let i = 0; i < threadTags.length; i += 1) {
     /* eslint-disable no-await-in-loop */

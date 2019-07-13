@@ -6,22 +6,22 @@ exports.up = (pgm) => {
     email: { type: 'text', notNull: true, unique: true },
     name: { type: 'text', unique: true },
     role: { type: 'text', notNull: true, default: '' },
-    lastReadSystemNoti: { type: 'integer', notNull: true, default: 0 },
-    lastReadRepliedNoti: { type: 'integer', notNull: true, default: 0 },
-    lastReadQuotedNoti: { type: 'integer', notNull: true, default: 0 },
+    last_read_system_noti: { type: 'integer', notNull: true, default: 0 },
+    last_read_replied_noti: { type: 'integer', notNull: true, default: 0 },
+    last_read_quoted_noti: { type: 'integer', notNull: true, default: 0 },
   });
   pgm.createIndex('user', ['email']);
   pgm.createIndex('user', ['name']);
 
   pgm.createTable('thread', {
     id: { type: 'bigint', primaryKey: true },
-    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
 
     anonymous: { type: 'boolean', notNull: true },
-    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
-    userName: { type: 'varchar(16)', references: 'public.user(name)' },
-    anonymousId: { type: 'bigint' },
+    user_id: { type: 'integer', notNull: true, references: 'public.user(id)' },
+    user_name: { type: 'varchar(16)', references: 'public.user(name)' },
+    anonymous_id: { type: 'bigint' },
 
     title: { type: 'text', default: '' },
     content: { type: 'text', notNull: true },
@@ -30,92 +30,92 @@ exports.up = (pgm) => {
   });
   pgm.createIndex('thread', 'title');
   pgm.createIndex('thread', 'anonymous');
-  pgm.createIndex('thread', 'userId');
+  pgm.createIndex('thread', 'user_id');
   pgm.createIndex('thread', 'blocked');
 
   pgm.createTable('post', {
     id: { type: 'bigint', primaryKey: true },
-    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
+    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    thread_id: { type: 'bigint', notNull: true, references: 'thread(id)' },
 
     anonymous: { type: 'bool', notNull: true },
-    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
-    userName: { type: 'varchar(16)', references: 'public.user(name)' },
-    anonymousId: { type: 'bigint' },
+    user_id: { type: 'integer', notNull: true, references: 'public.user(id)' },
+    user_name: { type: 'varchar(16)', references: 'public.user(name)' },
+    anonymous_id: { type: 'bigint' },
 
     blocked: { type: 'bool', default: false },
     content: { type: 'text', notNull: true },
   });
-  pgm.createIndex('post', ['threadId', 'userId', 'anonymous']);
+  pgm.createIndex('post', ['thread_id', 'user_id', 'anonymous']);
 
   pgm.createTable('anonymous_id', {
     id: { type: 'serial', primaryKey: true },
-    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    threadId: { type: 'bigint', notNull: true },
-    userId: { type: 'integer', notNull: true },
-    anonymousId: { type: 'bigint', notNull: true, unique: true },
+    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    thread_id: { type: 'bigint', notNull: true },
+    user_id: { type: 'integer', notNull: true },
+    anonymous_id: { type: 'bigint', notNull: true, unique: true },
   });
-  pgm.createIndex('anonymous_id', ['threadId']);
-  pgm.createIndex('anonymous_id', ['userId']);
-  pgm.createIndex('anonymous_id', ['threadId', 'userId'], { unique: true });
+  pgm.createIndex('anonymous_id', ['thread_id']);
+  pgm.createIndex('anonymous_id', ['user_id']);
+  pgm.createIndex('anonymous_id', ['thread_id', 'user_id'], { unique: true });
 
   pgm.createTable('posts_quotes', {
     id: { type: 'serial', primaryKey: true },
-    quoterId: { type: 'bigint', notNull: true, references: 'post(id)' },
-    quotedId: { type: 'bigint', notNull: true, references: 'post(id)' },
+    quoter_id: { type: 'bigint', notNull: true, references: 'post(id)' },
+    quoted_id: { type: 'bigint', notNull: true, references: 'post(id)' },
   });
-  pgm.createIndex('posts_quotes', ['quoterId', 'quotedId'], { unique: true });
+  pgm.createIndex('posts_quotes', ['quoter_id', 'quoted_id'], { unique: true });
 
   pgm.createTable('tag', {
     name: { type: 'text', primaryKey: true, notNull: true },
-    isMain: { type: 'bool', notNull: true, default: false },
-    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    is_main: { type: 'bool', notNull: true, default: false },
+    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
   });
 
   pgm.createTable('tags_main_tags', {
     id: { type: 'serial', primaryKey: true },
-    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     name: { type: 'text', notNull: true, references: 'tag(name)' },
-    belongsTo: { type: 'text', notNull: true, references: 'tag(name)' },
+    belongs_to: { type: 'text', notNull: true, references: 'tag(name)' },
   });
-  pgm.createIndex('tags_main_tags', ['name', 'belongsTo'], { unique: true });
+  pgm.createIndex('tags_main_tags', ['name', 'belongs_to'], { unique: true });
 
   pgm.createTable('threads_tags', {
     id: { type: 'serial', primaryKey: true },
-    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
-    tagName: { type: 'text', notNull: true, references: 'tag(name)' },
+    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    thread_id: { type: 'bigint', notNull: true, references: 'thread(id)' },
+    tag_name: { type: 'text', notNull: true, references: 'tag(name)' },
   });
-  pgm.createIndex('threads_tags', ['threadId', 'tagName'], { unique: true });
+  pgm.createIndex('threads_tags', ['thread_id', 'tag_name'], { unique: true });
 
   pgm.createTable('users_tags', {
     id: { type: 'serial', primaryKey: true },
-    userId: { type: 'integer', notNull: true, references: 'public.user(id)' },
-    tagName: { type: 'text', notNull: true, references: 'tag(name)' },
+    user_id: { type: 'integer', notNull: true, references: 'public.user(id)' },
+    tag_name: { type: 'text', notNull: true, references: 'tag(name)' },
   });
-  pgm.createIndex('users_tags', ['userId', 'tagName'], { unique: true });
+  pgm.createIndex('users_tags', ['user_id', 'tag_name'], { unique: true });
 
   pgm.createTable('notification', {
     id: { type: 'serial', primaryKey: true },
     key: { type: 'text', unique: true },
-    createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     type: { type: 'text', notNull: true },
-    sendTo: { type: 'integer', references: 'public.user(id)' },
-    sendToGroup: { type: 'text' },
+    send_to: { type: 'integer', references: 'public.user(id)' },
+    send_to_group: { type: 'text' },
     content: { type: 'jsonb' },
   });
 
   // pgm.createIndex('name');
   pgm.createTable('config', {
     id: { type: 'serial', primaryKey: true },
-    rateLimit: { type: 'jsonb', notNull: true },
-    rateCost: { type: 'jsonb', notNull: true },
+    rate_limit: { type: 'jsonb', notNull: true },
+    rate_cost: { type: 'jsonb', notNull: true },
   });
   pgm.createTable('counter', {
     name: { type: 'varchar(32)', primaryKey: true },
