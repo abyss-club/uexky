@@ -1,20 +1,19 @@
 import gql from 'graphql-tag';
 
-import startRepl from '../__utils__/mongoServer';
+import { query as pgq } from '~/utils/pg';
 import { mockUser, query, mutate } from '../__utils__/apolloClient';
+import startPg, { migrate } from '../__utils__/pgServer';
 
-jest.setTimeout(60000);
-
-let replSet;
-let mongoClient;
+let pgPool;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
 
 const SYNC_TAGS = gql`
@@ -23,15 +22,15 @@ const SYNC_TAGS = gql`
   }
 `;
 
-const ADD_TAGS = gql`
-  mutation AddTags($tags: [String!]!) {
-    addSubbedTags(tags: $tags) { tags }
+const ADD_TAG = gql`
+  mutation AddTag($tag: String!) {
+    addSubbedTag(tag: $tag) { tags }
   }
 `;
 
-const DEL_TAGS = gql`
-  mutation DelTags($tags: [String!]!) {
-    delSubbedTags(tags: $tags) { tags }
+const DEL_TAG = gql`
+  mutation DelTags($tag: String!) {
+    delSubbedTag(tag: $tag) { tags }
   }
 `;
 
@@ -49,7 +48,6 @@ const PROFILE = gql`
 
 const subbedTags = ['MainA', 'SubA', 'SubB', 'MainB'];
 const newSubbedTags = [...subbedTags, 'MainC'];
-const dupSubbedTags = [...subbedTags, 'MainC', 'MainD'];
 
 describe('Testing profile', () => {
   it('query profile', async () => {
@@ -58,31 +56,31 @@ describe('Testing profile', () => {
   });
 });
 describe('Testing modifying tags subscription', () => {
+  it('parpare data', async () => {
+    await pgq('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
+    await pgq('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainB', true]);
+    await pgq('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainC', true]);
+    await pgq('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainD', true]);
+    await pgq('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubA', false]);
+    await pgq('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubB', false]);
+  });
   it('sync tags', async () => {
-    const { data } = await mutate({ mutation: SYNC_TAGS, variables: { tags: subbedTags } });
+    const { data, errors } = await mutate({ mutation: SYNC_TAGS, variables: { tags: subbedTags } });
+    expect(errors).toBeUndefined();
     expect(data.syncTags.tags).toEqual(subbedTags);
   });
-});
-describe('Testing adding tags subscription', () => {
   it('add tags', async () => {
-    const { data } = await mutate({ mutation: ADD_TAGS, variables: { tags: ['MainC'] } });
-    expect(JSON.stringify(data.addSubbedTags.tags)).toEqual(JSON.stringify(newSubbedTags));
+    const { data, errors } = await mutate({ mutation: ADD_TAG, variables: { tag: 'MainC' } });
+    expect(errors).toBeUndefined();
+    expect(JSON.stringify(data.addSubbedTag.tags)).toEqual(JSON.stringify(newSubbedTags));
   });
-  it('add duplicated tags', async () => {
-    const { data } = await mutate({ mutation: ADD_TAGS, variables: { tags: ['MainC', 'MainD'] } });
-    expect(JSON.stringify(data.addSubbedTags.tags)).toEqual(JSON.stringify(dupSubbedTags));
-  });
-});
-describe('Testing deleting tags subscription', () => {
   it('del tags', async () => {
-    const { data } = await mutate({ mutation: DEL_TAGS, variables: { tags: ['MainD'] } });
-    expect(JSON.stringify(data.delSubbedTags.tags)).toEqual(JSON.stringify(newSubbedTags));
-  });
-  it('del non-existing tags', async () => {
-    const { data } = await mutate({ mutation: DEL_TAGS, variables: { tags: ['MainC', 'MainD'] } });
-    expect(JSON.stringify(data.delSubbedTags.tags)).toEqual(JSON.stringify(subbedTags));
+    const { data, errors } = await mutate({ mutation: DEL_TAG, variables: { tag: 'MainC' } });
+    expect(errors).toBeUndefined();
+    expect(JSON.stringify(data.delSubbedTag.tags)).toEqual(JSON.stringify(subbedTags));
   });
 });
+
 describe('Testing setting name', () => {
   it('set name', async () => {
     const { data } = await mutate({ mutation: SET_NAME, variables: { name: mockUser.name } });

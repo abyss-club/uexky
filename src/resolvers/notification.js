@@ -4,7 +4,7 @@ import PostModel from '~/models/post';
 
 const Query = {
   unreadNotiCount: (_obj, _args, ctx) => {
-    if (!ctx.user) return null;
+    if (!ctx.user) return { system: 0, replied: 0, quoted: 0 };
     return {};
   },
   notification: async (_obj, { type, query }, ctx) => {
@@ -33,26 +33,38 @@ const UnreadNotiCount = {
 };
 
 // Default Type resolvers:
-//   SystemNoti: id, type, eventTime, hasRead, title, content
-
-// Default Type resolvers:
-//   RepliedNoti: id, type, eventTime, hasRead
-const RepliedNoti = {
-  thread: noti => ThreadModel.findById(noti.threadId),
-  repliers: noti => PostModel.getLastRepliers(noti.threadId),
+//   SystemNoti: type, eventTime, hasRead, title, content
+const SystemNoti = {
+  id: noti => noti.key,
 };
 
 // Default Type resolvers:
-//   QuotedNoti: id, type, eventTime, hasRead, quoter
+//   RepliedNoti: type, eventTime, hasRead
+const RepliedNoti = {
+  id: noti => noti.key,
+  thread: noti => ThreadModel.findById({ threadId: noti.threadId }),
+  repliers: async (noti) => {
+    const { posts } = await PostModel.findThreadPosts({
+      threadId: noti.threadId,
+      query: { before: '', limit: 5 },
+    });
+    return posts.map(p => p.author);
+  },
+};
+
+// Default Type resolvers:
+//   QuotedNoti: type, eventTime, hasRead, quoter
 const QuotedNoti = {
-  thread: noti => ThreadModel.findById(noti.threadId),
-  quotedPost: noti => PostModel.findById(noti.quotedId),
-  post: noti => PostModel.findById(noti.postId),
+  id: noti => noti.key,
+  thread: noti => ThreadModel.findById({ threadId: noti.threadId }),
+  quotedPost: noti => PostModel.findById({ postId: noti.quotedId }),
+  post: noti => PostModel.findById({ postId: noti.postId }),
 };
 
 export default {
   Query,
   UnreadNotiCount,
+  SystemNoti,
   RepliedNoti,
   QuotedNoti,
 };

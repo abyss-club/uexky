@@ -1,55 +1,69 @@
 import gql from 'graphql-tag';
-import startRepl from '../__utils__/mongoServer';
 
-import { mutate } from '../__utils__/apolloClient';
-import TagModel from '~/models/tag';
+import ThreadModel from '~/models/thread';
+import { query as pgq } from '~/utils/pg';
+import startPg, { migrate } from '../__utils__/pgServer';
+import mockContext from '../__utils__/context';
+import { customClient } from '../__utils__/apolloClient';
 
-jest.setTimeout(60000);
-
-let replSet;
-let mongoClient;
+let pgPool;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
-
-const mockTags = { mainTag: 'MainA', subTags: ['SubA', 'SubB'] };
-
-// const ADD_TAGS = gql`
-//   mutation AddTags($tags: [String!]) {
-//     editConfig(config: {
-//       mainTags: $tags,
-//     }) { mainTags }
-//   }
-// `;
-
-const GET_TAGS = gql`
-  query {
-    tags {
-      mainTags,
-      tree {
-        mainTag, subTags
-      }
-    }
-  }
-`;
 
 describe('Insert Tags', () => {
-  it('add tags', async () => {
-    await TagModel().addMainTag(mockTags.mainTag);
-    const tags = mockTags;
-    await TagModel().onPubThread(tags);
+  const mockEmail = 'test@uexky.com';
+  const { query } = customClient({ email: mockEmail });
+  it('parpare data', async () => {
+    await pgq('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
+    const ctx = await mockContext({ email: mockEmail });
+    await ThreadModel.new({
+      ctx,
+      thread: {
+        anonymous: true,
+        content: 'Test Content',
+        mainTag: 'MainA',
+        subTags: ['SubA', 'SubB'],
+        title: 'TestTitle',
+      },
+    });
   });
-  it('validate tags', async () => {
-    const result = await mutate({ query: GET_TAGS });
-    expect(result.data.tags.mainTags).toEqual([mockTags.mainTag]);
-    const target = result.data.tags.tree.filter(tagObj => tagObj.mainTag === mockTags.mainTag)[0];
-    expect(target.mainTag).toEqual(mockTags.mainTag);
-    expect(target.subTags.sort()).toEqual(mockTags.subTags.sort());
+  it('get main tags', async () => {
+    const GET_MAIN_TAGS = gql`
+      query {
+        mainTags
+      }
+    `;
+    const { data, errors } = await query({ query: GET_MAIN_TAGS });
+    expect(errors).toBeUndefined();
+    expect(data.mainTags).toEqual(['MainA']);
+  });
+  it('query tags', async () => {
+    const QUERY_TAGS = gql`
+      query Tags($query: String!) {
+        tags(query: $query, limit: 10) {
+          name, isMain, belongsTo
+        }
+      }
+    `;
+    const { data, errors } = await query({
+      query: QUERY_TAGS,
+      variables: { query: 'A' },
+    });
+    expect(errors).toBeUndefined();
+    expect(data.tags.length).toEqual(2);
+    expect(data.tags).toContainEqual({
+      name: 'MainA', isMain: true, belongsTo: [],
+    });
+    expect(data.tags).toContainEqual({
+      name: 'SubA', isMain: false, belongsTo: ['MainA'],
+    });
   });
 });

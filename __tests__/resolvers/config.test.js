@@ -1,19 +1,18 @@
 import gql from 'graphql-tag';
-import startRepl from '../__utils__/mongoServer';
 
-import { query, mutate } from '../__utils__/apolloClient';
+import { query, mutate, customClient } from '../__utils__/apolloClient';
+import startPg, { migrate } from '../__utils__/pgServer';
 
-jest.setTimeout(60000);
-let replSet;
-let mongoClient;
+let pgPool;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
 
 // const EDIT_TAGS = gql`
@@ -85,12 +84,18 @@ describe('Testing rateLimit', () => {
     },
   };
 
+  const { mutate: adminMutate } = customClient({
+    email: 'admin@uexky.com',
+    name: 'admin',
+    role: 'admin',
+  });
+
   it('get default config', async () => {
     const result = await query({ query: GET_RATE });
     expect(result.data.config).toEqual(expectedConfig);
   });
   it('modify config with single entry', async () => {
-    const result = await mutate({
+    const result = await adminMutate({
       mutation: EDIT_CONFIG,
       variables: {
         config: {
@@ -113,7 +118,7 @@ describe('Testing rateLimit', () => {
     expect(result.errors.length).toEqual(1);
   });
   it('modify config multiple entries', async () => {
-    const result = await mutate({
+    const result = await adminMutate({
       mutation: EDIT_CONFIG,
       variables: {
         config: {

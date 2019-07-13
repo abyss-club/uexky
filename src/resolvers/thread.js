@@ -27,14 +27,8 @@ const Mutation = {
 const Thread = {
   // auto field resolvers: createdAt, anonymous, author, title, content, blocked, locked
   id: thread => thread.id.duid,
-  mainTag: async (thread) => {
-    const mainTag = await ThreadModel.getMainTag({ thread });
-    return mainTag;
-  },
-  subTags: async (thread) => {
-    const subTags = await ThreadModel.getSubTags({ thread });
-    return subTags;
-  },
+  mainTag: async thread => thread.getMainTag(),
+  subTags: async thread => thread.getSubTags(),
   title: thread => thread.title,
   replies: async (thread, query, ctx) => {
     await ctx.limiter.take(query.limit);

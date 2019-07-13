@@ -7,14 +7,14 @@ const makeTag = function makeTag(raw) {
   return {
     name: raw.name,
     isMain: raw.is_main,
-    async belongsTo() {
+    async getBelongsTo() {
       if (raw.is_main) {
         return [];
       }
-      const { rows } = query(
-        'SELECT belongs_to FROM tags_main_tags WHERE name=$1', [raw.name],
+      const { rows } = await query(
+        'SELECT * FROM tags_main_tags WHERE name=$1', [raw.name],
       );
-      return rows.map(row => row.belongs_to);
+      return (rows || []).map(row => row.belongs_to);
     },
   };
 };
