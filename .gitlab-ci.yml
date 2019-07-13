@@ -18,9 +18,8 @@ test:
     - postgres:latest
     - redis:latest
   variables:
-    PG_URI: "postgresql://runner@postgres"
+    PG_URI: "postgresql://runner@postgres/test_uexky"
     REDIS_URI: "redis://redis"
-    PG_DBNAME: "test_uexky"
     POSTGRES_DB: test_uexky
     POSTGRES_USER: runner
     POSTGRES_PASSWORD: ""
