@@ -66,11 +66,11 @@ const UserModel = {
     // guest
     if (!email) {
       return {
+        isSignedIn: false,
         signedInUser: () => { throw AuthError('you are not signed in'); },
-        ensurePermission: () => { throw PermissionError('permission denyed'); },
+        ensurePermission: () => { throw new PermissionError('permission denyed'); },
       };
     }
-
     // signed in
     if (!validator.isValidEmail(email)) {
       throw new ParamsError(`Invalid Email: ${email}`);
@@ -84,6 +84,7 @@ const UserModel = {
       [user] = rows;
     }
     return {
+      isSignedIn: true,
       signedInUser() {
         return user;
       },
@@ -94,16 +95,16 @@ const UserModel = {
         const ar = actionRole[action] || '';
         if (ar === ROLE.ADMIN) {
           if (user.role !== ROLE.ADMIN) {
-            throw PermissionError('you are not admin');
+            throw new PermissionError('you are not admin');
           }
           return;
         } if (ar === ROLE.MOD) {
           if ((user.role !== ROLE.ADMIN) && (user.role !== ROLE.MOD)) {
-            throw PermissionError('you are not mod');
+            throw new PermissionError('you are not mod');
           }
           return;
         } if (user.role === ROLE.BANNED) {
-          throw PermissionError('you are banned');
+          throw new PermissionError('you are banned');
         }
       },
     };

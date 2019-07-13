@@ -3,7 +3,7 @@ import PostModel from '~/models/post';
 const Query = {
   post: async (_obj, { id }, ctx) => {
     await ctx.limiter.take(1);
-    const post = await PostModel.findById(id);
+    const post = await PostModel.findById({ postId: id });
     return post;
   },
 };

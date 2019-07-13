@@ -1,31 +1,26 @@
 import gql from 'graphql-tag';
-import { db } from '~/utils/mongo';
-
-import startRepl from '../__utils__/mongoServer';
 import {
   mockUser, mockAltUser, query, mutate, altMutate,
 } from '../__utils__/apolloClient';
 
-import Uid from '~/uid';
+import AidModel from '~/models/aid';
 import UserModel from '~/models/user';
-import TagModel from '~/models/tag';
+import { query as pgq } from '~/utils/pg';
 
-jest.setTimeout(60000);
+import startPg, { migrate } from '../__utils__/pgServer';
+import mockContext from '../__utils__/context';
 
-let replSet;
-let mongoClient;
+let pgPool;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
-
-const USERPOSTS = 'userPosts';
-const NOTIFICATION = 'notification';
 
 const mockEmail = mockUser.email;
 const mockReplierEmail = mockAltUser.email;
@@ -63,7 +58,7 @@ const PUB_THREAD = gql`
 const PUB_POST = gql`
   mutation PubPost($post: PostInput!) {
     pubPost(post: $post) {
-      id, anonymous, author, content, createdAt, quotes { id }, quoteCount, blocked
+      id, anonymous, author, content, createdAt, quotes { id }, quotedCount, blocked
     }
   }
 `;
@@ -71,7 +66,7 @@ const PUB_POST = gql`
 const GET_POST = gql`
   query Post($id: String!) {
     post(id: $id) {
-      id, anonymous, author, content, createdAt, quotes { id }, quoteCount, blocked
+      id, anonymous, author, content, createdAt, quotes { id }, quotedCount, blocked
     }
   }
 `;
@@ -83,18 +78,17 @@ const GET_NOTI = gql`
     }
     notification(type: $type, query: $query) {
       replied { id, type, eventTime, hasRead, thread { id }, repliers  }
-      quoted { id, type, eventTime, hasRead, thread { id }, quotedPost { id }, post { id }, quoter }
+      quoted { id, type, eventTime, hasRead, thread { id }, quotedPost { id }, post { id } }
       sliceInfo { firstCursor, lastCursor, hasNext }
     }
   }
 `;
 
 describe('Testing posting a thread', () => {
-  it('Create collections', async () => {
-    await db.createCollection(USERPOSTS);
-  });
   it('Setting mainTag', async () => {
-    await TagModel().addMainTag('MainA');
+    await pgq('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
+    await mockContext({ email: mockEmail });
+    await mockContext({ email: mockReplierEmail });
   });
   it('Posting thread', async () => {
     const { data, errors } = await mutate({
@@ -117,11 +111,8 @@ describe('Testing posting a thread', () => {
 });
 
 describe('Testing replying a thread', () => {
-  it('Create collections', async () => {
-    await db.createCollection(NOTIFICATION);
-  });
   it('Posting reply', async () => {
-    const user = await UserModel().getUserByEmail(mockEmail);
+    const user = await UserModel.findByEmail({ email: mockEmail });
     const newPost = mockPost;
     const { data, errors } = await mutate({
       mutation: PUB_POST, variables: { post: newPost },
@@ -129,19 +120,19 @@ describe('Testing replying a thread', () => {
     expect(errors).toBeUndefined();
 
     const postResult = data.pubPost;
-    const author = await UserModel().methods(user).author(Uid.encode(threadId), true);
+    const aid = await AidModel.getAid({ userId: user.id, threadId });
     expect(postResult.anonymous).toEqual(true);
     expect(postResult.content).toEqual(mockPost.content);
     expect(postResult.quotes).toEqual([]);
-    expect(postResult.quoteCount).toEqual(0);
-    expect(postResult.author).toEqual(author);
+    expect(postResult.quotedCount).toEqual(0);
+    expect(postResult.author).toEqual(aid.duid);
     expect(postResult.blocked).toEqual(false);
 
     postId = postResult.id;
     mockReply.quoteIds.push(postResult.id);
   });
   it('Posting reply with quotes', async () => {
-    const replier = await UserModel().getUserByEmail(mockReplierEmail);
+    const replier = await UserModel.findByEmail({ email: mockReplierEmail });
     const newPost = mockReply;
     const { data, errors } = await altMutate({
       mutation: PUB_POST, variables: { post: newPost },
@@ -149,48 +140,47 @@ describe('Testing replying a thread', () => {
     expect(errors).toBeUndefined();
 
     const postResult = data.pubPost;
-    const author = await UserModel().methods(replier).author(Uid.encode(threadId), true);
+    const aid = await AidModel.getAid({ userId: replier.id, threadId });
     expect(postResult.anonymous).toEqual(true);
     expect(postResult.content).toEqual(mockPost.content);
     expect(postResult.quotes).toEqual([{ id: postId }]);
-    expect(postResult.author).toEqual(author);
+    expect(postResult.author).toEqual(aid.duid);
     expect(postResult.blocked).toEqual(false);
 
     replyId = postResult.id;
   });
   it('Validate updated post', async () => {
-    const user = await UserModel().getUserByEmail(mockEmail);
+    const user = await UserModel.findByEmail({ email: mockEmail });
     const { data, errors } = await query({ query: GET_POST, variables: { id: postId } });
     expect(errors).toBeUndefined();
 
     const postResult = data.post;
-    const author = await UserModel().methods(user).author(Uid.encode(threadId), true);
+    const aid = await AidModel.getAid({ userId: user.id, threadId });
     expect(postResult.anonymous).toEqual(true);
     expect(postResult.content).toEqual(mockPost.content);
     expect(postResult.quotes).toEqual([]);
-    expect(postResult.quoteCount).toEqual(1);
-    expect(postResult.author).toEqual(author);
+    expect(postResult.quotedCount).toEqual(1);
+    expect(postResult.author).toEqual(aid.duid);
     expect(postResult.blocked).toEqual(false);
   });
   it('Validate reply', async () => {
-    const replier = await UserModel().getUserByEmail(mockReplierEmail);
+    const replier = await UserModel.findByEmail({ email: mockReplierEmail });
     const { data, errors } = await query({ query: GET_POST, variables: { id: replyId } });
     expect(errors).toBeUndefined();
 
     const postResult = data.post;
-    const author = await UserModel().methods(replier).author(Uid.encode(threadId), true);
+    const aid = await AidModel.getAid({ userId: replier.id, threadId });
     expect(postResult.anonymous).toEqual(true);
     expect(postResult.content).toEqual(mockPost.content);
     expect(postResult.quotes).toEqual([{ id: postId }]);
-    expect(postResult.author).toEqual(author);
+    expect(postResult.author).toEqual(aid.duid);
     expect(postResult.blocked).toEqual(false);
   });
   it('Validating post for mockUser in NotificationModel', async () => {
-    const user = await UserModel().getUserByEmail(mockEmail);
-    const replier = await UserModel().getUserByEmail(mockReplierEmail);
-    const userAuthor = await UserModel().methods(user).author(Uid.encode(threadId), true);
-    const replyAuthor = await UserModel().methods(replier).author(Uid.encode(threadId), true);
-
+    const user = await UserModel.findByEmail({ email: mockEmail });
+    const replier = await UserModel.findByEmail({ email: mockReplierEmail });
+    const aid = await AidModel.getAid({ userId: user.id, threadId });
+    const replyAid = await AidModel.getAid({ userId: replier.id, threadId });
 
     const repResult = await query({
       query: GET_NOTI,
@@ -204,7 +194,7 @@ describe('Testing replying a thread', () => {
     expect(repData.notification.replied[0].type).toEqual('replied');
     expect(repData.notification.replied[0].hasRead).toEqual(false);
     expect(repData.notification.replied[0].thread.id).toEqual(threadId);
-    expect(repData.notification.replied[0].repliers).toEqual([userAuthor, replyAuthor]);
+    expect(repData.notification.replied[0].repliers).toEqual([aid.duid, replyAid.duid]);
 
     const quoResult = await query({
       query: GET_NOTI,
@@ -214,12 +204,11 @@ describe('Testing replying a thread', () => {
     expect(quoErrors).toBeUndefined();
     expect(quoData.unreadNotiCount).toEqual({ system: 0, replied: 0, quoted: 1 });
     expect(quoData.notification.replied).toBeNull();
-    expect(quoData.notification.quoted[0].id).toEqual(`quoted:${replyId}:${postId}`);
+    expect(quoData.notification.quoted[0].id).toEqual(`quoted:${postId}:${replyId}`);
     expect(quoData.notification.quoted[0].type).toEqual('quoted');
     expect(quoData.notification.quoted[0].hasRead).toEqual(false);
     expect(quoData.notification.quoted[0].thread.id).toEqual(threadId);
-    expect(quoData.notification.quoted[0].post.id).toEqual(postId);
-    expect(quoData.notification.quoted[0].quoter).toEqual(replyAuthor);
+    expect(quoData.notification.quoted[0].post.id).toEqual(replyId);
     expect(quoData.notification.quoted[0].quotedPost.id).toEqual(postId);
   });
 });

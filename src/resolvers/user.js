@@ -11,7 +11,7 @@ const Query = {
 
 const Mutation = {
   auth: async (_obj, { email }, ctx) => {
-    if (ctx.user) throw new Error('Already signed in.');
+    if (ctx.auth.isSignedIn) throw new Error('Already signed in.');
     await Code.addToAuth(email);
     return true;
   },
@@ -49,19 +49,19 @@ const Mutation = {
   },
 
   blockPost: async (_obj, { postId }, ctx) => {
-    await PostModel.blockPost({ ctx, postId });
+    await PostModel.block({ ctx, postId });
     const post = await PostModel.findById({ postId });
     return post;
   },
 
   lockThread: async (_obj, { threadId }, ctx) => {
-    await ThreadModel.lockThread({ ctx, threadId });
+    await ThreadModel.lock({ ctx, threadId });
     const thread = await ThreadModel.findById({ threadId });
     return thread;
   },
 
   blockThread: async (_obj, { threadId }, ctx) => {
-    await ThreadModel.blockThread({ ctx, threadId });
+    await ThreadModel.block({ ctx, threadId });
     const thread = await ThreadModel.findById({ threadId });
     return thread;
   },

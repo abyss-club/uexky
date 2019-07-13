@@ -1,12 +1,12 @@
-import { connectDb } from '~/utils/mongo';
+import { connectDb } from '~/utils/pg';
 
 import app from '~/app';
 import log from '~/utils/log';
 import env from '~/utils/env';
 
-let mongoClient;
+let pgPool;
 (async () => {
-  mongoClient = await connectDb(env.MONGODB_URI, env.MONGODB_DBNAME);
+  pgPool = await connectDb(env.PG_URI);
 })();
 
 log.info('run uexky at env:', env);
@@ -14,5 +14,5 @@ app.listen(env.PORT);
 log.info(`Listening to http://localhost:${env.PORT} 🚀`);
 
 (async () => {
-  await mongoClient.close();
+  await pgPool.end();
 })();
