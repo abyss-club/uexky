@@ -29,6 +29,8 @@ import UID from '~/uid';
 //   tagName: { type: 'text', notNull: true, references: 'tag(name)' },
 // });
 
+const blockedContent = '[此内容已被管理员屏蔽]';
+
 const makeThread = function makeThread(raw) {
   return {
     id: UID.parse(raw.id),
@@ -37,7 +39,7 @@ const makeThread = function makeThread(raw) {
     anonymous: raw.anonymous,
     author: raw.anonymous ? UID.parse(raw.anonymousId).duid : raw.userName,
     title: raw.title === '' ? '无题' : raw.title,
-    content: raw.blocked ? '[此内容已被屏蔽]' : raw.content,
+    content: raw.blocked ? blockedContent : raw.content,
 
     async getMainTag() {
       const { rows } = await query(`SELECT *
@@ -53,18 +55,6 @@ const makeThread = function makeThread(raw) {
         WHERE threads_tags."threadId" = $1 AND tag."isMain" = false`,
       [this.id.suid]);
       return (rows || []).map(row => row.tagName);
-    },
-
-    async getReplyCount() {
-      const { rows } = await query(`SELECT count(*) FROM post
-        WHERE "threadId"=$1`, [this.id.suid]);
-      return parseInt(rows[0].count || '0', 10);
-    },
-
-    async getCatelog() {
-      const { rows } = await query(`SELECT id "postId", "createdAt"
-      FROM post WHERE "threadId"=$1 ORDER BY id DESC`, [this.id.suid]);
-      return rows || [];
     },
 
     blocked: raw.blocked,
@@ -85,9 +75,9 @@ const threadSliceOpt = {
 
 const ThreadModel = {
 
-  async findById({ threadId }) {
+  async findById({ txn, threadId }) {
     const id = UID.parse(threadId);
-    const { rows } = await query('SELECT * FROM thread WHERE id=$1', [id.suid]);
+    const { rows } = await query('SELECT * FROM thread WHERE id=$1', [id.suid], txn);
     if ((rows || []).length === 0) {
       throw new NotFoundError(`cant find thread ${threadId}`);
     }
@@ -138,7 +128,7 @@ const ThreadModel = {
         isNew: true,
         threadId: newThread.id,
         mainTag: input.mainTag,
-        subTags: input.subTags,
+        subTags: input.subTags || [],
       });
     });
     return newThread;
@@ -153,16 +143,23 @@ const ThreadModel = {
     return slice;
   },
 
-  async lockThread({ ctx, threadId }) {
+  async lock({ ctx, threadId }) {
     ctx.auth.ensurePermission(ACTION.LOCK_THREAD);
-    await query('UPDATE thread SET lock=$1 WHERE id=$2', [true, UID.parse(threadId).suid]);
+    await query(
+      'UPDATE thread SET locked=$1 WHERE id=$2',
+      [true, UID.parse(threadId).suid],
+    );
   },
 
-  async blockThread({ ctx, threadId }) {
+  async block({ ctx, threadId }) {
     ctx.auth.ensurePermission(ACTION.BLOCK_THREAD);
-    await query('UPDATE thread SET block=$1 WHERE id=$2', [true, UID.parse(threadId).suid]);
+    await query(
+      'UPDATE thread SET blocked=$1 WHERE id=$2',
+      [true, UID.parse(threadId).suid],
+    );
   },
 
 };
 
 export default ThreadModel;
+export { blockedContent };

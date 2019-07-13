@@ -66,6 +66,7 @@ exports.up = (pgm) => {
     quoterId: { type: 'bigint', notNull: true, references: 'post(id)' },
     quotedId: { type: 'bigint', notNull: true, references: 'post(id)' },
   });
+  pgm.createIndex('posts_quotes', ['quoterId', 'quotedId'], { unique: true });
 
   pgm.createTable('tag', {
     name: { type: 'text', primaryKey: true, notNull: true },
@@ -100,7 +101,7 @@ exports.up = (pgm) => {
   pgm.createIndex('users_tags', ['userId', 'tagName'], { unique: true });
 
   pgm.createTable('notification', {
-    id: { type: 'serial', primaryKey: true },
+    id: { type: 'text', primaryKey: true },
     createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     type: { type: 'text', notNull: true },
