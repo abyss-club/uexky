@@ -2,16 +2,6 @@ import { query, doTransaction } from '~/utils/pg';
 import { AuthError, ParamsError, PermissionError } from '~/utils/error';
 import validator from '~/utils/validator';
 
-// pgm.createTable('user', {
-//   id: { type: 'serial', primaryKey: true },
-//   email: { type: 'text', notNull: true, unique: true },
-//   name: { type: 'text', unique: true },
-//   role: { type: 'text', notNull: true, default: '' },
-//   lastReadSystemNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-//   lastReadRepliedNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-//   lastReadQuotedNoti: { type: 'timestamp', notNull: true, default: pgm.func('now()') },
-// });
-
 const makeUser = function makeUser(raw) {
   return {
     id: raw.id,
@@ -25,7 +15,7 @@ const makeUser = function makeUser(raw) {
       return (rows || []).map(row => row.tagName);
     },
     role: raw.role,
-    readNotiTime: {
+    lastReadNoti: {
       system: raw.lastReadSystemNoti,
       replied: raw.lastReadRepliedNoti,
       quoted: raw.lastReadQuotedNoti,
@@ -94,7 +84,7 @@ const UserModel = {
     }
     return {
       signedInUser() {
-        return makeUser(user);
+        return user;
       },
       ensurePermission(action) {
         if (!user) {

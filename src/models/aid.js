@@ -10,7 +10,7 @@ import { query } from '~/utils/pg';
 //   anonymousId: { type: 'bigint', notNull: true, unique: true },
 // });
 
-const UserAidModel = {
+const AidModel = {
   async getAid({ txn, userId, threadId }) {
     const tid = UID.parse(threadId);
     const aid = await UID.new();
@@ -22,4 +22,4 @@ const UserAidModel = {
   },
 };
 
-export default UserAidModel;
+export default AidModel;
