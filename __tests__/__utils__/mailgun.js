@@ -1,15 +1,18 @@
-import { init } from '~/external/mailgun';
+import { mockMailgun } from '~/auth/mail';
 
-const mockMailgun = () => {
-  init({
+export default () => {
+  const mailgun = {
     mail: null,
-    messages() {
-      return (mail, fallback) => {
-        this.mail = mail;
-        fallback('success');
+    messages: function messages() {
+      const that = this;
+      return {
+        send(mail, fallback) {
+          that.mail = mail;
+          fallback(null, 'success');
+        },
       };
     },
-  });
+  };
+  mockMailgun(mailgun);
+  return mailgun;
 };
-
-export default mockMailgun;

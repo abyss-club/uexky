@@ -1,46 +1,53 @@
 import ThreadModel from '~/models/thread';
+import PostModel from '~/models/post';
 
 const Query = {
-  threadSlice: async (obj, { tags, query }, ctx) => {
+  threadSlice: async (_obj, { tags, query }, ctx) => {
     await ctx.limiter.take(query.limit);
-    const threadSlice = await ThreadModel(ctx).getThreadSlice(tags, query);
+    const threadSlice = await ThreadModel.findSlice({ ctx, tags, query });
     return threadSlice;
   },
 
-  thread: async (obj, { id }, ctx) => {
+  thread: async (_obj, { id }, ctx) => {
     await ctx.limiter.take(1);
-    const thread = await ThreadModel(ctx).findByUid(id);
+    const thread = await ThreadModel.findById({ id });
     return thread;
   },
 };
 
 const Mutation = {
-  pubThread: async (obj, { thread }, ctx) => {
+  pubThread: async (_obj, { thread }, ctx) => {
     const { rateCost } = ctx.config;
     await ctx.limiter.take(rateCost.pubThread);
-    const newThread = await ThreadModel(ctx).pubThread(thread);
-    newThread.replyCount = 0;
+    const newThread = await ThreadModel.new({ ctx, thread });
     return newThread;
   },
 };
 
-// Default Types resolvers:
-//   Thread:
-//     id, anonymous, author, createdAt, mainTag,
-//     subTags, title, replyCount, catelog
-//   CatelogItem:
-//     postId, createdAt,
-//   ThreadSlice:
-//     thread, sliceInfo
 const Thread = {
-  id: (thread, _, ctx) => ThreadModel(ctx).methods(thread).uid(),
-  content: (thread, _, ctx) => ThreadModel(ctx).methods(thread).getContent(),
+  // auto field resolvers: createdAt, anonymous, author, title, content, blocked, locked
+  id: thread => thread.id.duid,
+  mainTag: async thread => thread.getMainTag(),
+  subTags: async thread => thread.getSubTags(),
+  title: thread => thread.title,
   replies: async (thread, query, ctx) => {
     await ctx.limiter.take(query.limit);
-    const result = await ThreadModel(ctx).methods(thread).replies(query);
+    const result = await PostModel.findThreadPosts({ thread, query });
     return result;
   },
+  replyCount: async (thread) => {
+    const count = await PostModel.getThreadReplyCount({ threadId: thread.id });
+    return count;
+  },
+  catalog: async (thread) => {
+    const catalog = await PostModel.getThreadCatelog({ threadId: thread.id });
+    return catalog;
+  },
 };
+
+// auto type resolvers:
+//   ThreadSlice
+//   ThreadCatalogItem, with fields: postId, createdAt
 
 export default {
   Query,

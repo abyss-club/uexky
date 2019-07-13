@@ -1,21 +1,12 @@
-// import Joi from '@hapi/joi';
-import mongo from '~/utils/mongo';
-
-// const workerIdSchema = Joi.object().keys({
-//   count: Joi.number().integer().min(0),
-// });
-
-const WORKER_ID = 'workerid';
+import { query } from '~/utils/pg';
 
 const WorkerIdModel = () => ({
   newWorkerId: async function newWorkerId() {
-    const col = mongo.collection(WORKER_ID);
-    const { value } = await col.findOneAndUpdate(
-      {}, { $inc: { count: 1 } }, {
-        projection: 'count', returnOriginal: false, upsert: true, w: 'majority', j: true, wtimeout: 1000,
-      },
+    const results = await query(
+      "INSERT INTO counter (name) VALUES ('worker') ON CONFLICT (name)"
+      + 'DO UPDATE SET count = counter.count + 1 RETURNING counter.count;',
     );
-    return value.count % 512;
+    return results.rows[0].count % 512;
   },
 });
 

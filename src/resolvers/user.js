@@ -1,65 +1,89 @@
-import UserModel, { ensureSignIn } from '../models/user';
-import AuthModel from '../models/auth';
+import UserModel from '~/models/user';
+import ThreadModel from '~/models/thread';
+import PostModel from '~/models/post';
+import Code from '~/auth/code';
+import { ParamsError } from '~/utils/error';
 
 const Query = {
-  profile: (_, __, ctx) => ensureSignIn(ctx),
+  profile: (_obj, _args, ctx) => ctx.auth.signedInUser(),
 };
+
 
 const Mutation = {
-  auth: async (obj, { email }, ctx) => {
-    if (ctx.user) throw new Error('Already signed in.');
-    await AuthModel(ctx).addToAuth(email);
+  auth: async (_obj, { email }, ctx) => {
+    if (ctx.auth.isSignedIn) throw new Error('Already signed in.');
+    await Code.addToAuth(email);
     return true;
   },
-  setName: async (obj, { name }, ctx) => {
-    const user = ensureSignIn(ctx);
-    const result = await UserModel(ctx).methods(user).setName(name);
-    return result;
+  setName: async (_obj, { name }, ctx) => {
+    await UserModel.setName({ ctx, name });
+    return ctx.auth.signedInUser();
   },
-  syncTags: async (obj, { tags }, ctx) => {
-    const user = ensureSignIn(ctx);
-    const result = await UserModel(ctx).methods(user).syncTags(tags);
-    return result;
+  syncTags: async (_obj, { tags }, ctx) => {
+    await UserModel.syncTags({ ctx, tags });
+    return ctx.auth.signedInUser();
   },
-  addSubbedTags: async (obj, { tags }, ctx) => {
-    const user = ensureSignIn(ctx);
-    const result = await UserModel(ctx).methods(user).addSubbedTags(tags);
-    return result;
+  addSubbedTag: async (_obj, { tag }, ctx) => {
+    await UserModel.addSubbedTag({ ctx, tag });
+    return ctx.auth.signedInUser();
   },
-  delSubbedTags: async (obj, { tags }, ctx) => {
-    const user = ensureSignIn(ctx);
-    const result = await UserModel(ctx).methods(user).delSubbedTags(tags);
-    return result;
+  delSubbedTag: async (_obj, { tag }, ctx) => {
+    await UserModel.delSubbedTag({ ctx, tag });
+    return ctx.auth.signedInUser();
   },
 
-  // admin's apis:
-  banUser: async (obj, { postId }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).banUser(postId);
+  // mod's apis:
+  banUser: async (_obj, { postId, threadId }, ctx) => {
+    let id;
+    if (!postId) {
+      const { userId } = await PostModel.findById({ postId });
+      id = userId;
+    } else if (!threadId) {
+      const { userId } = await ThreadModel.findById({ threadId });
+      id = userId;
+    } else {
+      throw new ParamsError('postId and threadId are both empty');
+    }
+    await UserModel.banUser({ ctx, userId: id });
+    return true;
   },
-  blockPost: async (obj, { postId }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).blockPost(postId);
+
+  blockPost: async (_obj, { postId }, ctx) => {
+    await PostModel.block({ ctx, postId });
+    const post = await PostModel.findById({ postId });
+    return post;
   },
-  lockThread: async (obj, { threadId }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).lockThread(threadId);
+
+  lockThread: async (_obj, { threadId }, ctx) => {
+    await ThreadModel.lock({ ctx, threadId });
+    const thread = await ThreadModel.findById({ threadId });
+    return thread;
   },
-  blockThread: async (obj, { threadId }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).blockThread(threadId);
+
+  blockThread: async (_obj, { threadId }, ctx) => {
+    await ThreadModel.block({ ctx, threadId });
+    const thread = await ThreadModel.findById({ threadId });
+    return thread;
   },
-  editTags: async (obj, { threadId, mainTag, subTags }, ctx) => {
-    const user = ensureSignIn(ctx);
-    await UserModel(ctx).methods(user).editTags(threadId, mainTag, subTags);
+
+  editTags: async (_obj, { threadId, mainTag, subTags }, ctx) => {
+    await ThreadModel.editTags({
+      ctx, threadId, mainTag, subTags,
+    });
+    const thread = await ThreadModel.findById({ threadId });
+    return thread;
   },
 };
 
-// Default Types Resolver:
-//   User:
-//     email, name, tags
+const User = {
+  // auto field resolvers: email, name, role
+  tags: user => user.getTags(),
+  threads: (user, { query }) => ThreadModel.findUserThreads({ user, query }),
+  posts: (user, { query }) => PostModel.findUserPosts({ user, query }),
+};
 
 export default {
   Query,
   Mutation,
+  User,
 };

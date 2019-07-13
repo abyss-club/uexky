@@ -1,34 +1,92 @@
-import startRepl from '../__utils__/mongoServer';
 import TagModel from '~/models/tag';
+import ThreadModel from '~/models/thread';
+import { query } from '~/utils/pg';
+import startPg, { migrate } from '../__utils__/pgServer';
+import mockContext from '../__utils__/context';
 
-jest.setTimeout(60000);
-
-let replSet;
-let mongoClient;
-// let db;
+let pgPool;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
 
-// const TAG = 'tag';
-
-const mockTags = { mainTag: 'MainA', subTags: ['SubA', 'SubB'] };
-
-describe('Insert Tags', () => {
-  it('add tags', async () => {
-    await TagModel().addMainTag(mockTags.mainTag);
-    await TagModel().onPubThread(mockTags);
+describe('tags query', () => {
+  it('parpare data', async () => {
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainB', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubA', false]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubB', false]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubC', false]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubD', false]);
   });
-  it('validate tags', async () => {
-    const result = await TagModel().getTree();
-    const target = result.filter(tagObj => tagObj.mainTag === mockTags.mainTag)[0];
-    expect(target.mainTag).toEqual(mockTags.mainTag);
-    expect(target.subTags.sort()).toEqual(mockTags.subTags.sort());
+  it('find one tag', async () => {
+    const tags = await TagModel.findTags({ query: 'SubA' });
+    expect(tags.length).toEqual(1);
+    expect(tags[0].name).toEqual('SubA');
+    expect(tags[0].isMain).toBeFalsy();
+  });
+  it('find tags by query string', async () => {
+    const tags = await TagModel.findTags({ query: 'B' });
+    expect(tags.length).toEqual(2);
+    expect(tags[0].name).toEqual('SubB');
+    expect(tags[0].isMain).toBeFalsy();
+    expect(tags[1].name).toEqual('MainB');
+    expect(tags[1].isMain).toBeTruthy();
+  });
+  it('find main tags', async () => {
+    const mainTags = await TagModel.getMainTags();
+    expect(mainTags).toEqual(['MainA', 'MainB']);
+  });
+});
+
+describe('set thread tags', () => {
+  let thread;
+  it('parpare data', async () => {
+    await query('DELETE FROM tag');
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainB', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['SubA', false]);
+    const ctx = await mockContext({ email: 'test@uexky.com' });
+    thread = await ThreadModel.new({
+      ctx,
+      thread: {
+        anonymous: true,
+        content: 'Test Content',
+        mainTag: 'MainA',
+        subTags: ['SubA', 'SubB'],
+        title: 'TestTitle',
+      },
+    });
+  });
+  it('check in tag', async () => {
+    const tags = await TagModel.findTags({ }); // all
+    expect(tags.length).toEqual(4);
+    expect(tags[3].name).toEqual('MainB'); // oldest
+  });
+  it('check threads_tags', async () => {
+    const { rows } = await query(
+      'SELECT tag_name as name FROM threads_tags WHERE thread_id=$1',
+      [thread.id.suid],
+    );
+    const tags = rows.map(row => row.name);
+    expect(tags.length).toEqual(3);
+    expect(tags).toContain('MainA');
+    expect(tags).toContain('SubA');
+    expect(tags).toContain('SubB');
+  });
+  it('check tags_main_tags', async () => {
+    const { rows } = await query(
+      'SELECT name, belongs_to FROM tags_main_tags WHERE belongs_to=$1',
+      ['MainA'],
+    );
+    expect(rows.length).toEqual(2);
+    expect(rows).toContainEqual({ name: 'SubA', belongs_to: 'MainA' });
+    expect(rows).toContainEqual({ name: 'SubB', belongs_to: 'MainA' });
   });
 });

@@ -1,198 +1,139 @@
-import startRepl from '../__utils__/mongoServer';
-import mongo, { db } from '~/utils/mongo';
-
-import Uid from '~/uid';
-import UserModel from '~/models/user';
-// import UserPostsModel from '~/models/userPosts';
+import { ROLE } from '~/models/user';
 import ThreadModel from '~/models/thread';
-import PostModel from '~/models/post';
-import TagModel from '~/models/tag';
-import NotificationModel from '~/models/notification';
+import PostModel, { blockedContent } from '~/models/post';
+import { query } from '~/utils/pg';
 
-jest.setTimeout(60000); // for boot replica sets
-let replSet;
-let mongoClient;
-// let db;
+import startPg, { migrate } from '../__utils__/pgServer';
+import mockContext from '../__utils__/context';
+
+let pgPool;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
 
-const THREAD = 'thread';
-const POST = 'post';
-const USERPOSTS = 'userPosts';
-const NOTIFICATION = 'notification';
-const col = () => mongo.collection(POST);
-
-const mockUser = {
-  email: 'test@example.com',
-  name: 'testUser',
-};
-const mockReplier = {
-  email: 'replier@example.com',
-  name: 'testReplier',
-};
-
-const mockThread = {
-  anonymous: true,
-  content: 'Test Content',
-  mainTag: 'MainA',
-  subTags: ['SubA'],
-  title: 'TestTitle',
-};
-const mockPost = {
-  threadId: '',
-  anonymous: true,
-  content: 'Test Reply',
-};
-const mockReply = {
-  threadId: '',
-  anonymous: true,
-  content: 'Test Reply',
-  quoteIds: [],
-};
-const mockTagTree = {
-  mainTag: 'MainA', subTags: ['SubA'],
-};
-
-let threadSuid;
-let threadId;
-let postSuid;
-let postId;
-let replyId;
-let replySuid;
-
-describe('Testing posting a thread', () => {
-  it('Create collections', async () => {
-    await db.createCollection(USERPOSTS);
-    await db.createCollection(NOTIFICATION);
+describe('publish post and read', () => {
+  const mockUser = { email: 'test@uexky.com', name: 'test user' };
+  let ctx;
+  let thread;
+  const postIds = [];
+  it('parpare data', async () => {
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
+    ctx = await mockContext(mockUser);
+    thread = await ThreadModel.new({
+      ctx,
+      thread: {
+        anonymous: true,
+        content: 'test thread content',
+        mainTag: 'MainA',
+        subTags: [],
+        title: 'test thread title',
+      },
+    });
+    const replyCount = await PostModel.getThreadReplyCount({ threadId: thread.id });
+    expect(replyCount).toEqual(0);
+    const catelog = await PostModel.getThreadCatelog({ threadId: thread.id });
+    expect(catelog.length).toEqual(0);
   });
-  it('Setting tags', async () => {
-    await TagModel().addMainTag('MainA');
+  it('new post', async () => {
+    const input = {
+      threadId: thread.id,
+      anonymous: true,
+      content: 'test post1',
+      quoteIds: [],
+    };
+    const before = new Date();
+    const post = await PostModel.new({ ctx, post: input });
+    const after = new Date();
+    expect(post.id.type).toEqual('UID');
+    expect(post.createdAt.getTime()).toBeGreaterThan(before.getTime() - 500);
+    expect(post.createdAt.getTime()).toBeLessThan(after.getTime() + 500);
+    expect(post.updatedAt.getTime()).toBeGreaterThan(before.getTime() - 500);
+    expect(post.updatedAt.getTime()).toBeLessThan(after.getTime() + 500);
+    expect(post.anonymous).toBeTruthy();
+    expect(post.author).toMatch(/[0-9a-zA-Z-_]{6,}/);
+    expect(post.content).toEqual(input.content);
+    expect(post.blocked).toBeFalsy();
+    postIds.push(post.id);
   });
-  it('Posting a thread', async () => {
-    const user = await UserModel().getUserByEmail(mockUser.email);
-    const newThread = mockThread;
-    const { _id } = await ThreadModel({ user }).pubThread(newThread);
-    const threadResult = await mongo.collection(THREAD).findOne({ _id });
-    const author = await UserModel({ user }).methods(user).author(threadResult.suid, true);
-    expect(JSON.stringify(threadResult.subTags)).toEqual(JSON.stringify(newThread.subTags));
-    expect(JSON.stringify(threadResult.tags))
-      .toEqual(JSON.stringify([newThread.mainTag, ...newThread.subTags]));
-    expect(threadResult.anonymous).toEqual(true);
-    expect(threadResult.content).toEqual(newThread.content);
-    expect(threadResult.title).toEqual(newThread.title);
-    expect(threadResult.userId).toEqual(user._id);
-    expect(threadResult.author).toEqual(author);
-    expect(threadResult.blocked).toEqual(false);
-    expect(threadResult.locked).toEqual(false);
-
-    threadSuid = threadResult.suid;
-    threadId = Uid.decode(threadSuid);
-    mockPost.threadId = threadId;
-    mockReply.threadId = threadId;
+  it('new post with name', async () => {
+    const input = {
+      threadId: thread.id,
+      anonymous: false,
+      content: 'test post2',
+      quoteIds: [],
+    };
+    const post = await PostModel.new({ ctx, post: input });
+    expect(post.author).toEqual(mockUser.name);
+    postIds.push(post.id);
   });
-  it('Validating the thread in UserPostsModel', async () => {
-    const user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await mongo.collection(USERPOSTS).find(
-      { userId: user._id, threadSuid },
-    ).toArray();
-    expect(result.length).toEqual(1);
-    expect(result[0].posts.length).toEqual(0);
+  it('new post with quotes', async () => {
+    const input = {
+      threadId: thread.id,
+      anonymous: false,
+      content: 'test post2',
+      quoteIds: postIds.map(pid => pid.suid),
+    };
+    const post = await PostModel.new({ ctx, post: input });
+    const quotedPosts = await post.getQuotes();
+    expect(quotedPosts.length).toEqual(2);
+    const qduids = quotedPosts.map(qp => qp.id.suid).sort();
+    expect(qduids[0].toString()).toEqual(postIds[0].suid.toString());
+    expect(qduids[1].toString()).toEqual(postIds[1].suid.toString());
+    postIds.push(post.id);
   });
-  it('Validating the thread in TagModel', async () => {
-    const result = await TagModel().getTree();
-    expect(JSON.stringify(result[0])).toEqual(JSON.stringify(mockTagTree));
+  it('quoted count', async () => {
+    const post0 = await PostModel.findById({ postId: postIds[0] });
+    const post1 = await PostModel.findById({ postId: postIds[1] });
+    const post0qc = await post0.getQuotedCount();
+    const post1qc = await post1.getQuotedCount();
+    expect(post0qc).toEqual(1);
+    expect(post1qc).toEqual(1);
   });
-});
-
-describe('Testing replying a thread', () => {
-  it('Create collections', async () => {
-    await db.createCollection(NOTIFICATION);
+  it('find thread posts', async () => {
+    const { posts, sliceInfo } = await PostModel.findThreadPosts({
+      threadId: thread.id,
+      query: { after: '', limit: 10 },
+    });
+    expect(posts.length).toEqual(3);
+    expect(sliceInfo.firstCursor).toEqual(postIds[0].duid);
+    expect(sliceInfo.lastCursor).toEqual(postIds[2].duid);
   });
-  it('Posting reply', async () => {
-    const user = await UserModel().getUserByEmail(mockUser.email);
-    const newPost = mockPost;
-    const { _id } = await PostModel({ user }).pubPost(newPost);
-    const postResult = await mongo.collection(POST).findOne({ _id });
-
-    postSuid = postResult.suid;
-    postId = Uid.decode(postSuid);
-
-    const author = await UserModel({ user }).methods(user).author(threadSuid, true);
-    expect(postResult.threadSuid).toEqual(threadSuid);
-    expect(postResult.anonymous).toEqual(true);
-    expect(postResult.content).toEqual(newPost.content);
-    expect(postResult.quotes).toBeUndefined();
-    expect(postResult.userId).toEqual(user._id);
-    expect(postResult.author).toEqual(author);
-    expect(postResult.blocked).toEqual(false);
-
-    mockReply.quoteIds.push(postId);
+  it('find user posts', async () => {
+    const user = ctx.auth.signedInUser();
+    const { posts, sliceInfo } = await PostModel.findUserPosts({
+      user,
+      query: { after: '', limit: 10 },
+    });
+    expect(posts.length).toEqual(3);
+    expect(sliceInfo.firstCursor).toEqual(postIds[0].duid);
+    expect(sliceInfo.lastCursor).toEqual(postIds[2].duid);
   });
-  it('Posting reply with quotes', async () => {
-    const user = await UserModel().getUserByEmail(mockReplier.email);
-    const newPost = mockReply;
-    const { _id } = await PostModel({ user }).pubPost(newPost);
-    const postResult = await mongo.collection(POST).findOne({ _id });
-
-    replySuid = postResult.suid;
-    replyId = Uid.decode(replySuid);
-
-    const author = await UserModel({ user }).methods(user).author(threadSuid, true);
-    expect(postResult.threadSuid).toEqual(threadSuid);
-    expect(postResult.anonymous).toEqual(true);
-    expect(postResult.content).toEqual(mockPost.content);
-    expect(postResult.quotes).toBeUndefined();
-    expect(postResult.userId).toEqual(user._id);
-    expect(postResult.author).toEqual(author);
-    expect(postResult.blocked).toEqual(false);
+  it('reply count', async () => {
+    const replyCount = await PostModel.getThreadReplyCount({ threadId: thread.id });
+    expect(replyCount).toEqual(3);
   });
-  it('Validate updated reply', async () => {
-    const postResult = await col().findOne({ suid: replySuid });
-    expect(postResult.quoteSuids[0]).toEqual(postSuid);
+  it('thread catelog', async () => {
+    const catelog = await PostModel.getThreadCatelog({ threadId: thread.id });
+    expect(catelog.length).toEqual(3);
+    expect(catelog[0].postId).toEqual(postIds[0].duid);
+    expect(catelog[1].postId).toEqual(postIds[1].duid);
+    expect(catelog[2].postId).toEqual(postIds[2].duid);
   });
-  it('Validating post for mockUser in UserPostsModel', async () => {
-    const user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await mongo.collection(USERPOSTS).find(
-      { userId: user._id, threadSuid },
-    ).toArray();
-    expect(result.length).toEqual(1);
-    expect(result[0].posts[0].suid).toEqual(postSuid);
-  });
-  it('Validating post for mockReplier in UserPostsModel', async () => {
-    const replier = await UserModel().getUserByEmail(mockReplier.email);
-    const result = await mongo.collection(USERPOSTS).find(
-      { userId: replier._id, threadSuid },
-    ).toArray();
-    expect(result.length).toEqual(1);
-    expect(result[0].posts[0].suid).toEqual(replySuid);
-  });
-  it('Validating post for mockUser in NotificationModel', async () => {
-    const mockUserDoc = await UserModel().getUserByEmail(mockUser.email);
-    const mockReplierDoc = await UserModel().getUserByEmail(mockReplier.email);
-    const replyAuthor = await UserModel().methods(mockReplierDoc).author(threadSuid, true);
-
-    const repResult = await NotificationModel().getNotiSlice(mockUserDoc, 'replied', { after: '', limit: 10 });
-    const { replied } = repResult;
-    expect(replied[0].id).toEqual(`replied:${threadId}`);
-    expect(replied[0].sendTo).toEqual(mockUserDoc._id);
-    expect(replied[0].type).toEqual('replied');
-
-    const quotedResult = await NotificationModel().getNotiSlice(mockUserDoc, 'quoted', { after: '', limit: 10 });
-    const { quoted } = quotedResult;
-    expect(quoted[0].id).toEqual(`quoted:${replyId}:${postId}`);
-    expect(quoted[0].sendTo).toEqual(mockUserDoc._id);
-    expect(quoted[0].type).toEqual('quoted');
-    expect(quoted[0].quoted.threadId).toEqual(threadId);
-    expect(quoted[0].quoted.postId).toEqual(replyId);
-    expect(quoted[0].quoted.quotedPostId).toEqual(postId);
-    expect(quoted[0].quoted.quoter).toEqual(replyAuthor);
-    expect(quoted[0].quoted.quoterId).toEqual(mockReplierDoc._id);
+  it('block thread', async () => {
+    const modContext = await mockContext({
+      email: 'mod@uexky.com',
+      role: ROLE.MOD,
+    });
+    await PostModel.block({ ctx: modContext, postId: postIds[1] });
+    const post = await PostModel.findById({ postId: postIds[1] });
+    expect(post.blocked).toBeTruthy();
+    expect(post.content).toEqual(blockedContent);
   });
 });

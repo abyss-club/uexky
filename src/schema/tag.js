@@ -1,22 +1,16 @@
-export default`
+export default `
   extend type Query {
-    # Containing mainTags and tagTree.
-    tags: Tags!
-  }
-
-  type Tags {
-    # Main tags are predefined manually.
+    # main tags
     mainTags: [String!]!
-    tree(
-      "Keyword for filtering tags by tag name."
-      query: String,
-      "Maxmimum amount of returning \`MainTag\`s."
-      limit: Int,
-    ): [TagTreeNode!]
+    # Containing mainTags and tagTree.
+    tags(query: String, limit: Int): [Tag]!
   }
 
-  type TagTreeNode {
-    mainTag: String!
-    subTags: [String!]
+  type Tag {
+    # tag's name
+    name: String!
+    isMain: Boolean!
+    # belongsTo which main tag
+    belongsTo: [String!]!
   }
 `;

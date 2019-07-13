@@ -1,20 +1,23 @@
 import gql from 'graphql-tag';
 
-import startRepl from '../__utils__/mongoServer';
+import getRedis from '~/utils/redis';
 import { mockUser, mutate, guestMutate } from '../__utils__/apolloClient';
-import { mockMailgun } from '~/utils/authMail';
+import mockMailgun from '../__utils__/mailgun';
+import startPg, { migrate } from '../__utils__/pgServer';
 
-jest.setTimeout(60000);
-let replSet;
-let mongoClient;
+let pgPool;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
+  const redis = getRedis();
+  await redis.flushall();
+  redis.disconnect();
 });
 
 const mockEmail = mockUser.email;
@@ -25,22 +28,9 @@ const AUTH = gql`
   }
 `;
 
-const mailgun = {
-  mail: null,
-  messages: function messages() {
-    const that = this;
-    return {
-      send(mail, fallback) {
-        that.mail = mail;
-        fallback(null, 'success');
-      },
-    };
-  },
-};
-
 describe('Testing auth', () => {
   it('without context', async () => {
-    mockMailgun(mailgun);
+    mockMailgun();
     const { data } = await guestMutate({ mutation: AUTH, variables: { email: mockEmail } });
     expect(data.auth).toEqual(true);
   });

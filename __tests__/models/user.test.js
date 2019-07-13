@@ -1,93 +1,127 @@
-import startRepl from '../__utils__/mongoServer';
-
 import UserModel from '~/models/user';
+import { query } from '~/utils/pg';
 import { ParamsError, InternalError } from '~/utils/error';
+import startPg, { migrate } from '../__utils__/pgServer';
 
-jest.setTimeout(60000); // for boot replica sets
-let replSet;
-let mongoClient;
-// let db;
+let pgPool;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
 
-const mockUser = {
-  email: 'test@example.com',
-  name: 'testUser',
-};
-const subbedTags = ['MainA', 'SubA', 'SubB', 'MainB'];
-const newSubbedTags = [...subbedTags, 'MainC'];
-const dupSubbedTags = [...subbedTags, 'MainC', 'MainD'];
+describe('user object', () => {
+  const mockEmail = 'test1@example.com';
+  it('new user context', async () => {
+    const auth = await UserModel.authContext({ email: mockEmail });
+    const user = auth.signedInUser();
+    expect(user.email).toEqual(mockEmail);
+  });
+  it('user context', async () => {
+    const auth = await UserModel.authContext({ email: mockEmail });
+    const user = auth.signedInUser();
+    expect(user.email).toEqual(mockEmail);
+    const { rows } = await query('SELECT count(*) FROM public.user');
+    expect(parseInt(rows[0].count, 10)).toEqual(1);
+  });
+  it('find user', async () => {
+    const user = await UserModel.findByEmail({ email: mockEmail });
+    expect(user.email).toEqual(mockEmail);
+  });
+});
 
-it('add user before tests', async () => {
-  await UserModel().getUserByEmail(mockUser.email);
+describe('user name', () => {
+  const mockEmail = 'test1@example.com';
+  const mockName = 'test1';
+  it('set and get name', async () => {
+    const auth = await UserModel.authContext({ email: mockEmail });
+    const ctx = { auth };
+    const user = await UserModel.setName({ ctx, name: mockName });
+    expect(user.name).toEqual(mockName);
+    const userInDb = await UserModel.findByEmail({ email: mockEmail });
+    expect(userInDb.name).toEqual(mockName);
+  });
+  it('name is unchangeable', async () => {
+    const auth = await UserModel.authContext({ email: mockEmail });
+    const ctx = { auth };
+    await expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(ParamsError);
+  });
+  it('name is unique', async () => {
+    const auth = await UserModel.authContext({ email: 'test2@example.com' });
+    const ctx = { auth };
+    await expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(InternalError);
+  });
 });
 
-describe('Testing modifying tags subscription', () => {
-  it('sync tags', async () => {
-    let user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await UserModel({ user }).methods(user).syncTags(subbedTags);
-    user = await UserModel().getUserByEmail(mockUser.email);
-    expect(JSON.stringify(result.tags)).toEqual(JSON.stringify(subbedTags));
-    expect(JSON.stringify(user.tags)).toEqual(JSON.stringify(subbedTags));
+describe('user tags', () => {
+  const tagsInDb = [
+    { name: 'MainA', isMain: true },
+    { name: 'MainB', isMain: true },
+    { name: 'MainC', isMain: true },
+    { name: 'SubA', isMain: false },
+    { name: 'SubB', isMain: false },
+    { name: 'SubC', isMain: false },
+    { name: 'SubD', isMain: false },
+  ];
+  const mockEmail = 'test@example.com';
+  let ctx;
+  it('build data', async () => {
+    await Promise.all(tagsInDb.map(tag => query(
+      'INSERT INTO tag (name, is_main) VALUES ($1, $2)',
+      [tag.name, tag.isMain],
+    )));
+    const auth = await UserModel.authContext({ email: mockEmail });
+    ctx = { auth };
   });
-});
-describe('Testing adding tags subscription', () => {
-  it('add tags', async () => {
-    let user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await UserModel({ user }).methods(user).addSubbedTags(['MainC']);
-    user = await UserModel().getUserByEmail(mockUser.email);
-    expect(JSON.stringify(result.tags)).toEqual(JSON.stringify(newSubbedTags));
-    expect(JSON.stringify(user.tags)).toEqual(JSON.stringify(newSubbedTags));
+  it('add tag', async () => {
+    await UserModel.addSubbedTag({ ctx, tag: 'MainA' });
+    await UserModel.addSubbedTag({ ctx, tag: 'SubA' });
+    const user = await UserModel.findByEmail({ email: mockEmail });
+    const tags = await user.getTags();
+    expect(tags.length).toEqual(2);
+    expect(tags).toContain('MainA');
+    expect(tags).toContain('SubA');
   });
-  it('add invalid tags', async () => {
-    const user = await UserModel().getUserByEmail(mockUser.email);
-    expect(UserModel({ user }).methods(user).addSubbedTags('MainC')).rejects.toThrow(ParamsError);
+  it('add tag invalid', async () => {
+    await expect(UserModel.addSubbedTag({ ctx, tag: 'SubA' })).rejects.toThrow(InternalError);
+    await expect(UserModel.addSubbedTag({ ctx, tag: 'SubX' })).rejects.toThrow(InternalError);
   });
-  it('add duplicated tags', async () => {
-    let user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await UserModel({ user }).methods(user).addSubbedTags(['MainC', 'MainD']);
-    user = await UserModel().getUserByEmail(mockUser.email);
-    expect(JSON.stringify(result.tags)).toEqual(JSON.stringify(dupSubbedTags));
-    expect(JSON.stringify(user.tags)).toEqual(JSON.stringify(dupSubbedTags));
+  it('del tag', async () => {
+    await UserModel.delSubbedTag({ ctx, tag: 'MainA' });
+    const user = await UserModel.findByEmail({ email: mockEmail });
+    const tags = await user.getTags();
+    expect(tags.length).toEqual(1);
+    expect(tags).toContain('SubA');
   });
-});
-describe('Testing deleting tags subscription', () => {
-  it('del tags', async () => {
-    let user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await UserModel({ user }).methods(user).delSubbedTags(['MainD']);
-    user = await UserModel().getUserByEmail(mockUser.email);
-    expect(JSON.stringify(result.tags)).toEqual(JSON.stringify(newSubbedTags));
-    expect(JSON.stringify(user.tags)).toEqual(JSON.stringify(newSubbedTags));
+  it('del tag invalid', async () => {
+    await UserModel.delSubbedTag({ ctx, tag: 'SubB' });
+    await UserModel.delSubbedTag({ ctx, tag: 'SubX' });
+    const user = await UserModel.findByEmail({ email: mockEmail });
+    const tags = await user.getTags();
+    expect(tags.length).toEqual(1);
+    expect(tags).toContain('SubA');
   });
-  it('del invalid tags', async () => {
-    const user = await UserModel().getUserByEmail(mockUser.email);
-    expect(UserModel({ user }).methods(user).delSubbedTags('MainC')).rejects.toThrow(ParamsError);
+  it('sync tag', async () => {
+    await UserModel.syncTags({ ctx, tags: ['MainC', 'SubC', 'SubD'] });
+    const user = await UserModel.findByEmail({ email: mockEmail });
+    const tags = await user.getTags();
+    expect(tags.length).toEqual(3);
+    expect(tags).toContain('MainC');
+    expect(tags).toContain('SubC');
+    expect(tags).toContain('SubD');
   });
-  it('del non-existing tags', async () => {
-    let user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await UserModel({ user }).methods(user).delSubbedTags(['MainC', 'MainD']);
-    user = await UserModel().getUserByEmail(mockUser.email);
-    expect(JSON.stringify(result.tags)).toEqual(JSON.stringify(subbedTags));
-    expect(JSON.stringify(user.tags)).toEqual(JSON.stringify(subbedTags));
-  });
-});
-describe('Testing setting name', () => {
-  it('set name', async () => {
-    let user = await UserModel().getUserByEmail(mockUser.email);
-    const result = await UserModel({ user }).methods(user).setName(mockUser.name);
-    user = await UserModel().getUserByEmail(mockUser.email);
-    expect(result.name).toEqual(mockUser.name);
-    expect(user.name).toEqual(mockUser.name);
-  });
-  it('set name again', async () => {
-    const user = await UserModel().getUserByEmail(mockUser.email);
-    expect(UserModel({ user }).methods(user).setName(mockUser.name)).rejects.toThrow(InternalError);
+  it('sync tag invalid', async () => {
+    await expect(UserModel.syncTags({ ctx, tags: ['SubC', 'SubX'] })).rejects.toThrow(InternalError);
+    const user = await UserModel.findByEmail({ email: mockEmail });
+    const tags = await user.getTags();
+    expect(tags.length).toEqual(3);
+    expect(tags).toContain('MainC');
+    expect(tags).toContain('SubC');
+    expect(tags).toContain('SubD');
   });
 });

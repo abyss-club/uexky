@@ -13,16 +13,16 @@ export default `
     # Directly edit tags subscribed by user.
     syncTags(tags: [String]!): User!
     # Add tags subscribed by user.
-    addSubbedTags(tags: [String!]!): User!
+    addSubbedTag(tag: String!): User!
     # Delete tags subscribed by user.
-    delSubbedTags(tags: [String!]!): User!
+    delSubbedTag(tag: String!): User!
 
-    # admin's apis:
-    banUser(postId: String!): User!
+    # mod's apis:
+    banUser(postId: String, threadId: String): Boolean!
     blockPost(postId: String!): Post!
     lockThread(threadId: String!): Thread!
     blockThread(threadId: String!): Thread!
-    editTags(threadId: String!, mainTag: String!, subTags: [String!]!): Tags!
+    editTags(threadId: String!, mainTag: String!, subTags: [String!]!): Thread!
   }
 
   type User {
@@ -31,15 +31,15 @@ export default `
     name: String
     # Tags saved by user.
     tags: [String!]
-    role: UserRole
-  }
+    # user roles:
+    # role: admin: modify config, manage mods.
+    #       mod:   lock/block thread, lock/block post, ban user.
+    #       null:  normal user.
+    role: String
 
-  # user roles:
-  # role: 'SuperAdmin': modify config, manage all tags.
-  #       'TagAdmin':   manage several mainTags.
-  #       None:         normal user. (won't have "role" field)
-  type UserRole {
-    role: String!
-    params: [String!]
+    # return threads published by user.
+    threads(query: SliceQuery!): ThreadSlice!
+    # return threads replied by user
+    posts(query: SliceQuery!): PostSlice!
   }
 `;
