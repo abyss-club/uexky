@@ -5,12 +5,22 @@ import { authMiddleware, authHandler } from '~/auth';
 import Token from '~/auth/token';
 import { Base64 } from '~/uid';
 import Code, { expireTime } from '~/auth/code';
+import startPg, { migrate } from '../__utils__/pgServer';
 import getRedis from '~/utils/redis';
 import log from '~/utils/log';
 import env from '~/utils/env';
 import mockMailgun from '../__utils__/mailgun';
 
+let pgPool;
+
+beforeAll(async () => {
+  await migrate();
+  pgPool = await startPg();
+});
+
 afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
   const redis = getRedis();
   await redis.flushall();
   redis.disconnect();
@@ -21,7 +31,7 @@ it('test auth middleware/without token', async () => {
   const app = new Koa();
   app.use(authMiddleware('/test'));
   app.use((ctx) => {
-    user = ctx.user || {};
+    user = ctx.auth.isSignedIn ? ctx.auth.signedInUser() : {};
     ctx.body = user.email || '';
   });
 
@@ -34,7 +44,7 @@ it('test auth middleware/with token', async () => {
   const app = new Koa();
   app.use(authMiddleware('/test'));
   app.use((ctx) => {
-    user = ctx.user || {};
+    user = ctx.auth.isSignedIn ? ctx.auth.signedInUser() : {};
     ctx.body = user.email || '';
   });
   const mockEmail = 'example@example.com';

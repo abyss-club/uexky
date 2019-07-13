@@ -13,7 +13,7 @@ function authMiddleware(endpoint) {
       ctx.auth = await UserModel.authContext({ email });
       ctx.response.set({ 'Set-Cookie': genCookie(token) });
     } else {
-      ctx.auth = await UserModel.authContext();
+      ctx.auth = await UserModel.authContext({});
     }
     await next();
   };
