@@ -1,5 +1,5 @@
 import UID from '~/uid';
-import UserAidModel from '~/models/userAid';
+import AidModel from '~/models/aid';
 
 import startPg, { migrate } from '../__utils__/pgServer';
 
@@ -23,11 +23,11 @@ describe('test aid', () => {
     threadId = await UID.new();
   });
   it('new aid', async () => {
-    aid = await UserAidModel.getAid({ userId, threadId });
+    aid = await AidModel.getAid({ userId, threadId });
     expect(aid.type).toEqual('UID');
   });
   it('already have aid', async () => {
-    const id = await UserAidModel.getAid({ userId, threadId });
+    const id = await AidModel.getAid({ userId, threadId });
     expect(id.type).toEqual('UID');
     expect(id.duid).toEqual(aid.duid);
     expect(id.suid.toString()).toEqual(aid.suid.toString());

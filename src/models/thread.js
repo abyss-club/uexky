@@ -1,7 +1,7 @@
 import { NotFoundError } from '~/utils/error';
 import { query, doTransaction } from '~/utils/pg';
 import { ACTION } from '~/models/user';
-import UserAidModel from '~/models/userAid';
+import AidModel from '~/models/aid';
 import TagModel from '~/models/tag';
 import querySlice from '~/models/slice';
 import UID from '~/uid';
@@ -64,9 +64,9 @@ const makeThread = function makeThread(raw) {
 
 const threadSliceOpt = {
   select: 'SELECT * FROM thread',
-  before: before => `thread.id > ${UID.parse(before).suid}`,
-  after: after => `thread.id < ${UID.parse(after).suid}`,
-  order: 'ORDER BY thread.id',
+  before: before => `id > ${UID.parse(before).suid}`,
+  after: after => `id < ${UID.parse(after).suid}`,
+  order: 'ORDER BY id',
   desc: true,
   name: 'threads',
   make: makeThread,
@@ -112,7 +112,7 @@ const ThreadModel = {
     let newThread;
     await doTransaction(async (txn) => {
       if (input.anonymous) {
-        raw.anonymousId = await UserAidModel.getAid({ txn, userId: user.id, threadId: raw.id });
+        raw.anonymousId = await AidModel.getAid({ txn, userId: user.id, threadId: raw.id });
       } else {
         raw.userName = user.name;
       }

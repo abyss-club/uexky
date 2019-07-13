@@ -1,7 +1,7 @@
+import querySlice from '~/models/slice';
 import { ParamsError } from '~/utils/error';
 import { query } from '~/utils/pg';
 import UID from '~/uid';
-
 
 const USER_GROUPS = { ALL_USER: 'all_user' };
 const NOTI_TYPES = {
@@ -11,34 +11,59 @@ const NOTI_TYPES = {
 };
 const isValidType = type => (NOTI_TYPES[type] || '') === '';
 
+// content
+// system {
+//   title string
+//   content string
+// }
+// replied {
+//   threadId bigint
+// }
+// quoted {
+//   threadId bigint(string)
+//   quotedId bigint(string)
+//   postId bigint(string
+// }
+
 const makeNoti = (raw, type, user) => {
   const base = {
     id: raw.id,
-    type: NOTI_TYPES.SYSTEM,
+    key: raw.key,
     eventTime: raw.createdAt,
-    hasRead: user.readNotiTime.system >= raw.createdAt,
+    hasRead: user.lastReadNoti[type] >= raw.id,
   };
   if (type === NOTI_TYPES.SYSTEM) {
     return {
       ...base,
+      type: NOTI_TYPES.SYSTEM,
       title: raw.content.title,
       content: raw.content.content,
     };
   } if (type === NOTI_TYPES.REPLIED) {
     return {
       ...base,
-      threadId: raw.content.threadId,
-      quotedId: raw.content.quotedId,
-      postId: raw.content.postId,
+      type: NOTI_TYPES.REPLIED,
+      threadId: UID.parse(raw.content.threadId),
     };
   } if (type === NOTI_TYPES.QUOTED) {
     return {
       ...base,
-      quotedId: user.content.quotedId,
-      postId: user.content.postId,
+      type: NOTI_TYPES.QUOTED,
+      threadId: UID.parse(raw.content.threadId),
+      quotedId: UID.parse(raw.content.quotedId),
+      postId: UID.parse(raw.content.postId),
     };
   }
   throw new ParamsError(`unknown notification type: ${type}`);
+};
+
+const notiSliceOpt = {
+  select: 'SELECT * FROM notification',
+  before: before => `id > ${parseInt(before, 10)}`,
+  after: after => `id < ${parseInt(after, 10)}`,
+  order: 'ORDER BY id',
+  desc: true,
+  toCursor: noti => noti.id.toString(),
 };
 
 const NotificationModel = {
@@ -49,11 +74,10 @@ const NotificationModel = {
     }
     const user = ctx.auth.signedInUser();
     const { rows } = await query(
-      `SELECT count(*) FROM notification
-      WHERE "updatedAt" < $1`,
-      [user.readNotiTime[type]],
+      'SELECT count(*) FROM notification WHERE id > $1 AND type=$2',
+      [user.lastReadNoti[type], type],
     );
-    return rows[0].count;
+    return parseInt(rows[0].count, 10);
   },
 
   async findNotiSlice({ ctx, type, query: sq }) {
@@ -61,40 +85,54 @@ const NotificationModel = {
       throw new ParamsError(`unknown notification type: ${type}`);
     }
     const user = ctx.auth.signedInUser();
-    const { rows } = await query([
-      'SELECT * FROM notification',
-      `WHERE ("sendTo"=$1 OR "sendToGroup"=${USER_GROUPS.ALL_USER}')`,
-      'AND type=$2',
-      sq.before && `AND id < ${sq.before}`,
-      sq.after && `AND id > ${sq.after}`,
-      `ORDER BY id DESC LIMIT ${sq.limit || 0}`,
-    ].join(' '), [user.id, type]);
-    return rows.map(raw => makeNoti(raw, type, user));
+    const opt = {
+      ...notiSliceOpt,
+      where: 'WHERE ("sendTo"=$1 OR "sendToGroup"=$2) AND type=$3',
+      params: [user.id, USER_GROUPS.ALL_USER, type],
+      name: type,
+      make: raw => makeNoti(raw, type, user),
+    };
+    const slice = await querySlice(sq, opt);
+    const column = {
+      system: 'lastReadSystemNoti',
+      replied: 'lastReadRepliedNoti',
+      quoted: 'lastReadQuotedNoti',
+    };
+    if (slice.sliceInfo.lastCursor !== '') {
+      await query(
+        `UPDATE public.user SET "${column[type]}"=$1`,
+        [slice.sliceInfo.lastCursor],
+      );
+    }
+    return slice;
   },
 
   async newSystemNoti({
     sendTo, sendToGroup, title, content,
   }) {
-    const id = `system:${(await UID.new()).duid}`;
+    const key = `system:${(await UID.new()).duid}`;
     if (sendTo) {
       await query(`INSERT INTO notification
-      (id, type, sendTo, content) VALUES ($1, $2, $3, $4)`,
-      [id, NOTI_TYPES.SYSTEM, sendTo, { title, content }]);
+      (key, type, "sendTo", content) VALUES ($1, $2, $3, $4)`,
+      [key, NOTI_TYPES.SYSTEM, sendTo, { title, content }]);
     } if (sendToGroup) {
       await query(`INSERT INTO notification
-      (id, type, sendToGroup, content) VALUES ($1, $2, $3, $4)`,
-      [id, NOTI_TYPES.SYSTEM, sendToGroup, { title, content }]);
+      (key, type, "sendToGroup", content) VALUES ($1, $2, $3, $4)`,
+      [key, NOTI_TYPES.SYSTEM, sendToGroup, { title, content }]);
     }
   },
 
   async newRepliedNoti({ txn, threadId }) {
     const tid = UID.parse(threadId);
-    const id = `replied:${tid.duid}`;
-    const { rows } = await query('SELECT * FROM thread WHERE id=$1', [tid.suid], txn);
+    const key = `replied:${tid.duid}`;
+    const content = { threadId: threadId.suid.toString() };
+    const { rows } = await query(
+      'SELECT * FROM thread WHERE id=$1', [tid.suid], txn,
+    );
     await query(`INSERT INTO notification
-      (id, type, "sendTo", content) VALUES ($1, $2, $3, $4)
-      ON CONFLICT (id) DO UPDATE SET "updatedAt"=now() RETURNING *`,
-    [id, NOTI_TYPES.REPLIED, rows[0].userId, { threadId: threadId.suid.toString() }], txn);
+      (key, type, "sendTo", content) VALUES ($1, $2, $3, $4)
+      ON CONFLICT (key) DO UPDATE SET "updatedAt"=now() RETURNING *`,
+    [key, NOTI_TYPES.REPLIED, rows[0].userId, content], txn);
   },
 
   async newQuotedNoti({
@@ -107,20 +145,20 @@ const NotificationModel = {
     await Promise.all(rows.map((row) => {
       const pid = UID.parse(postId);
       const qid = UID.parse(row.id);
-      const id = `${NOTI_TYPES.QUOTED}:${qid.duid}:${pid.duid}`;
+      const key = `${NOTI_TYPES.QUOTED}:${qid.duid}:${pid.duid}`;
       const content = {
         threadId: threadId.suid.toString(),
         quotedId: row.id,
         postId: postId.suid.toString(),
       };
       return query(
-        `INSERT INTO notification (id, type, "sendTo", content)
+        `INSERT INTO notification (key, type, "sendTo", content)
         VALUES ($1, $2, $3, $4)`,
-        [id, NOTI_TYPES.QUOTED, row.userId, content], txn,
+        [key, NOTI_TYPES.QUOTED, row.userId, content], txn,
       );
     }));
   },
 };
 
 export default NotificationModel;
-export { NOTI_TYPES };
+export { NOTI_TYPES, USER_GROUPS };

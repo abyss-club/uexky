@@ -2,7 +2,7 @@ import { NotFoundError, ParamsError } from '~/utils/error';
 import { query, doTransaction } from '~/utils/pg';
 import { ACTION } from '~/models/user';
 import UID from '~/uid';
-import UserAidModel from '~/models/userAid';
+import AidModel from '~/models/aid';
 import NotificationModel from '~/models/notification';
 import querySlice from '~/models/slice';
 
@@ -162,7 +162,7 @@ const PostModel = {
       }
 
       if (input.anonymous) {
-        raw.anonymousId = await UserAidModel.getAid({
+        raw.anonymousId = await AidModel.getAid({
           txn, userId: user.id, threadId: raw.threadId,
         });
       } else {

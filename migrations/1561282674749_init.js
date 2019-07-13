@@ -6,9 +6,9 @@ exports.up = (pgm) => {
     email: { type: 'text', notNull: true, unique: true },
     name: { type: 'text', unique: true },
     role: { type: 'text', notNull: true, default: '' },
-    lastReadSystemNoti: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    lastReadRepliedNoti: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
-    lastReadQuotedNoti: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    lastReadSystemNoti: { type: 'integer', notNull: true, default: 0 },
+    lastReadRepliedNoti: { type: 'integer', notNull: true, default: 0 },
+    lastReadQuotedNoti: { type: 'integer', notNull: true, default: 0 },
   });
   pgm.createIndex('user', ['email']);
   pgm.createIndex('user', ['name']);
@@ -101,7 +101,8 @@ exports.up = (pgm) => {
   pgm.createIndex('users_tags', ['userId', 'tagName'], { unique: true });
 
   pgm.createTable('notification', {
-    id: { type: 'text', primaryKey: true },
+    id: { type: 'serial', primaryKey: true },
+    key: { type: 'text', unique: true },
     createdAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     updatedAt: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     type: { type: 'text', notNull: true },
