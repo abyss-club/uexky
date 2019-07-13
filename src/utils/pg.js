@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { ParamsError, InternalError } from '~/utils/error';
+import { InternalError, ParamsError } from '~/utils/error';
 
 import log from '~/utils/log';
 
@@ -13,6 +13,20 @@ const connectDb = async (pgUri) => {
     process.exit(-1);
   });
   return pgPool;
+};
+
+const customErrors = new Set([
+  'AuthError', 'InternalError', 'NotFoundError',
+  'ParamsError', 'PermissionError',
+]);
+const handleError = (e) => {
+  const name = e.name || '';
+  if (customErrors.has(name)) {
+    throw e;
+  } else {
+    log.error('transcation error', e.stack);
+    throw new InternalError(`pg transcation error: ${e.stack}`);
+  }
 };
 
 const query = async (text, params, client) => {
@@ -37,8 +51,7 @@ const doTransaction = async (transcation) => {
     await client.query('COMMIT');
   } catch (e) {
     await client.query('ROLLBACK');
-    log.error('transcation error', e.stack);
-    throw new InternalError(`pg transcation error: ${e.stack}`);
+    handleError(e);
   } finally {
     client.release();
   }

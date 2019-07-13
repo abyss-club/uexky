@@ -49,12 +49,12 @@ describe('user name', () => {
   it('name is unchangeable', async () => {
     const auth = await UserModel.authContext({ email: mockEmail });
     const ctx = { auth };
-    expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(ParamsError);
+    await expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(ParamsError);
   });
   it('name is unique', async () => {
     const auth = await UserModel.authContext({ email: 'test2@example.com' });
     const ctx = { auth };
-    expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(InternalError);
+    await expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(InternalError);
   });
 });
 
@@ -88,8 +88,8 @@ describe('user tags', () => {
     expect(tags).toContain('SubA');
   });
   it('add tag invalid', async () => {
-    expect(UserModel.addSubbedTag({ ctx, tag: 'SubA' })).rejects.toThrow(InternalError);
-    expect(UserModel.addSubbedTag({ ctx, tag: 'SubX' })).rejects.toThrow(InternalError);
+    await expect(UserModel.addSubbedTag({ ctx, tag: 'SubA' })).rejects.toThrow(InternalError);
+    await expect(UserModel.addSubbedTag({ ctx, tag: 'SubX' })).rejects.toThrow(InternalError);
   });
   it('del tag', async () => {
     await UserModel.delSubbedTag({ ctx, tag: 'MainA' });
@@ -116,7 +116,7 @@ describe('user tags', () => {
     expect(tags).toContain('SubD');
   });
   it('sync tag invalid', async () => {
-    expect(UserModel.syncTags({ ctx, tags: ['SubC', 'SubX'] })).rejects.toThrow(InternalError);
+    await expect(UserModel.syncTags({ ctx, tags: ['SubC', 'SubX'] })).rejects.toThrow(InternalError);
     const user = await UserModel.findByEmail({ email: mockEmail });
     const tags = await user.getTags();
     expect(tags.length).toEqual(3);

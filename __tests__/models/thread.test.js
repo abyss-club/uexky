@@ -1,5 +1,8 @@
+import PostModel from '~/models/post';
+import ThreadModel, { blockedContent } from '~/models/thread';
+import { ROLE } from '~/models/user';
+import { ParamsError } from '~/utils/error';
 import { query } from '~/utils/pg';
-import ThreadModel from '~/models/thread';
 import startPg, { migrate } from '../__utils__/pgServer';
 import mockContext from '../__utils__/context';
 
@@ -56,10 +59,6 @@ describe('Testing posting a thread', () => {
     expect(subTags.length).toEqual(1);
     expect(subTags).toContain('SubA');
 
-    const replyCount = await thread.getReplyCount();
-    expect(replyCount).toEqual(0);
-    const catelog = await thread.getCatelog();
-    expect(catelog.length).toEqual(0);
     threadIds.push(thread.id);
   });
   it('publish a thread not anonymous', async () => {
@@ -107,5 +106,34 @@ describe('Testing posting a thread', () => {
     });
     expect(threads.length).toEqual(1);
     expect(sliceInfo.firstCursor).toEqual(threadIds[2].duid);
+  });
+  it('lock thread', async () => {
+    const modContext = await mockContext({
+      email: 'mod@uexky.com',
+      role: ROLE.MOD,
+    });
+    const ctx = await mockContext({ email: mockUser.email, name: mockUser.name });
+    await ThreadModel.lock({ ctx: modContext, threadId: threadIds[0] });
+    const thread = await ThreadModel.findById({ threadId: threadIds[0] });
+    expect(thread.locked).toBeTruthy();
+    await expect(PostModel.new({
+      ctx,
+      post: {
+        threadId: threadIds[0],
+        anonymous: true,
+        content: 'try reply locked thread',
+        quoteIds: [],
+      },
+    })).rejects.toThrow(ParamsError);
+  });
+  it('block thread', async () => {
+    const modContext = await mockContext({
+      email: 'mod@uexky.com',
+      role: ROLE.MOD,
+    });
+    await ThreadModel.block({ ctx: modContext, threadId: threadIds[1] });
+    const thread = await ThreadModel.findById({ threadId: threadIds[1] });
+    expect(thread.blocked).toBeTruthy();
+    expect(thread.content).toEqual(blockedContent);
   });
 });

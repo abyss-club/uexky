@@ -42,11 +42,11 @@ const Thread = {
     return result;
   },
   replyCount: async (thread) => {
-    const count = await ThreadModel.replyCount({ thread });
+    const count = await PostModel.getThreadReplyCount({ threadId: thread.id });
     return count;
   },
   catalog: async (thread) => {
-    const catalog = await ThreadModel.getCatalog({ thread });
+    const catalog = await PostModel.getThreadCatelog({ threadId: thread.id });
     return catalog;
   },
 };

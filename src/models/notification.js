@@ -75,40 +75,50 @@ const NotificationModel = {
   async newSystemNoti({
     sendTo, sendToGroup, title, content,
   }) {
+    const id = `system:${(await UID.new()).duid}`;
     if (sendTo) {
       await query(`INSERT INTO notification
-      (type, sendTo, content) VALUES ($1, $2, $3)`,
-      [NOTI_TYPES.SYSTEM, sendTo, { title, content }]);
+      (id, type, sendTo, content) VALUES ($1, $2, $3, $4)`,
+      [id, NOTI_TYPES.SYSTEM, sendTo, { title, content }]);
     } if (sendToGroup) {
       await query(`INSERT INTO notification
-      (type, sendToGroup, content) VALUES ($1, $2, $3)`,
-      [NOTI_TYPES.SYSTEM, sendToGroup, { title, content }]);
+      (id, type, sendToGroup, content) VALUES ($1, $2, $3, $4)`,
+      [id, NOTI_TYPES.SYSTEM, sendToGroup, { title, content }]);
     }
   },
 
   async newRepliedNoti({ txn, threadId }) {
-    const { rows } = query('SELECT "userId" FROM thread WHERE id=$1',
-      [UID.parse(threadId).suid], txn);
+    const tid = UID.parse(threadId);
+    const id = `replied:${tid.duid}`;
+    const { rows } = await query('SELECT * FROM thread WHERE id=$1', [tid.suid], txn);
     await query(`INSERT INTO notification
-      (type, sendTo, content) VALUES ($1, $2, $3)
-      ON CONFLICT UPDATE SET "updatedAt"=now()`,
-    [NOTI_TYPES.REPLIED, rows[0].userId, { threadId: threadId.suid }], txn);
+      (id, type, "sendTo", content) VALUES ($1, $2, $3, $4)
+      ON CONFLICT (id) DO UPDATE SET "updatedAt"=now() RETURNING *`,
+    [id, NOTI_TYPES.REPLIED, rows[0].userId, { threadId: threadId.suid.toString() }], txn);
   },
 
   async newQuotedNoti({
     txn, threadId, postId, quotedIds,
   }) {
     const { rows } = await query(
-      'SELECT (id, "userId") FROM posts WHERE id IN $1', [quotedIds], txn,
+      'SELECT id id, "userId" "userId" FROM post WHERE id=ANY($1)',
+      [quotedIds.map(qid => qid.suid)], txn,
     );
-    await Promise.all(rows.map(row => query(`INSERT INTO notification
-      (type, sendTo, content) VALUES ($1, $2, $3)`,
-    [NOTI_TYPES.QUOTED, row.userId, {
-      threadId: threadId.suid,
-      quotedId: row.id,
-      postId: postId.suid,
-    },
-    ], txn)));
+    await Promise.all(rows.map((row) => {
+      const pid = UID.parse(postId);
+      const qid = UID.parse(row.id);
+      const id = `${NOTI_TYPES.QUOTED}:${qid.duid}:${pid.duid}`;
+      const content = {
+        threadId: threadId.suid.toString(),
+        quotedId: row.id,
+        postId: postId.suid.toString(),
+      };
+      return query(
+        `INSERT INTO notification (id, type, "sendTo", content)
+        VALUES ($1, $2, $3, $4)`,
+        [id, NOTI_TYPES.QUOTED, row.userId, content], txn,
+      );
+    }));
   },
 };
 
