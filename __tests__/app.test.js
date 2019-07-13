@@ -1,18 +1,24 @@
 import request from 'supertest';
-import app, { endpoints } from '~/app';
+import app from '~/app';
+
+// import startPg, { migrate } from './__utils__/pgServer';
+//
+// let pgPool;
+//
+// beforeAll(async () => {
+//   await migrate();
+//   pgPool = await startPg();
+// });
+//
+// afterAll(async () => {
+//   await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+//   pgPool.end();
+// });
 
 describe('Testing paths', () => {
   it('Get /invalid', async () => {
     const response = await request(app.callback()).get('/invalid');
-    expect(response.status).toEqual(404);
-    expect(response.text).toEqual('Not Found');
-  });
-});
-
-describe('Testing auth', () => {
-  it(`Plain request to ${endpoints.auth}`, async () => {
-    const response = await (await request(app.callback())).get(endpoints.auth);
-    expect(response.status).toEqual(400);
-    expect(response.text).toEqual('验证信息格式错误');
+    await expect(response.status).toEqual(404);
+    await expect(response.text).toEqual('Not Found');
   });
 });

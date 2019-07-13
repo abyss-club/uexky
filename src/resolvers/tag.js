@@ -1,30 +1,19 @@
 import TagModel from '~/models/tag';
 
 const Query = {
-  tags: async () => {
-    const mainTags = await TagModel().getMainTags();
-    return { mainTags };
-  },
+  mainTags: () => TagModel.getMainTags(),
+  tags: async (_obj, { query, limit = 10 }) => TagModel.findTags({ query, limit }),
 };
 
 // Default Types Resolvers:
-//   TagTreeNode:
-//     mainTag, subTags
+//   Tag:
+//     name, isMain, belongsTo
 
-const Tags = {
-  mainTags: ({ mainTags }) => mainTags,
-  tree: async (obj, { query, limit = 10 }, ctx) => {
-    await ctx.limiter.take(limit);
-    try {
-      const tree = await TagModel(ctx).getTree(limit, query);
-      return tree;
-    } catch (e) {
-      throw e;
-    }
-  },
+const Tag = {
+  belongsTo: tag => tag.getBelongsTo(),
 };
 
 export default {
   Query,
-  Tags,
+  Tag,
 };

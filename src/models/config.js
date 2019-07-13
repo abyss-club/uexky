@@ -1,11 +1,9 @@
 import Joi from '@hapi/joi';
-import mongo from '~/utils/mongo';
 
+import { query } from '~/utils/pg';
 import { ParamsError } from '~/utils/error';
 import log from '~/utils/log';
-
-const CONFIG = 'config';
-const col = () => mongo.collection(CONFIG);
+import { ACTION } from '~/models/user';
 
 const rateLimitObjSchema = Joi.object().keys({
   httpHeader: Joi.string().regex(/^[a-zA-Z0-9-]*$/).default(''),
@@ -26,16 +24,19 @@ const configSchema = Joi.object().keys({
   rateCost: rateCostObjSchema.default(rateCostObjSchema.validate({}).value),
 });
 
-const ConfigModel = () => ({
-  getConfig: async function getConfig() {
-    const results = await col().find({}, { projection: { _id: 0 } }).toArray();
-    if (results.length === 0) {
+const ConfigModel = {
+  async getConfig() {
+    const results = await query(
+      'SELECT rate_limit "rateLimit", rate_cost "rateCost" from config where id = 1',
+    );
+    if (results.rows.length < 1) {
       return configSchema.validate({}).value;
     }
-    return results[0];
+    return results.rows[0];
   },
 
-  setConfig: async function setConfig(input) {
+  async setConfig(ctx, input) {
+    ctx.auth.ensurePermission(ACTION.EDIT_SETTING);
     const config = await this.getConfig();
     Object.keys(input).forEach((key) => {
       config[key] = Object.assign(config[key] || {}, input[key] || {});
@@ -46,12 +47,19 @@ const ConfigModel = () => ({
       log.error(error);
       throw new ParamsError(`JSON validation failed, ${error}`);
     }
-    await col().findOneAndUpdate({}, { $set: newConfig }, {
-      upsert: true, w: 'majority', j: true, wtimeout: 1000,
-    });
+    await query(
+      `
+      INSERT INTO config(id, rate_limit, rate_cost) VALUES(1, $1, $2)
+      ON CONFLICT (id)
+        DO UPDATE SET
+          rate_limit = $1,
+          rate_cost = $2;
+      `,
+      [newConfig.rateLimit, newConfig.rateCost],
+    );
     log.info('config updated!', newConfig);
     return newConfig;
   },
-});
+};
 
 export default ConfigModel;

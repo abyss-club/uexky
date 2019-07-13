@@ -1,57 +1,21 @@
 import ConfigModel from '~/models/config';
-import mongo from '~/utils/mongo';
+import { ROLE } from '~/models/user';
 import { ParamsError } from '~/utils/error';
-import startRepl from '../__utils__/mongoServer';
+import startPg, { migrate } from '../__utils__/pgServer';
+import mockContext from '../__utils__/context';
 
-// May require additional time for downloading MongoDB binaries
-jest.setTimeout(60000);
-
-let replSet;
-let mongoClient;
-let ctx;
+let pgPool;
 // let db;
 
 beforeAll(async () => {
-  ({ replSet, mongoClient } = await startRepl());
+  await migrate();
+  pgPool = await startPg();
 });
 
-afterAll(() => {
-  mongoClient.close();
-  replSet.stop();
+afterAll(async () => {
+  await pgPool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
+  pgPool.end();
 });
-
-const CONFIG = 'config';
-
-/* TODO(tangwenhan): may be useful in next work (tag model).
-describe('Testing mainTags', () => {
-  const mockTags = ['mainA', 'mainB', 'mainC'];
-  const modifyTags = ['mainC', 'mainD', 'mainE'];
-  const failTags = 'main';
-  it('add mainTags', async () => {
-    await ConfigModel.modifyMainTags(mockTags);
-    const result = await ConfigModel.findOne({ optionName: 'mainTags' }).exec();
-    expect(result.optionName).toEqual('mainTags');
-    expect(JSON.parse(result.optionValue)).toEqual(mockTags);
-  });
-  it('verify mainTags', async () => {
-    const result = await ConfigModel.getMainTags();
-    expect(result).toEqual(mockTags);
-  });
-  it('modify mainTags', async () => {
-    await ConfigModel.modifyMainTags(modifyTags);
-    const result = await ConfigModel.findOne({ optionName: 'mainTags' }).exec();
-    expect(result.optionName).toEqual('mainTags');
-    expect(JSON.parse(result.optionValue)).toEqual(modifyTags);
-  });
-  it('verify modified mainTags', async () => {
-    const result = await ConfigModel.getMainTags();
-    expect(result).toEqual(modifyTags);
-  });
-  it('add invalid tag string', async () => {
-    await expect(ConfigModel.modifyMainTags(failTags)).rejects.toThrow(ParamsError);
-  });
-});
-*/
 
 describe('Testing rateLimit', () => {
   // default
@@ -70,51 +34,56 @@ describe('Testing rateLimit', () => {
     },
   };
   const checkConfig = async () => {
-    const result = await ConfigModel().getConfig();
-    const resultInDb = await mongo.collection(CONFIG).findOne({}, { projection: { _id: 0 } });
+    const result = await ConfigModel.getConfig();
+    const resultInDb = await pgPool.query(
+      'SELECT rate_limit "rateLimit", rate_cost "rateCost" from config where id = 1',
+    );
     expect(result).toEqual(expectedConfig);
-    expect(resultInDb).toEqual(expectedConfig);
+    expect(resultInDb.rows[0]).toEqual(expectedConfig);
   };
-
+  let ctx;
+  it('prepare', async () => {
+    ctx = await mockContext({ email: 'uexky@uexky.com', role: ROLE.ADMIN });
+  });
   it('get default config', async () => {
-    const result = await ConfigModel().getConfig();
+    const result = await ConfigModel.getConfig();
     expect(result).toEqual(expectedConfig);
   });
   it('modify config with single entry', async () => {
-    await ConfigModel(ctx).setConfig({ rateLimit: { httpHeader: 'X-IP-Forward' } });
+    await ConfigModel.setConfig(ctx, { rateLimit: { httpHeader: 'X-IP-Forward' } });
     expectedConfig.rateLimit.httpHeader = 'X-IP-Forward';
     await checkConfig();
   });
   it('modify config with invalid value (unknown group)', async () => {
-    await expect(ConfigModel(ctx).setConfig({
+    await expect(ConfigModel.setConfig(ctx, {
       iamfine: true,
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
     await checkConfig();
   });
   it('modify config with invalid value (unknown entry)', async () => {
-    await expect(ConfigModel(ctx).setConfig({
+    await expect(ConfigModel.setConfig(ctx, {
       rateLimit: { mutLimit: 'hello', name: 'tom' },
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
     await checkConfig();
   });
   it('modify config with invalid value (error group)', async () => {
-    await expect(ConfigModel(ctx).setConfig({
+    await expect(ConfigModel.setConfig(ctx, {
       rateLimit: 'unreal',
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
     await checkConfig();
   });
   it('modify config with invalid value (error entry)', async () => {
-    await expect(ConfigModel(ctx).setConfig({
+    await expect(ConfigModel.setConfig(ctx, {
       rateLimit: { queryLimit: 'hi' },
       rateCost: { pubPost: 2 },
     })).rejects.toThrow(ParamsError);
     await checkConfig();
   });
   it('modify config multiple entries', async () => {
-    await ConfigModel(ctx).setConfig({
+    await ConfigModel.setConfig(ctx, {
       rateLimit: { queryLimit: 400 },
       rateCost: { pubThread: 20, pubPost: 3 },
     });

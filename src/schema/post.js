@@ -11,29 +11,29 @@ export default `
 
   # Input object describing a Post to be published.
   input PostInput {
-      threadId: String!
-      anonymous: Boolean!
-      content: String!
-      # Set quoting PostIDs.
-      quoteIds: [String!]
+    threadId: String!
+    anonymous: Boolean!
+    content: String!
+    # Set quoting PostIDs.
+    quoteIds: [String!]
   }
 
   # Object describing a Post.
   type Post {
-      id: String!
-      anonymous: Boolean!
-      author: String!
-      content: String!
-      createdAt: Time!
-      quotes: [Post!]
-      quoteCount: Int!
-      blocked: Boolean!
+    id: String!
+    createdAt: Time!
+    anonymous: Boolean!
+    author: String!
+    content: String!
+    quotes: [Post!]
+    quotedCount: Int!
+    blocked: Boolean!
   }
 
   # PostSlice object is for selecting specific 'slice' of Post objects to
   # return. Affects the returning SliceInfo.
   type PostSlice {
-      posts: [Post]!
-      sliceInfo: SliceInfo!
+    posts: [Post]!
+    sliceInfo: SliceInfo!
   }
 `;

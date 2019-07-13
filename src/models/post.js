@@ -1,151 +1,173 @@
-import JoiBase from '@hapi/joi';
-import JoiObjectId from '~/utils/joiObjectId';
-import mongo from '~/utils/mongo';
-import Uid from '~/uid';
-import { ParamsError, InternalError } from '~/utils/error';
-import log from '~/utils/log';
+import { NotFoundError, ParamsError } from '~/utils/error';
+import { query, doTransaction } from '~/utils/pg';
+import { ACTION } from '~/models/user';
+import UID from '~/uid';
+import AidModel from '~/models/aid';
+import NotificationModel from '~/models/notification';
+import querySlice from '~/models/slice';
 
-import UserPostsModel from './userPosts';
-import UserModel from './user';
-import ThreadModel from './thread';
-import NotificationModel from './notification';
+const blockedContent = '[此内容已被管理员屏蔽]';
 
-const Joi = JoiBase.extend(JoiObjectId);
-const THREAD = 'thread';
-const POST = 'post';
-const col = () => mongo.collection(POST);
+const makePost = function makePost(raw) {
+  return {
+    id: UID.parse(raw.id),
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+    anonymous: raw.anonymous,
+    author: raw.anonymous ? UID.parse(raw.anonymous_id).duid : raw.user_name,
+    content: raw.blocked ? blockedContent : raw.content,
+    blocked: raw.blocked,
 
-const postSchema = Joi.object().keys({
-  suid: Joi.string().alphanum().length(15).required(),
-  threadSuid: Joi.string().alphanum().length(15).required(),
-  anonymous: Joi.boolean().required(),
-  author: Joi.string().required(),
-  userId: Joi.objectId().required(),
-  locked: Joi.boolean().default(false),
-  blocked: Joi.boolean().default(false),
-  createdAt: Joi.date().required(),
-  updatedAt: Joi.date().required(),
-  content: Joi.string().required(),
-  quoteSuids: Joi.array().items(Joi.string().alphanum().length(15)).default([]),
-});
+    async getQuotes() {
+      const { rows } = await query(`SELECT post.*
+        FROM post INNER JOIN posts_quotes
+        ON post.id = posts_quotes.quoted_id
+        WHERE posts_quotes.quoter_id = $1 ORDER BY post.id`,
+      [this.id.suid]);
+      return rows.map(row => makePost(row));
+    },
 
-// const PostSchema = new mongoose.Schema({
-//   suid: { type: String, required: true },
-//   userId: SchemaObjectId,
-//   threadSuid: String,
-//   anonymous: Boolean,
-//   author: String,
-//   createdAt: Date,
-//   updatedAt: Date,
-//   blocked: Boolean,
-//   quoteSuids: [String],
-//   content: String,
-// }, { autoCreate: true });
+    async getQuotedCount() {
+      const { rows } = await query(`SELECT count(*) FROM posts_quotes
+        WHERE quoted_id=$1`, [this.id.suid]);
+      return parseInt(rows[0].count, 10);
+    },
+  };
+};
 
-const PostModel = ctx => ({
-  pubPost: async function pubPost(input) {
-    const {
-      threadId: threadUid, anonymous, content, quoteIds: quoteUids = [],
-    } = input;
-    const { user } = ctx;
+const postSliceOpt = {
+  select: 'SELECT * FROM post',
+  before: before => `post.id < ${UID.parse(before).suid}`,
+  after: after => `post.id < ${UID.parse(after).suid}`,
+  order: 'ORDER BY post.id',
+  desc: false,
+  name: 'posts',
+  make: makePost,
+  toCursor: post => post.id.duid,
+};
 
-    const threadSuid = Uid.encode(threadUid);
-    const threadDoc = await mongo.collection(THREAD).findOne({ suid: threadSuid });
-    if (!threadDoc) {
-      throw new ParamsError('Thread not found.');
+const PostModel = {
+
+  async findById({ postId }) {
+    const { rows } = await query(
+      'SELECT * FROM post WHERE id=$1',
+      [UID.parse(postId).suid],
+    );
+    if ((rows || []).length === 0) {
+      throw NotFoundError(`can't find post ${postId}`);
     }
-    if (threadDoc.locked) {
-      throw new ParamsError('Thread is locked.');
-    }
+    return makePost(rows[0]);
+  },
 
-    const now = new Date();
-    let post = {
-      suid: await Uid.newSuid(),
-      userId: user._id,
-      threadSuid,
-      anonymous,
-      author: await UserModel(ctx).methods(user).author(threadSuid, anonymous),
-      createdAt: now,
-      updatedAt: now,
-      blocked: false,
-      quoteSuids: [],
-      content,
+  async findThreadPosts({ threadId, query: sq }) {
+    const slice = await querySlice(sq, {
+      ...postSliceOpt,
+      where: 'WHERE post.thread_id = $1',
+      params: [UID.parse(threadId).suid],
+    });
+    return slice;
+  },
+
+  async getThreadReplyCount({ threadId }) {
+    const { rows } = await query(
+      'SELECT count(*) FROM post WHERE thread_id=$1',
+      [UID.parse(threadId).suid],
+    );
+    return parseInt(rows[0].count || '0', 10);
+  },
+
+  async getThreadCatelog({ threadId }) {
+    const { rows } = await query(
+      `SELECT id "postId", created_at "createdAt"
+      FROM post WHERE thread_id=$1 ORDER BY id`,
+      [UID.parse(threadId).suid],
+    );
+    return (rows || []).map(row => ({
+      postId: UID.parse(row.postId).duid,
+      createdAt: row.createdAt,
+    }));
+  },
+
+  async findUserPosts({ user, query: sq }) {
+    const slice = await querySlice(sq, {
+      ...postSliceOpt,
+      where: 'WHERE post.user_id = $1',
+      params: [user.id],
+    });
+    return slice;
+  },
+
+  // input PostInput {
+  //     threadId: String!
+  //     anonymous: Boolean!
+  //     content: String!
+  //     # Set quoting PostIDs.
+  //     quoteIds: [String!]
+  // }
+  async new({ ctx, post: input }) {
+    ctx.auth.ensurePermission(ACTION.PUB_POST);
+    const user = ctx.auth.signedInUser();
+    const raw = {
+      id: await UID.new(),
+      threadId: UID.parse(input.threadId),
+      anonymous: input.anonymous,
+      userId: user.id,
+      userName: null,
+      anonymousId: null,
+      content: input.content,
+      quoteIds: (input.quoteIds || []).map(qid => UID.parse(qid)),
     };
+    let newPost;
+    await doTransaction(async (txn) => {
+      const { rows: ts } = await query(
+        'SELECT locked as locked FROM thread WHERE id=$1', [raw.threadId.suid],
+      );
+      if ((ts || []).length === 0) {
+        throw new NotFoundError(`thread ${raw.threadId.duid} not found`);
+      }
+      if (ts[0].locked) {
+        throw new ParamsError(`thread ${raw.threadId.duid} is locked`);
+      }
 
-    let quotedPosts = [];
-    if (quoteUids.length > 0) {
-      quotedPosts = await col().find({
-        suid: {
-          $in: quoteUids.map(
-            q => Uid.encode(q),
-          ),
-        },
-      }).toArray();
-      post.quoteSuids = quotedPosts.map(qp => qp.suid);
-    }
-
-    const { value, error } = postSchema.validate(post);
-    if (error) {
-      log.error(error);
-      throw new ParamsError(`Thread validation failed, ${error}`);
-    }
-    post = value;
-
-    const session = await mongo.startSession();
-    session.startTransaction();
-
-    try {
-      await col().insertOne(post);
-      await ThreadModel(ctx).methods(threadDoc).onPubPost(post, { session });
-      await UserPostsModel(ctx).methods(user).onPubPost(threadDoc, post, { session });
-      await NotificationModel(ctx).sendRepliedNoti(post, threadDoc, { session });
-      await NotificationModel(ctx).sendQuotedNoti(post, threadDoc, quotedPosts, { session });
-      await session.commitTransaction();
-      session.endSession();
-      return post;
-    } catch (e) {
-      await session.abortTransaction();
-      session.endSession();
-      throw new InternalError(`Transaction Failed: ${e}`);
-    }
+      if (input.anonymous) {
+        raw.anonymousId = await AidModel.getAid({
+          txn, userId: user.id, threadId: raw.threadId,
+        });
+      } else {
+        raw.userName = user.name;
+      }
+      const { rows } = await txn.query(`INSERT INTO post
+        (id, thread_id, anonymous, user_id, user_name, anonymous_id, content)
+        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [raw.id.suid, raw.threadId.suid, raw.anonymous, raw.userId, raw.userName,
+        raw.anonymousId && raw.anonymousId.suid, raw.content]);
+      newPost = makePost(rows[0]);
+      if (raw.quoteIds.length > 0) {
+        await Promise.all(raw.quoteIds.map(qid => txn.query(`INSERT
+           INTO posts_quotes (quoter_id, quoted_id)
+           VALUES ($1, $2)`, [newPost.id.suid, qid.suid])));
+        await NotificationModel.newQuotedNoti({
+          txn,
+          threadId: raw.threadId,
+          postId: raw.id,
+          quotedIds: raw.quoteIds,
+        });
+      }
+      await NotificationModel.newRepliedNoti({ txn, threadId: raw.threadId });
+    });
+    return newPost;
   },
 
-  findByUid: async function findByUid(uid) {
-    const post = await col().findOne({ suid: Uid.encode(uid) });
-    return post;
+  async block({ ctx, postId }) {
+    ctx.auth.ensurePermission(ACTION.BLOCK_POST);
+    await query(
+      'UPDATE post SET blocked=$1 WHERE id=$2',
+      [true, UID.parse(postId).suid],
+    );
+    return true;
   },
 
-  methods: function methods(doc) {
-    return genDoc(ctx, this, doc);
-  },
-});
-
-const genDoc = (ctx, model, doc) => ({
-  CACHED_UID: '',
-
-  uid: function uid() {
-    if (!this.CACHED_UID) this.CACHED_UID = Uid.decode(doc.suid);
-    return this.CACHED_UID;
-  },
-
-  getQuotes: async function getQuotes() {
-    let qs = [];
-    if (doc.quoteSuids.length > 0) {
-      qs = await col().find(
-        { suid: { $in: doc.quoteSuids } },
-      ).sort({ suid: 1 }).toArray();
-    }
-    return qs;
-  },
-
-  getContent: async function getContent() {
-    return doc.blocked ? '' : doc.content;
-  },
-
-  quoteCount: async function quoteCount() {
-    const count = await col().find({ quoteSuids: doc.suid }).count();
-    return count;
-  },
-});
+};
 
 export default PostModel;
+export { blockedContent };
