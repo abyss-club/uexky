@@ -72,7 +72,7 @@ describe('user tags', () => {
   let ctx;
   it('build data', async () => {
     await Promise.all(tagsInDb.map(tag => query(
-      'INSERT INTO tag (name, "isMain") VALUES ($1, $2)',
+      'INSERT INTO tag (name, is_main) VALUES ($1, $2)',
       [tag.name, tag.isMain],
     )));
     const auth = await UserModel.authContext({ email: mockEmail });

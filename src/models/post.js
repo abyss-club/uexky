@@ -6,62 +6,30 @@ import AidModel from '~/models/aid';
 import NotificationModel from '~/models/notification';
 import querySlice from '~/models/slice';
 
-// pgm.createTable('post', {
-//   id: { type: 'bigint', primaryKey: true },
-//   createdAt: { type: 'timestamp', notNull: true },
-//   updatedAt: { type: 'timestamp', notNull: true },
-//   threadId: { type: 'bigint', notNull: true, references: 'thread(id)' },
-//
-//   anonymous: { type: 'bool', notNull: true },
-//   userId: { type: 'integer', notNull: true, references: 'user(id)' },
-//   userName: { type: 'varchar(16)', references: 'user(name)' },
-//   anonymousId: { type: 'bigint', references: 'anonymous_id(anonymousId)' },
-//
-//   blocked: { type: 'bool', default: false },
-//   content: { type: 'text', notNull: true },
-// });
-// pgm.createIndex('threadId', 'userId', 'anonymous');
-// pgm.createTable('posts_quotes', {
-//   id: { type: 'serial', primaryKey: true },
-//   quoterId: { type: 'bigint', notNull: true, references: 'post(id)' },
-//   quotedId: { type: 'bigint', notNull: true, references: 'post(id)' },
-// });
-//
-// type Post {
-//     id: String!
-//     createdAt: Time!
-//     anonymous: Boolean!
-//     author: String!
-//     content: String!
-//     quotes: [Post!]
-//     quoteCount: Int!
-//     blocked: Boolean!
-// }
-
 const blockedContent = '[此内容已被管理员屏蔽]';
 
 const makePost = function makePost(raw) {
   return {
     id: UID.parse(raw.id),
-    createdAt: raw.createdAt,
-    updatedAt: raw.updatedAt,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
     anonymous: raw.anonymous,
-    author: raw.anonymous ? UID.parse(raw.anonymousId).duid : raw.userName,
+    author: raw.anonymous ? UID.parse(raw.anonymous_id).duid : raw.user_name,
     content: raw.blocked ? blockedContent : raw.content,
     blocked: raw.blocked,
 
     async getQuotes() {
       const { rows } = await query(`SELECT post.*
         FROM post INNER JOIN posts_quotes
-        ON post.id = posts_quotes."quotedId"
-        WHERE posts_quotes."quoterId" = $1 ORDER BY post.id`,
+        ON post.id = posts_quotes.quoted_id
+        WHERE posts_quotes.quoter_id = $1 ORDER BY post.id`,
       [this.id.suid]);
       return rows.map(row => makePost(row));
     },
 
     async getQuotedCount() {
       const { rows } = await query(`SELECT count(*) FROM posts_quotes
-        WHERE "quotedId"=$1`, [this.id.suid]);
+        WHERE quoted_id=$1`, [this.id.suid]);
       return parseInt(rows[0].count, 10);
     },
   };
@@ -94,7 +62,7 @@ const PostModel = {
   async findThreadPosts({ threadId, query: sq }) {
     const slice = await querySlice(sq, {
       ...postSliceOpt,
-      where: 'WHERE post."threadId" = $1',
+      where: 'WHERE post.thread_id = $1',
       params: [UID.parse(threadId).suid],
     });
     return slice;
@@ -102,7 +70,7 @@ const PostModel = {
 
   async getThreadReplyCount({ threadId }) {
     const { rows } = await query(
-      'SELECT count(*) FROM post WHERE "threadId"=$1',
+      'SELECT count(*) FROM post WHERE thread_id=$1',
       [UID.parse(threadId).suid],
     );
     return parseInt(rows[0].count || '0', 10);
@@ -110,8 +78,8 @@ const PostModel = {
 
   async getThreadCatelog({ threadId }) {
     const { rows } = await query(
-      `SELECT id "postId", "createdAt" "createdAt"
-      FROM post WHERE "threadId"=$1 ORDER BY id`,
+      `SELECT id "postId", created_at "createdAt"
+      FROM post WHERE thread_id=$1 ORDER BY id`,
       [UID.parse(threadId).suid],
     );
     return (rows || []).map(row => ({
@@ -123,7 +91,7 @@ const PostModel = {
   async findUserPosts({ user, query: sq }) {
     const slice = await querySlice(sq, {
       ...postSliceOpt,
-      where: 'WHERE post."userId" = $1',
+      where: 'WHERE post.user_id = $1',
       params: [user.id],
     });
     return slice;
@@ -169,14 +137,14 @@ const PostModel = {
         raw.userName = user.name;
       }
       const { rows } = await txn.query(`INSERT INTO post
-        (id, "threadId", anonymous, "userId", "userName", "anonymousId", content)
+        (id, thread_id, anonymous, user_id, user_name, anonymous_id, content)
         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [raw.id.suid, raw.threadId.suid, raw.anonymous, raw.userId, raw.userName,
         raw.anonymousId && raw.anonymousId.suid, raw.content]);
       newPost = makePost(rows[0]);
       if (raw.quoteIds.length > 0) {
         await Promise.all(raw.quoteIds.map(qid => txn.query(`INSERT
-           INTO posts_quotes ("quoterId", "quotedId")
+           INTO posts_quotes (quoter_id, quoted_id)
            VALUES ($1, $2)`, [newPost.id.suid, qid.suid])));
         await NotificationModel.newQuotedNoti({
           txn,

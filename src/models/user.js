@@ -2,6 +2,7 @@ import { query, doTransaction } from '~/utils/pg';
 import { AuthError, ParamsError, PermissionError } from '~/utils/error';
 import validator from '~/utils/validator';
 
+
 const makeUser = function makeUser(raw) {
   return {
     id: raw.id,
@@ -9,16 +10,16 @@ const makeUser = function makeUser(raw) {
     email: raw.email,
     async getTags() {
       const { rows } = await query(
-        'SELECT "tagName" FROM users_tags WHERE "userId"=$1',
+        'SELECT tag_name FROM users_tags WHERE user_id=$1',
         [raw.id],
       );
-      return (rows || []).map(row => row.tagName);
+      return (rows || []).map(row => row.tag_name);
     },
     role: raw.role,
     lastReadNoti: {
-      system: raw.lastReadSystemNoti,
-      replied: raw.lastReadRepliedNoti,
-      quoted: raw.lastReadQuotedNoti,
+      system: raw.last_read_system_noti,
+      replied: raw.last_read_replied_noti,
+      quoted: raw.last_read_quoted_noti,
     },
   };
 };
@@ -124,7 +125,7 @@ const UserModel = {
   async addSubbedTag({ ctx, tag }) {
     const user = ctx.auth.signedInUser();
     await query(
-      'INSERT INTO users_tags ("userId", "tagName") VALUES ($1, $2)',
+      'INSERT INTO users_tags (user_id, tag_name) VALUES ($1, $2)',
       [user.id, tag],
     );
   },
@@ -132,7 +133,7 @@ const UserModel = {
   async delSubbedTag({ ctx, tag }) {
     const user = ctx.auth.signedInUser();
     await query(
-      'DELETE FROM users_tags WHERE "userId"=$1 AND "tagName"=$2',
+      'DELETE FROM users_tags WHERE user_id=$1 AND tag_name=$2',
       [user.id, tag],
     );
   },
@@ -140,9 +141,9 @@ const UserModel = {
   async syncTags({ ctx, tags }) {
     const user = ctx.auth.signedInUser();
     await doTransaction(async (txn) => {
-      await txn.query('DELETE FROM users_tags WHERE "userId"=$1', [user.id]);
+      await txn.query('DELETE FROM users_tags WHERE user_id=$1', [user.id]);
       await Promise.all(tags.map(tag => txn.query(`INSERT INTO
-        users_tags ("userId", "tagName")
+        users_tags (user_id, tag_name)
         VALUES ($1, $2) ON CONFLICT DO NOTHING`,
       [user.id, tag])));
     });

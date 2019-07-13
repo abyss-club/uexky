@@ -32,7 +32,7 @@ describe('Testing posting a thread', () => {
   };
   const threadIds = [];
   it('parpare data', async () => {
-    await query('INSERT INTO tag (name, "isMain") VALUES ($1, $2)', ['MainA', true]);
+    await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
   });
   it('publish a thread anonymous', async () => {
     const ctx = await mockContext({ email: mockUser.email, name: mockUser.name });
@@ -73,7 +73,7 @@ describe('Testing posting a thread', () => {
     const { rows } = await query(
       'SELECT * FROM tags_main_tags WHERE name=$1', [mockInput.subTags[0]],
     );
-    expect(rows[0].belongsTo).toEqual(mockInput.mainTag);
+    expect(rows[0].belongs_to).toEqual(mockInput.mainTag);
   });
   it('publish thread without subTags', async () => {
     const ctx = await mockContext({ email: mockUser.email, name: mockUser.name });

@@ -6,15 +6,15 @@ import { ACTION } from '~/models/user';
 const makeTag = function makeTag(raw) {
   return {
     name: raw.name,
-    isMain: raw.isMain,
+    isMain: raw.is_main,
     async belongsTo() {
-      if (raw.isMain) {
+      if (raw.is_main) {
         return [];
       }
       const { rows } = query(
-        'SELECT belongsTo FROM tags_main_tags WHERE name=$1', [raw],
+        'SELECT belongs_to FROM tags_main_tags WHERE name=$1', [raw.name],
       );
-      return rows.map(row => row.belongsTo);
+      return rows.map(row => row.belongs_to);
     },
   };
 };
@@ -23,7 +23,7 @@ const TagModel = {
 
   async getMainTags() {
     const { rows } = await query(
-      'SELECT name FROM tag WHERE "isMain"=true ORDER BY "createdAt"',
+      'SELECT name FROM tag WHERE is_main=true ORDER BY created_at',
     );
     return rows.map(row => row.name);
   },
@@ -31,14 +31,14 @@ const TagModel = {
   async findTags({ query: qtext, limit = 10 }) {
     if (qtext) {
       const { rows } = await query(
-        `SELECT name as name, "isMain" as "isMain" FROM tag
-        WHERE name LIKE $1 ORDER BY "updatedAt" DESC LIMIT $2`,
+        `SELECT name, is_main FROM tag
+        WHERE name LIKE $1 ORDER BY updated_at DESC LIMIT $2`,
         [`%${qtext}%`, limit],
       );
       return rows.map(row => makeTag(row));
     }
     const { rows } = await query(
-      'SELECT name, "isMain" FROM tag ORDER BY "updatedAt" DESC LIMIT $1',
+      'SELECT name, is_main FROM tag ORDER BY updated_at DESC LIMIT $1',
       [limit],
     );
     return rows.map(row => makeTag(row));
@@ -52,7 +52,7 @@ const TagModel = {
       ctx.auth.ensurePermission({ action: ACTION.EDIT_TAG });
     }
     const { rows: mainTags } = await query(
-      'SELECT name FROM tag WHERE "isMain" = true AND name = ANY ($1)',
+      'SELECT name FROM tag WHERE is_main = true AND name = ANY ($1)',
       [[mainTag, ...subTags]], txn,
     );
     if (mainTags.length !== 1) {
@@ -61,21 +61,21 @@ const TagModel = {
       throw new ParamsError(`${mainTag} is not main tag`);
     }
     if (!isNew) {
-      await query('DELETE FROM threads_tags WHERE "threadId" = $1', [id.suid], txn);
+      await query('DELETE FROM threads_tags WHERE thread_id = $1', [id.suid], txn);
     }
     await Promise.all([
       ...[mainTag, ...(subTags || [])].map(
         tag => query(`INSERT INTO tag (name) VALUES ($1)
-        ON CONFLICT (name) DO UPDATE SET "updatedAt" = now()`, [tag], txn),
+        ON CONFLICT (name) DO UPDATE SET updated_at = now()`, [tag], txn),
       ),
       ...[mainTag, ...(subTags || [])].map(
-        tag => query(`INSERT INTO threads_tags ("threadId", "tagName")
-        VALUES ($1, $2) ON CONFLICT ("threadId", "tagName") DO UPDATE SET "updatedAt"=now()`,
+        tag => query(`INSERT INTO threads_tags (thread_id, tag_name)
+        VALUES ($1, $2) ON CONFLICT (thread_id, tag_name) DO UPDATE SET updated_at=now()`,
         [id.suid, tag], txn),
       ),
       ...(subTags || []).map(subTag => query(`
-        INSERT INTO tags_main_tags (name, "belongsTo") VALUES ($1, $2)
-        ON CONFLICT (name, "belongsTo") DO UPDATE SET "updatedAt"=now()`,
+        INSERT INTO tags_main_tags (name, belongs_to) VALUES ($1, $2)
+        ON CONFLICT (name, belongs_to) DO UPDATE SET updated_at=now()`,
       [subTag, mainTag], txn)),
     ]);
   },
