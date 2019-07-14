@@ -1,4 +1,4 @@
-image: node:lts
+image: node:latest
 
 variables:
   REGISTRY_NAME: 'registry.gitlab.com'
