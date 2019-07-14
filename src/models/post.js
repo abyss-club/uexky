@@ -54,7 +54,7 @@ const PostModel = {
       [UID.parse(postId).suid],
     );
     if ((rows || []).length === 0) {
-      throw NotFoundError(`can't find post ${postId}`);
+      throw new NotFoundError(`can't find post ${postId}`);
     }
     return makePost(rows[0]);
   },
