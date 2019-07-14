@@ -68,7 +68,7 @@ const server = new ApolloServer({
   schema,
   context: ({ ctx }) => ({
     config: ctx.config,
-    user: ctx.user,
+    auth: ctx.auth,
     limiter: ctx.limiter,
   }),
 });

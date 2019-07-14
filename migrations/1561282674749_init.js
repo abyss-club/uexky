@@ -128,9 +128,8 @@ exports.down = (pgm) => {
   pgm.dropTable('config');
   pgm.dropTable('notification');
   pgm.dropTable('users_tags');
+  pgm.dropTable('threads_tags');
   pgm.dropTable('tags_main_tags');
-  pgm.dropConstraint('thread_main_tag');
-  pgm.dropTable('threads_sub_tags');
   pgm.dropTable('tag');
   pgm.dropTable('posts_quotes');
   pgm.dropTable('anonymous_id');
