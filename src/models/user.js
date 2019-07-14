@@ -67,7 +67,7 @@ const UserModel = {
     if (!email) {
       return {
         isSignedIn: false,
-        signedInUser: () => { throw AuthError('you are not signed in'); },
+        signedInUser: () => { throw new AuthError('you are not signed in'); },
         ensurePermission: () => { throw new PermissionError('permission denyed'); },
       };
     }
@@ -90,7 +90,7 @@ const UserModel = {
       },
       ensurePermission(action) {
         if (!user) {
-          throw AuthError('not login');
+          throw new AuthError('not login');
         }
         const ar = actionRole[action] || '';
         if (ar === ROLE.ADMIN) {
