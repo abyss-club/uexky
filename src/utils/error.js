@@ -1,6 +1,8 @@
-class AuthError extends Error {
-  constructor(...params) {
-    super(...params);
+import { ApolloError } from 'apollo-server-koa';
+
+class AuthError extends ApolloError {
+  constructor(message, ...params) {
+    super(message, 'UNAUTHENTICATED', ...params);
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, AuthError);
     }
@@ -9,9 +11,9 @@ class AuthError extends Error {
   }
 }
 
-class ParamsError extends Error {
-  constructor(...params) {
-    super(...params);
+class ParamsError extends ApolloError {
+  constructor(message, ...params) {
+    super(message, 'PARAMS_ERROR', ...params);
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, ParamsError);
     }
@@ -20,9 +22,9 @@ class ParamsError extends Error {
   }
 }
 
-class InternalError extends Error {
-  constructor(...params) {
-    super(...params);
+class InternalError extends ApolloError {
+  constructor(message, ...params) {
+    super(message, 'INTERNAL_ERROR', ...params);
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, InternalError);
     }
@@ -31,9 +33,9 @@ class InternalError extends Error {
   }
 }
 
-class PermissionError extends Error {
-  constructor(...params) {
-    super(...params);
+class PermissionError extends ApolloError {
+  constructor(message, ...params) {
+    super(message, 'FORBIDDEN', ...params);
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, PermissionError);
     }
@@ -42,9 +44,9 @@ class PermissionError extends Error {
   }
 }
 
-class NotFoundError extends Error {
-  constructor(...params) {
-    super(...params);
+class NotFoundError extends ApolloError {
+  constructor(message, ...params) {
+    super(message, 'NOT_FOUND', ...params);
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, NotFoundError);
     }
