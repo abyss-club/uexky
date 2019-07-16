@@ -10,5 +10,6 @@ const env = {
   API_DOMAIN: process.env.API_DOMAIN,
   PROTO: process.env.PROTO || 'http',
   PORT: process.env.PORT || 5000,
+  HOST: process.env.HOST || 'localhost',
 };
 export default env;
