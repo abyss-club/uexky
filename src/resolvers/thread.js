@@ -32,7 +32,7 @@ const Thread = {
   title: thread => thread.title,
   replies: async (thread, query, ctx) => {
     await ctx.limiter.take(query.limit);
-    const result = await PostModel.findThreadPosts({ thread, query });
+    const result = await PostModel.findThreadPosts({ threadId: thread.id, query });
     return result;
   },
   replyCount: async (thread) => {
