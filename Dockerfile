@@ -1,15 +1,15 @@
-FROM node:11.3-stretch
+FROM node:latest
 
-ADD package.json /usr/app/
-ADD yarn.lock /usr/app/
+WORKDIR /app
+ADD package.json ./
+ADD yarn.lock ./
 
-WORKDIR /usr/app
 RUN yarn
 
-ADD . /usr/app
+ADD . ./
 RUN yarn build
 
-ENV PORT=5000
+ENV PORT=
 ENV MONGODB_URI=
 ENV API_DOMAIN=
 ENV MAIN_DOMAIN=
