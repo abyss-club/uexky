@@ -18,7 +18,7 @@ const mockMailgun = (obj) => {
 };
 
 const sendAuthMail = (email, code) => new Promise(((resolve, reject) => {
-  const codeUrl = `${env.API_DOMAIN}/auth/?code=${code}`;
+  const codeUrl = `${env.PROTO}://${env.API_DOMAIN}/auth/?code=${code}`;
   const mail = {
     from: `Abyss <auth@${env.MAILGUN_DOMAIN}>`,
     to: email,
