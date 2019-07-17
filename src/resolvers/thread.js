@@ -30,7 +30,7 @@ const Thread = {
   mainTag: async thread => thread.getMainTag(),
   subTags: async thread => thread.getSubTags(),
   title: thread => thread.title,
-  replies: async (thread, query, ctx) => {
+  replies: async (thread, { query }, ctx) => {
     await ctx.limiter.take(query.limit);
     const result = await PostModel.findThreadPosts({ threadId: thread.id, query });
     return result;
