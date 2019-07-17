@@ -10,7 +10,7 @@ const Query = {
 
   thread: async (_obj, { id }, ctx) => {
     await ctx.limiter.take(1);
-    const thread = await ThreadModel.findById({ id });
+    const thread = await ThreadModel.findById({ threadId: id });
     return thread;
   },
 };
