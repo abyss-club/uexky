@@ -2,6 +2,8 @@ export default `
   extend type Query {
     # main tags
     mainTags: [String!]!
+    # recommend tags
+    recommended: [String!]!
     # Containing mainTags and tagTree.
     tags(query: String, limit: Int): [Tag]!
   }

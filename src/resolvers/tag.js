@@ -2,6 +2,7 @@ import TagModel from '~/models/tag';
 
 const Query = {
   mainTags: () => TagModel.getMainTags(),
+  recommended: () => TagModel.getMainTags(),
   tags: async (_obj, { query, limit = 10 }) => TagModel.findTags({ query, limit }),
 };
 
