@@ -25,7 +25,7 @@ test:
     POSTGRES_PASSWORD: ""
   stage: test
   script:
-    - yarn test models/config.test
+    - yarn test
 
 build:
   image: docker:stable
