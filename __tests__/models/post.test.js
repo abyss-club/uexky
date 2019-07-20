@@ -38,8 +38,8 @@ describe('publish post and read', () => {
     });
     const replyCount = await PostModel.getThreadReplyCount({ threadId: thread.id });
     expect(replyCount).toEqual(0);
-    const catelog = await PostModel.getThreadCatelog({ threadId: thread.id });
-    expect(catelog.length).toEqual(0);
+    const catalog = await PostModel.getThreadCatalog({ threadId: thread.id });
+    expect(catalog.length).toEqual(0);
   });
   it('new post', async () => {
     const input = {
@@ -119,12 +119,12 @@ describe('publish post and read', () => {
     const replyCount = await PostModel.getThreadReplyCount({ threadId: thread.id });
     expect(replyCount).toEqual(3);
   });
-  it('thread catelog', async () => {
-    const catelog = await PostModel.getThreadCatelog({ threadId: thread.id });
-    expect(catelog.length).toEqual(3);
-    expect(catelog[0].postId).toEqual(postIds[0].duid);
-    expect(catelog[1].postId).toEqual(postIds[1].duid);
-    expect(catelog[2].postId).toEqual(postIds[2].duid);
+  it('thread catalog', async () => {
+    const catalog = await PostModel.getThreadCatalog({ threadId: thread.id });
+    expect(catalog.length).toEqual(3);
+    expect(catalog[0].postId).toEqual(postIds[0].duid);
+    expect(catalog[1].postId).toEqual(postIds[1].duid);
+    expect(catalog[2].postId).toEqual(postIds[2].duid);
   });
   it('block thread', async () => {
     const modContext = await mockContext({
