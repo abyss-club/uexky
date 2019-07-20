@@ -40,7 +40,7 @@ const Thread = {
     return count;
   },
   catalog: async (thread) => {
-    const catalog = await PostModel.getThreadCatelog({ threadId: thread.id });
+    const catalog = await PostModel.getThreadCatalog({ threadId: thread.id });
     return catalog;
   },
 };

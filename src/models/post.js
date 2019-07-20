@@ -76,7 +76,7 @@ const PostModel = {
     return parseInt(rows[0].count || '0', 10);
   },
 
-  async getThreadCatelog({ threadId }) {
+  async getThreadCatalog({ threadId }) {
     const { rows } = await query(
       `SELECT id "postId", created_at "createdAt"
       FROM post WHERE thread_id=$1 ORDER BY id`,

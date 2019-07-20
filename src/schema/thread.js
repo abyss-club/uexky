@@ -47,7 +47,7 @@ export default `
   }
 
   type ThreadCatalogItem {
-    postId: [String!]
+    postId: String!
     createdAt: Time!
   }
 
