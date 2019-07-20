@@ -143,9 +143,11 @@ const PostModel = {
         raw.anonymousId && raw.anonymousId.suid, raw.content]);
       newPost = makePost(rows[0]);
       if (raw.quoteIds.length > 0) {
-        await Promise.all(raw.quoteIds.map(qid => txn.query(`INSERT
+        await Promise.all(raw.quoteIds.map(async (qid) => {
+          await txn.query(`INSERT
            INTO posts_quotes (quoter_id, quoted_id)
-           VALUES ($1, $2)`, [newPost.id.suid, qid.suid])));
+           VALUES ($1, $2)`, [newPost.id.suid, qid.suid]);
+        }));
         await NotificationModel.newQuotedNoti({
           txn,
           threadId: raw.threadId,
