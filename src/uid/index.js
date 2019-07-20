@@ -37,8 +37,11 @@ const Base64 = {
   },
 };
 
+const suidRegex = /^\d{11,}$/;
+const duidRegex = /^[0-9a-zA-Z-_]{6,10}$/;
+
 const display2storage = (duid) => {
-  if (typeof duid !== 'string' || duid.length < 6 || duid.length > 10) {
+  if (typeof duid !== 'string' || !duidRegex.test(duid)) {
     throw new Error(`Invalid uid display: ${duid}`);
   }
   const len = duid.length;
@@ -54,8 +57,6 @@ const storage2display = (suid) => {
   const len = raw.length;
   return [raw[len - 1], raw.substring(0, len - 1)].join('');
 };
-
-const suidRegex = /^\d{11,}$/;
 
 const UID = {
   parse(input) {
@@ -84,4 +85,4 @@ const UID = {
 };
 
 export default UID;
-export { Base64 };
+export { Base64, suidRegex, duidRegex };
