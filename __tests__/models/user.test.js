@@ -54,7 +54,7 @@ describe('user name', () => {
   it('name is unique', async () => {
     const auth = await UserModel.authContext({ email: 'test2@example.com' });
     const ctx = { auth };
-    await expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(InternalError);
+    await expect(UserModel.setName({ ctx, name: mockName })).rejects.toThrow(ParamsError);
   });
 });
 
@@ -116,7 +116,7 @@ describe('user tags', () => {
     expect(tags).toContain('SubD');
   });
   it('sync tag invalid', async () => {
-    await expect(UserModel.syncTags({ ctx, tags: ['SubC', 'SubX'] })).rejects.toThrow(InternalError);
+    await expect(UserModel.syncTags({ ctx, tags: ['SubC', 'SubX'] })).rejects.toThrow(ParamsError);
     const user = await UserModel.findByEmail({ email: mockEmail });
     const tags = await user.getTags();
     expect(tags.length).toEqual(3);
