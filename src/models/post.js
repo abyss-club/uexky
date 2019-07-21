@@ -38,7 +38,7 @@ const makePost = function makePost(raw) {
 const postSliceOpt = {
   select: 'SELECT * FROM post',
   before: before => `post.id < ${UID.parse(before).suid}`,
-  after: after => `post.id < ${UID.parse(after).suid}`,
+  after: after => `post.id > ${UID.parse(after).suid}`,
   order: 'ORDER BY post.id',
   desc: false,
   name: 'posts',
