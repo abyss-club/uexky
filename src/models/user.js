@@ -2,7 +2,6 @@ import { query, doTransaction } from '~/utils/pg';
 import { AuthError, ParamsError, PermissionError } from '~/utils/error';
 import validator from '~/utils/validator';
 
-
 const makeUser = function makeUser(raw) {
   const getTagsSql = 'SELECT tag_name FROM users_tags WHERE user_id=$1';
   return {
@@ -50,12 +49,18 @@ const actionRole = {
 };
 
 const newUser = async (email) => {
-  const sql = 'INSERT INTO public.user (email) VALUES ($1) RETURNING *';
+  const userSql = 'INSERT INTO public.user (email) VALUES ($1) RETURNING *';
+  const tagSql = 'INSERT INTO users_tags (user_id, tag_name) VALUES ($1, $2)';
+  const mainTagSql = 'SELECT name FROM tag WHERE is_main=true ORDER BY created_at';
   const values = [email];
-  const { rows } = await query(sql, values);
+  const { rows } = await query(userSql, values);
   // TODO: send welcome message
   const [user] = rows;
-  return user;
+
+  // set default tags by main tags
+  const { rows: tags } = await query(mainTagSql);
+  await Promise.all(tags.map(tag => query(tagSql, [user.id, tag.name])));
+  return makeUser(user);
 };
 
 const UserModel = {
