@@ -1,17 +1,18 @@
 import { query, doTransaction } from '~/utils/pg';
 import { AuthError, ParamsError, PermissionError } from '~/utils/error';
 import validator from '~/utils/validator';
-import UID from '~/uid';
 
 
 const makeUser = function makeUser(raw) {
-  const getTagsSql = 'SELECT tag_name FROM users_tags WHERE user_id=$1';
   return {
     id: raw.id,
     name: raw.name,
     email: raw.email,
     async getTags() {
-      const { rows } = await query(getTagsSql, [raw.id]);
+      const { rows } = await query(
+        'SELECT tag_name FROM users_tags WHERE user_id=$1',
+        [raw.id],
+      );
       return (rows || []).map(row => row.tag_name);
     },
     role: raw.role,
@@ -49,24 +50,10 @@ const actionRole = {
   [ACTION.EDIT_SETTING]: 'admin',
 };
 
-const newUser = async (email) => {
-  const notiId = await UID.new();
-  const sql = `
-    INSERT INTO public.user
-    (email, last_read_system_noti, last_read_replied_noti, last_read_quoted_noti)
-    VALUES ($1, $2, $2, $2) RETURNING *`;
-  const values = [email, notiId.suid];
-  const { rows } = await query(sql, values);
-  // TODO: send welcome message
-  const [user] = rows;
-  return user;
-};
-
 const UserModel = {
 
   async findByEmail({ email }) {
-    const sql = 'SELECT * FROM public.user WHERE email=$1';
-    const { rows } = await query(sql, [email]);
+    const { rows } = await query('SELECT * FROM public.user WHERE email=$1', [email]);
     if (rows.length !== 0) {
       return makeUser(rows[0]);
     }
@@ -90,7 +77,11 @@ const UserModel = {
     }
     let user = await this.findByEmail({ email });
     if (!user) { // new user
-      user = await newUser(email);
+      const text = 'INSERT INTO public.user (email) VALUES ($1) RETURNING *';
+      const values = [email];
+      const { rows } = await query(text, values);
+      // TODO: send welcome message
+      [user] = rows;
     }
     return {
       isSignedIn: true,
@@ -127,49 +118,35 @@ const UserModel = {
     if ((user.name || '') !== '') {
       throw new ParamsError('Name can only be set once.');
     }
-
-    const sql = 'UPDATE public.user SET name=$1 WHERE email=$2';
-    try {
-      await query(sql, [name, user.email]);
-    } catch (e) {
-      if (e.message.includes('duplicate key')) {
-        throw new ParamsError('duplicate name');
-      }
-      throw e;
-    }
+    await query('UPDATE public.user SET name=$1 WHERE email=$2', [name, user.email]);
     user.name = name;
     return user;
   },
 
   async addSubbedTag({ ctx, tag }) {
     const user = ctx.auth.signedInUser();
-    const sql = 'INSERT INTO users_tags (user_id, tag_name) VALUES ($1, $2)';
-    await query(sql, [user.id, tag]);
+    await query(
+      'INSERT INTO users_tags (user_id, tag_name) VALUES ($1, $2)',
+      [user.id, tag],
+    );
   },
 
   async delSubbedTag({ ctx, tag }) {
     const user = ctx.auth.signedInUser();
-    const sql = 'DELETE FROM users_tags WHERE user_id=$1 AND tag_name=$2';
-    await query(sql, [user.id, tag]);
+    await query(
+      'DELETE FROM users_tags WHERE user_id=$1 AND tag_name=$2',
+      [user.id, tag],
+    );
   },
 
   async syncTags({ ctx, tags }) {
     const user = ctx.auth.signedInUser();
     await doTransaction(async (txn) => {
       await txn.query('DELETE FROM users_tags WHERE user_id=$1', [user.id]);
-      // find valid tags
-      const { rows } = await txn.query(
-        'SELECT count(*) FROM tag WHERE name=ANY($1)', [tags],
-      );
-      if (parseInt(rows[0].count, 10) !== tags.length) {
-        throw new ParamsError('invalid tags');
-      }
-      await Promise.all(tags.map(async (tag) => {
-        await txn.query(`INSERT INTO
-          users_tags (user_id, tag_name)
-          VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-        [user.id, tag]);
-      }));
+      await Promise.all(tags.map(tag => txn.query(`INSERT INTO
+        users_tags (user_id, tag_name)
+        VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+      [user.id, tag])));
     });
   },
 
