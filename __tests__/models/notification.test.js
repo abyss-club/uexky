@@ -83,7 +83,7 @@ describe('test notification', () => {
   });
   it('quoted notification', async () => {
     const count = await NotificationModel.getUnreadCount({
-      ctx, type: 'replied',
+      ctx, type: 'quoted',
     });
     expect(count).toEqual(1);
     const { quoted, sliceInfo } = await NotificationModel.findNotiSlice({

@@ -38,7 +38,7 @@ const query = async (text, params, client) => {
       result = await pgPool.query(text, params);
     }
   } catch (e) {
-    log.error(`pg query '${text}' error: ${e.stack}`);
+    log.error(`pg query '${text}' with params ${params}, error: ${e.stack}`);
     throw new InternalError(`pg query error: ${e.message}`);
   }
   return result || {};
