@@ -29,7 +29,7 @@ const makeNoti = (raw, type, user) => {
   const base = {
     id: raw.id,
     key: raw.key,
-    eventTime: raw.created_at,
+    eventTime: raw.updated_at,
     hasRead: user.lastReadNoti[type] >= raw.id,
   };
   if (type === NOTI_TYPES.SYSTEM) {
@@ -73,10 +73,12 @@ const NotificationModel = {
       throw new ParamsError(`unknown notification type: ${type}`);
     }
     const user = ctx.auth.signedInUser();
-    const { rows } = await query(
-      'SELECT count(*) FROM notification WHERE id > $1 AND type=$2',
-      [user.lastReadNoti[type], type],
-    );
+    const sql = `
+      SELECT count(*) FROM notification
+      WHERE (send_to=$1 OR send_to_group=$2)
+      AND id > $3 AND type=$4 AND updated_at >= $5`;
+    const { rows } = await query(sql, [user.id, USER_GROUPS.ALL_USER,
+      user.lastReadNoti[type], type, user.createdAt]);
     return parseInt(rows[0].count, 10);
   },
 
@@ -87,18 +89,16 @@ const NotificationModel = {
     const user = ctx.auth.signedInUser();
     const opt = {
       ...notiSliceOpt,
-      where: 'WHERE (send_to=$1 OR send_to_group=$2) AND type=$3',
-      params: [user.id, USER_GROUPS.ALL_USER, type],
+      where: 'WHERE (send_to=$1 OR send_to_group=$2) AND type=$3 AND updated_at >= $4',
+      params: [user.id, USER_GROUPS.ALL_USER, type, user.createdAt],
       name: type,
       make: raw => makeNoti(raw, type, user),
     };
     const slice = await querySlice(sq, opt);
-    if (slice.sliceInfo.lastCursor !== '') {
-      await query(
-        `UPDATE public.user SET "last_read_${type}_noti"=$1`,
-        [slice.sliceInfo.lastCursor],
-      );
-    }
+    await query(
+      `UPDATE public.user SET "last_read_${type}_noti"=$1`,
+      [slice.sliceInfo.lastCursor],
+    );
     return slice;
   },
 
