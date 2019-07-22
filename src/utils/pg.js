@@ -24,8 +24,8 @@ const handleError = (e) => {
   if (customErrors.has(name)) {
     throw e;
   } else {
-    log.error('transcation error', e.stack);
-    throw new InternalError(`pg transcation error: ${e.stack}`);
+    log.error(`transcation error: ${e.stack}`);
+    throw new InternalError(`pg transcation error: ${e.message}`);
   }
 };
 
@@ -38,7 +38,8 @@ const query = async (text, params, client) => {
       result = await pgPool.query(text, params);
     }
   } catch (e) {
-    throw new InternalError(`pg query '${text}' error: ${e.stack}`);
+    log.error(`pg query '${text}' error: ${e.stack}`);
+    throw new InternalError(`pg query error: ${e.message}`);
   }
   return result || {};
 };
