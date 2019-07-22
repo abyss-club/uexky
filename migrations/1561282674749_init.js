@@ -3,12 +3,15 @@ exports.shorthands = undefined;
 exports.up = (pgm) => {
   pgm.createTable('user', {
     id: { type: 'integer', primaryKey: true, generated: { precedence: 'ALWAYS', increment: 1 } },
+    created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+    updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
+
     email: { type: 'text', notNull: true, unique: true },
     name: { type: 'text', unique: true },
     role: { type: 'text', notNull: true, default: '' },
-    last_read_system_noti: { type: 'bigint', notNull: true },
-    last_read_replied_noti: { type: 'bigint', notNull: true },
-    last_read_quoted_noti: { type: 'bigint', notNull: true },
+    last_read_system_noti: { type: 'integer', notNull: true, default: 0 },
+    last_read_replied_noti: { type: 'integer', notNull: true, default: 0 },
+    last_read_quoted_noti: { type: 'integer', notNull: true, default: 0 },
   });
   pgm.createIndex('user', ['email']);
   pgm.createIndex('user', ['name']);
@@ -86,7 +89,7 @@ exports.up = (pgm) => {
     name: { type: 'text', notNull: true, references: 'tag(name)' },
     belongs_to: { type: 'text', notNull: true, references: 'tag(name)' },
   });
-  pgm.createIndex('tag', ['name']);
+  pgm.createIndex('tags_main_tags', ['name']);
   pgm.createIndex('tags_main_tags', ['name', 'belongs_to'], { unique: true });
 
   pgm.createTable('threads_tags', {
@@ -108,7 +111,7 @@ exports.up = (pgm) => {
   pgm.createIndex('users_tags', ['user_id', 'tag_name'], { unique: true });
 
   pgm.createTable('notification', {
-    id: { type: 'bigint', primaryKey: true },
+    id: { type: 'integer', primaryKey: true, generated: { precedence: 'ALWAYS', increment: 1 } },
     key: { type: 'text', unique: true },
     created_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
     updated_at: { type: 'timestamp with time zone', notNull: true, default: pgm.func('now()') },
@@ -118,6 +121,7 @@ exports.up = (pgm) => {
     content: { type: 'jsonb' },
   });
   pgm.createIndex('notification', ['type']);
+  pgm.createIndex('notification', ['created_at']);
   pgm.createIndex('notification', ['send_to']);
   pgm.createIndex('notification', ['send_to_group']);
 

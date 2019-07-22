@@ -2,7 +2,6 @@ import NotificationModel, { USER_GROUPS } from '~/models/notification';
 import ThreadModel from '~/models/thread';
 import PostModel from '~/models/post';
 import { query } from '~/utils/pg';
-import { suidRegex, duidRegex } from '~/uid';
 import startPg, { migrate } from '../__utils__/pgServer';
 import mockContext from '../__utils__/context';
 
@@ -73,10 +72,10 @@ describe('test notification', () => {
     const { replied, sliceInfo } = await NotificationModel.findNotiSlice({
       ctx, type: 'replied', query: { after: '', limit: 5 },
     });
-    expect(sliceInfo.firstCursor).toMatch(duidRegex);
-    expect(sliceInfo.lastCursor).toMatch(duidRegex);
+    expect(sliceInfo.firstCursor).toEqual('1');
+    expect(sliceInfo.lastCursor).toEqual('1');
     expect(replied.length).toEqual(1);
-    expect(replied[0].id.toString()).toEqual(thread.id.suid.toString());
+    expect(replied[0].id).toEqual(1);
     expect(replied[0].key).toEqual(`replied:${thread.id.duid}`);
     expect(replied[0].type).toEqual('replied');
     expect(replied[0].hasRead).toBeFalsy();
@@ -90,10 +89,10 @@ describe('test notification', () => {
     const { quoted, sliceInfo } = await NotificationModel.findNotiSlice({
       ctx, type: 'quoted', query: { after: '', limit: 5 },
     });
-    expect(sliceInfo.firstCursor).toMatch(duidRegex);
-    expect(sliceInfo.lastCursor).toMatch(duidRegex);
+    expect(sliceInfo.firstCursor).toEqual('2');
+    expect(sliceInfo.lastCursor).toEqual('2');
     expect(quoted.length).toEqual(1);
-    expect(quoted[0].id).toMatch(suidRegex);
+    expect(quoted[0].id).toEqual(2);
     expect(quoted[0].key).toEqual(
       `quoted:${post1.id.duid}:${post2.id.duid}`,
     );
@@ -128,15 +127,15 @@ describe('test notification', () => {
     const { system, sliceInfo } = await NotificationModel.findNotiSlice({
       ctx, type: 'system', query: { after: '', limit: 5 },
     });
-    expect(sliceInfo.firstCursor).toMatch(duidRegex);
-    expect(sliceInfo.lastCursor).toMatch(duidRegex);
+    expect(sliceInfo.firstCursor).toEqual('5');
+    expect(sliceInfo.lastCursor).toEqual('4');
     expect(system.length).toEqual(2);
-    expect(system[0].id).toMatch(suidRegex);
+    expect(system[0].id).toEqual(5);
     expect(system[0].key).toMatch(/system:[0-9a-zA-Z-_]{6,}/);
     expect(system[0].hasRead).toBeFalsy();
     expect(system[0].title).toEqual(noti2.title);
     expect(system[0].content).toEqual(noti2.content);
-    expect(system[1].id).toMatch(suidRegex);
+    expect(system[1].id).toEqual(4);
     expect(system[1].key).toMatch(/system:[0-9a-zA-Z-_]{6,}/);
     expect(system[1].hasRead).toBeFalsy();
     expect(system[1].title).toEqual(noti1.title);
