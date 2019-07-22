@@ -1,13 +1,12 @@
 import { query, doTransaction } from '~/utils/pg';
 import { AuthError, ParamsError, PermissionError } from '~/utils/error';
 import validator from '~/utils/validator';
-import UID from '~/uid';
-
 
 const makeUser = function makeUser(raw) {
   const getTagsSql = 'SELECT tag_name FROM users_tags WHERE user_id=$1';
   return {
     id: raw.id,
+    createdAt: raw.created_at,
     name: raw.name,
     email: raw.email,
     async getTags() {
@@ -50,16 +49,18 @@ const actionRole = {
 };
 
 const newUser = async (email) => {
-  const notiId = await UID.new();
-  const sql = `
-    INSERT INTO public.user
-    (email, last_read_system_noti, last_read_replied_noti, last_read_quoted_noti)
-    VALUES ($1, $2, $2, $2) RETURNING *`;
-  const values = [email, notiId.suid];
-  const { rows } = await query(sql, values);
+  const userSql = 'INSERT INTO public.user (email) VALUES ($1) RETURNING *';
+  const tagSql = 'INSERT INTO users_tags (user_id, tag_name) VALUES ($1, $2)';
+  const mainTagSql = 'SELECT name FROM tag WHERE is_main=true ORDER BY created_at';
+  const values = [email];
+  const { rows } = await query(userSql, values);
   // TODO: send welcome message
   const [user] = rows;
-  return user;
+
+  // set default tags by main tags
+  const { rows: tags } = await query(mainTagSql);
+  await Promise.all(tags.map(tag => query(tagSql, [user.id, tag.name])));
+  return makeUser(user);
 };
 
 const UserModel = {
@@ -127,7 +128,6 @@ const UserModel = {
     if ((user.name || '') !== '') {
       throw new ParamsError('Name can only be set once.');
     }
-
     const sql = 'UPDATE public.user SET name=$1 WHERE email=$2';
     try {
       await query(sql, [name, user.email]);
@@ -155,6 +155,9 @@ const UserModel = {
 
   async syncTags({ ctx, tags }) {
     const user = ctx.auth.signedInUser();
+    const sql = `INSERT INTO
+                 users_tags (user_id, tag_name)
+                 VALUES ($1, $2) ON CONFLICT DO NOTHING`;
     await doTransaction(async (txn) => {
       await txn.query('DELETE FROM users_tags WHERE user_id=$1', [user.id]);
       // find valid tags
@@ -165,10 +168,7 @@ const UserModel = {
         throw new ParamsError('invalid tags');
       }
       await Promise.all(tags.map(async (tag) => {
-        await txn.query(`INSERT INTO
-          users_tags (user_id, tag_name)
-          VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-        [user.id, tag]);
+        await txn.query(sql, [user.id, tag]);
       }));
     });
   },

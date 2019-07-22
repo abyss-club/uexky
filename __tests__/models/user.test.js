@@ -18,9 +18,15 @@ afterAll(async () => {
 describe('user object', () => {
   const mockEmail = 'test1@example.com';
   it('new user context', async () => {
+    const tagSql = 'INSERT INTO tag (name, is_main) VALUES ($1, $2)';
+    await query(tagSql, ['MainTag', true]);
+
     const auth = await UserModel.authContext({ email: mockEmail });
     const user = auth.signedInUser();
     expect(user.email).toEqual(mockEmail);
+    const userTags = await user.getTags();
+    expect(userTags.length).toEqual(1);
+    expect(userTags[0]).toEqual('MainTag');
   });
   it('user context', async () => {
     const auth = await UserModel.authContext({ email: mockEmail });
@@ -68,9 +74,11 @@ describe('user tags', () => {
     { name: 'SubC', isMain: false },
     { name: 'SubD', isMain: false },
   ];
-  const mockEmail = 'test@example.com';
+  const mockEmail = 'test1@example.com';
   let ctx;
   it('build data', async () => {
+    await query('DELETE FROM users_tags');
+    await query('DELETE FROM tag');
     await Promise.all(tagsInDb.map(tag => query(
       'INSERT INTO tag (name, is_main) VALUES ($1, $2)',
       [tag.name, tag.isMain],
