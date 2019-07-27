@@ -134,6 +134,9 @@ const PostModel = {
           txn, userId: user.id, threadId: raw.threadId,
         });
       } else {
+        if (!user.name) {
+          throw new ParamsError('you don\'t have a name');
+        }
         raw.userName = user.name;
       }
       const { rows } = await txn.query(`INSERT INTO post
