@@ -1,4 +1,4 @@
-import { NotFoundError } from '~/utils/error';
+import { NotFoundError, ParamsError } from '~/utils/error';
 import { query, doTransaction } from '~/utils/pg';
 import { ACTION } from '~/models/user';
 import AidModel from '~/models/aid';
@@ -91,6 +91,9 @@ const ThreadModel = {
       if (input.anonymous) {
         raw.anonymousId = await AidModel.getAid({ txn, userId: user.id, threadId: raw.id });
       } else {
+        if (!user.name) {
+          throw new ParamsError('you don\'t have a name');
+        }
         raw.userName = user.name;
       }
       const { rows } = await txn.query(`INSERT INTO thread 

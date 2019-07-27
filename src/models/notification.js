@@ -9,7 +9,15 @@ const NOTI_TYPES = {
   REPLIED: 'replied',
   QUOTED: 'quoted',
 };
-const isValidType = type => (NOTI_TYPES[type] || '') === '';
+const isValidType = (type) => {
+  const types = Object.keys(NOTI_TYPES);
+  for (let i = 0; i < types.length; i += 1) {
+    if (NOTI_TYPES[types[i]] === type) {
+      return true;
+    }
+  }
+  return false;
+};
 
 // content
 // system {
@@ -95,10 +103,12 @@ const NotificationModel = {
       make: raw => makeNoti(raw, type, user),
     };
     const slice = await querySlice(sq, opt);
-    await query(
-      `UPDATE public.user SET "last_read_${type}_noti"=$1`,
-      [slice.sliceInfo.lastCursor],
-    );
+    if (slice.sliceInfo.lastCursor !== '') {
+      await query(
+        `UPDATE public.user SET "last_read_${type}_noti"=$1`,
+        [parseInt(slice.sliceInfo.lastCursor, 10)],
+      );
+    }
     return slice;
   },
 
@@ -156,4 +166,4 @@ const NotificationModel = {
 };
 
 export default NotificationModel;
-export { NOTI_TYPES, USER_GROUPS };
+export { NOTI_TYPES, USER_GROUPS, isValidType };
