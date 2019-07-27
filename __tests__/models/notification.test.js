@@ -1,4 +1,6 @@
-import NotificationModel, { USER_GROUPS } from '~/models/notification';
+import NotificationModel, {
+  USER_GROUPS, NOTI_TYPES, isValidType,
+} from '~/models/notification';
 import ThreadModel from '~/models/thread';
 import PostModel from '~/models/post';
 import { query } from '~/utils/pg';
@@ -63,6 +65,10 @@ describe('test notification', () => {
         quoteIds: [post1.id],
       },
     });
+  });
+  it('isValidType', () => {
+    expect(isValidType(NOTI_TYPES.SYSTEM)).toBeTruthy();
+    expect(isValidType('invalid')).toBeFalsy();
   });
   it('replied notification', async () => {
     const count = await NotificationModel.getUnreadCount({
