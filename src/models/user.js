@@ -1,6 +1,8 @@
 import { query, doTransaction } from '~/utils/pg';
 import { AuthError, ParamsError, PermissionError } from '~/utils/error';
 import validator from '~/utils/validator';
+import NotificationModel from '~/models/notification';
+import welcome from '~/models/welcome';
 
 const makeUser = function makeUser(raw) {
   const getTagsSql = 'SELECT tag_name FROM users_tags WHERE user_id=$1';
@@ -54,8 +56,9 @@ const newUser = async (email) => {
   const mainTagSql = 'SELECT name FROM tag WHERE is_main=true ORDER BY created_at';
   const values = [email];
   const { rows } = await query(userSql, values);
-  // TODO: send welcome message
   const [user] = rows;
+  // send welcome message
+  await NotificationModel.newSystemNoti({ sendTo: user.id, ...welcome });
 
   // set default tags by main tags
   const { rows: tags } = await query(mainTagSql);

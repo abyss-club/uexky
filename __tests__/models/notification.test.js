@@ -30,13 +30,14 @@ describe('test notification', () => {
       'INSERT INTO tag (name, is_main) VALUES ($1, $2)',
       ['MainA', true],
     );
+    // tips: there is a welcome message
     ctx = await mockContext(mockUser);
     const unread = {
       system: await NotificationModel.getUnreadCount({ ctx, type: 'system' }),
       replied: await NotificationModel.getUnreadCount({ ctx, type: 'replied' }),
       quoted: await NotificationModel.getUnreadCount({ ctx, type: 'quoted' }),
     };
-    expect(unread).toEqual({ system: 0, replied: 0, quoted: 0 });
+    expect(unread).toEqual({ system: 1, replied: 0, quoted: 0 });
     thread = await ThreadModel.new({
       ctx,
       thread: {
@@ -78,10 +79,10 @@ describe('test notification', () => {
     const { replied, sliceInfo } = await NotificationModel.findNotiSlice({
       ctx, type: 'replied', query: { after: '', limit: 5 },
     });
-    expect(sliceInfo.firstCursor).toEqual('1');
-    expect(sliceInfo.lastCursor).toEqual('1');
+    expect(sliceInfo.firstCursor).toEqual('2');
+    expect(sliceInfo.lastCursor).toEqual('2');
     expect(replied.length).toEqual(1);
-    expect(replied[0].id).toEqual(1);
+    expect(replied[0].id).toEqual(2);
     expect(replied[0].key).toEqual(`replied:${thread.id.duid}`);
     expect(replied[0].type).toEqual('replied');
     expect(replied[0].hasRead).toBeFalsy();
@@ -95,10 +96,10 @@ describe('test notification', () => {
     const { quoted, sliceInfo } = await NotificationModel.findNotiSlice({
       ctx, type: 'quoted', query: { after: '', limit: 5 },
     });
-    expect(sliceInfo.firstCursor).toEqual('2');
-    expect(sliceInfo.lastCursor).toEqual('2');
+    expect(sliceInfo.firstCursor).toEqual('3');
+    expect(sliceInfo.lastCursor).toEqual('3');
     expect(quoted.length).toEqual(1);
-    expect(quoted[0].id).toEqual(2);
+    expect(quoted[0].id).toEqual(3);
     expect(quoted[0].key).toEqual(
       `quoted:${post1.id.duid}:${post2.id.duid}`,
     );
@@ -128,20 +129,21 @@ describe('test notification', () => {
       replied: await NotificationModel.getUnreadCount({ ctx, type: 'replied' }),
       quoted: await NotificationModel.getUnreadCount({ ctx, type: 'quoted' }),
     };
-    expect(unread).toEqual({ system: 2, replied: 0, quoted: 0 });
+    // tips: welcome message, so the id expect to [6, 5, 1]
+    expect(unread).toEqual({ system: 3, replied: 0, quoted: 0 });
 
     const { system, sliceInfo } = await NotificationModel.findNotiSlice({
       ctx, type: 'system', query: { after: '', limit: 5 },
     });
-    expect(sliceInfo.firstCursor).toEqual('5');
-    expect(sliceInfo.lastCursor).toEqual('4');
-    expect(system.length).toEqual(2);
-    expect(system[0].id).toEqual(5);
+    expect(sliceInfo.firstCursor).toEqual('6');
+    expect(sliceInfo.lastCursor).toEqual('1');
+    expect(system.length).toEqual(3);
+    expect(system[0].id).toEqual(6);
     expect(system[0].key).toMatch(/system:[0-9a-zA-Z-_]{6,}/);
     expect(system[0].hasRead).toBeFalsy();
     expect(system[0].title).toEqual(noti2.title);
     expect(system[0].content).toEqual(noti2.content);
-    expect(system[1].id).toEqual(4);
+    expect(system[1].id).toEqual(5);
     expect(system[1].key).toMatch(/system:[0-9a-zA-Z-_]{6,}/);
     expect(system[1].hasRead).toBeFalsy();
     expect(system[1].title).toEqual(noti1.title);
