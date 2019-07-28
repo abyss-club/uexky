@@ -188,7 +188,7 @@ describe('Testing replying a thread', () => {
     });
     const { data: repData, errors: repErrors } = repResult;
     expect(repErrors).toBeUndefined();
-    expect(repData.unreadNotiCount).toEqual({ system: 0, replied: 1, quoted: 1 });
+    expect(repData.unreadNotiCount).toEqual({ system: 1, replied: 1, quoted: 1 });
     expect(repData.notification.quoted).toBeNull();
     expect(repData.notification.replied[0].id).toEqual(`replied:${threadId}`);
     expect(repData.notification.replied[0].type).toEqual('replied');
@@ -202,7 +202,7 @@ describe('Testing replying a thread', () => {
     });
     const { data: quoData, errors: quoErrors } = quoResult;
     expect(quoErrors).toBeUndefined();
-    expect(quoData.unreadNotiCount).toEqual({ system: 0, replied: 0, quoted: 1 });
+    expect(quoData.unreadNotiCount).toEqual({ system: 1, replied: 0, quoted: 1 });
     expect(quoData.notification.replied).toBeNull();
     expect(quoData.notification.quoted[0].id).toEqual(`quoted:${postId}:${replyId}`);
     expect(quoData.notification.quoted[0].type).toEqual('quoted');
