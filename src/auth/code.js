@@ -16,7 +16,7 @@ const expireTime = {
 };
 
 // Code = {
-//   addToAuth(email): send to login mail to email address, with link incluced code
+//   addToAuth(email): send to login mail to email address, with link included code
 //   getEmailByCode(authCode): read code, find out which email want to login
 // }
 // In redis:

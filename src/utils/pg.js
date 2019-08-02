@@ -10,7 +10,7 @@ const connectDb = async (pgUri) => {
   pgPool = new Pool({ connectionString: pgUri });
   pgPool.on('error', (error) => {
     log.error('Unexpected error on idle client', error.stack);
-    throw new InternalError(`Postgres client error: ${error.message}`);
+    throw new InternalError(`Pg client error: ${error.message}`);
   });
   return pgPool;
 };
@@ -24,8 +24,8 @@ const handleError = (error) => {
   if (customErrors.has(name)) {
     throw error;
   } else {
-    log.error(`transcation error: ${error.stack}`);
-    throw new InternalError(`pg transcation error: ${error.message}`);
+    log.error(`Transaction error: ${error.stack}`);
+    throw new InternalError(`Pg transaction error: ${error.message}`);
   }
 };
 
@@ -39,16 +39,16 @@ const query = async (text, params, client) => {
     }
   } catch (error) {
     log.error(`pg query '${text}' with params ${params}, error: ${error.stack}`);
-    throw new InternalError(`pg query error: ${error.message}`);
+    throw new InternalError(`Pg query error: ${error.message}`);
   }
   return result || {};
 };
 
-const doTransaction = async (transcation) => {
+const doTransaction = async (transaction) => {
   const client = await pgPool.connect();
   try {
     await client.query('BEGIN');
-    await transcation(client);
+    await transaction(client);
     await client.query('COMMIT');
   } catch (error) {
     await client.query('ROLLBACK');

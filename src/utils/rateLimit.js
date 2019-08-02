@@ -32,7 +32,7 @@ async function createSubRateLimiter(config, forMutation, ip, email) {
       }
       const remaining = redis.decrby(key, cost);
       if (remaining < 0) {
-        throw new Error('rate limit exceeded');
+        throw new Error('Rate limit exceeded.');
       }
     },
   };

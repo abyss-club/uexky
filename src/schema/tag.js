@@ -1,18 +1,24 @@
 export default `
   extend type Query {
-    # main tags
+    # Main Tags.
     mainTags: [String!]!
-    # recommend tags
+    # Tags that are recommended.
     recommended: [String!]!
-    # Containing mainTags and tagTree.
-    tags(query: String, limit: Int): [Tag]!
+    # Searching tags by keyword.
+    tags(
+      # Search keyword.
+      query: String,
+      # Amount of tags returned.
+      limit: Int,
+    ): [Tag]!
   }
 
   type Tag {
-    # tag's name
+    # Name of tag.
     name: String!
+    # The tag is a Main Tag if true, Sub Tag otherwise.
     isMain: Boolean!
-    # belongsTo which main tag
+    # The tag which this tag belongs to.
     belongsTo: [String!]!
   }
 `;

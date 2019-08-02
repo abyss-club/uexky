@@ -27,7 +27,7 @@ const Base64 = {
     return codes.reverse().join('');
   },
   randomString(len) {
-    if (Number.isNaN(len) || len < 1) throw new Error('Invalid length');
+    if (Number.isNaN(len) || len < 1) throw new Error('Invalid length.');
     const str = [];
     const getRandomInt = () => Math.floor(Math.random() * this.code.length);
     for (let i = 0; i < len; i += 1) {
@@ -75,7 +75,7 @@ const UID = {
     } if (typeof input === 'object' && (input || {}).type === 'UID') {
       return input;
     }
-    throw new ParamsError(`unknown value: ${input}`);
+    throw new ParamsError(`Unknown value: ${input}`);
   },
   async new() {
     const suid = await newSuid();
