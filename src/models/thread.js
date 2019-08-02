@@ -56,7 +56,7 @@ const ThreadModel = {
     const id = UID.parse(threadId);
     const { rows } = await query('SELECT * FROM thread WHERE id=$1', [id.suid], txn);
     if ((rows || []).length === 0) {
-      throw new NotFoundError(`cant find thread ${threadId}`);
+      throw new NotFoundError(`Thread ${threadId} not found.`);
     }
     return makeThread(rows[0]);
   },
@@ -92,11 +92,11 @@ const ThreadModel = {
         raw.anonymousId = await AidModel.getAid({ txn, userId: user.id, threadId: raw.id });
       } else {
         if (!user.name) {
-          throw new ParamsError('you don\'t have a name');
+          throw new ParamsError('Name not yet set.');
         }
         raw.userName = user.name;
       }
-      const { rows } = await txn.query(`INSERT INTO thread 
+      const { rows } = await txn.query(`INSERT INTO thread
         (id, anonymous, user_id, user_name, anonymous_id, title, content)
         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [raw.id.suid, raw.anonymous, raw.userId, raw.userName,

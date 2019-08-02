@@ -43,7 +43,7 @@ export default `
     # Time when a notify event triggers. E.g. The time when a system event is
     # announced from the server.
     eventTime: Time!
-    # The nofitication is read or not.
+    # The notification is read or not.
     hasRead: Boolean!
     # Notification title.
     title: String!
@@ -59,7 +59,7 @@ export default `
     type: String!
     # Time when a notify event triggers. E.g. The time when a thread is replied.
     eventTime: Time!
-    # The nofitication is read or not.
+    # The notification is read or not.
     hasRead: Boolean!
     # The thread object that is replied.
     thread: Thread!
@@ -74,8 +74,9 @@ export default `
     id: String!
     # Type of Notification. "system", "replied" or "quoted".
     type: String!
-    # Time when a notify event triggers. E.g. The time when a post is quoted.
+    # Timestamp when a notify event triggers. E.g. When a post is quoted.
     eventTime: Time!
+    # The notification is read or not.
     hasRead: Boolean!
     # The thread object that is quoted in.
     thread: Thread!

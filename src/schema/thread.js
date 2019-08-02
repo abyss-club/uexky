@@ -34,19 +34,27 @@ export default `
     author: String!
     # Default to '无题'.
     title: String
+    # Markdown formatted content.
     content: String!
     # Only one mainTag is allowed.
     mainTag: String!
     # Optional, maximum of 4.
     subTags: [String!]
+    # Replied posts.
     replies(query: SliceQuery!): PostSlice!
+    # Amount of posts replied.
     replyCount: Int!
+    # A list of all posts replied in the thread. Sorted by timestamp.
     catalog: [ThreadCatalogItem!]
+    # Thread is blocked.
     blocked: Boolean!
+    # Thread is locked.
     locked: Boolean!
   }
 
+  # The ID and timestamp of post replied in the thread.
   type ThreadCatalogItem {
+    # The ID of post.
     postId: String!
     createdAt: Time!
   }
