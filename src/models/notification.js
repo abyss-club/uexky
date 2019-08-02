@@ -10,13 +10,8 @@ const NOTI_TYPES = {
   QUOTED: 'quoted',
 };
 const isValidType = (type) => {
-  const types = Object.keys(NOTI_TYPES);
-  for (let i = 0; i < types.length; i += 1) {
-    if (NOTI_TYPES[types[i]] === type) {
-      return true;
-    }
-  }
-  return false;
+  const types = Object.values(NOTI_TYPES);
+  return types.includes(type);
 };
 
 // content

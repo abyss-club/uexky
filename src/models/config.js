@@ -29,7 +29,7 @@ const ConfigModel = {
     const results = await query(
       'SELECT rate_limit "rateLimit", rate_cost "rateCost" from config where id = 1',
     );
-    if (results.rows.length < 1) {
+    if (results.rows.length === 0) {
       return configSchema.validate({}).value;
     }
     return results.rows[0];

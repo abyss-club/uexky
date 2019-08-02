@@ -34,8 +34,8 @@ const Code = {
     const redis = getRedis();
     try {
       await redis.set(code, email, 'EX', expireTime.code);
-    } catch (e) {
-      log.error('set redis error', e);
+    } catch (redisErr) {
+      log.error('set redis error', redisErr);
     }
     await sendAuthMail(email, code);
     return code;
