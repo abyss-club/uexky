@@ -134,11 +134,11 @@ const UserModel = {
     const sql = 'UPDATE public.user SET name=$1 WHERE email=$2';
     try {
       await query(sql, [name, user.email]);
-    } catch (e) {
-      if (e.message.includes('duplicate key')) {
+    } catch (error) {
+      if (error.message.includes('duplicate key')) {
         throw new ParamsError('duplicate name');
       }
-      throw e;
+      throw error;
     }
     user.name = name;
     return user;

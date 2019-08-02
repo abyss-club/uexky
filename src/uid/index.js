@@ -6,10 +6,10 @@ const Base64 = {
   // Convert 2-codes base64 string to 3-hex number
   convertToBigInt(b64Str) {
     let num = BigInt(0);
-    for (let i = 0; i < b64Str.length; i += 1) {
-      const n = this.code.indexOf(b64Str[i]);
+    [...b64Str].forEach((b64Char) => {
+      const n = this.code.indexOf(b64Char);
       num = num * BigInt(64) + BigInt(n);
-    }
+    });
     return num;
   },
   parseFromBigInt(bint, padTo) {

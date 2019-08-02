@@ -38,21 +38,20 @@ describe('query thread', () => {
     await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainA', true]);
     await query('INSERT INTO tag (name, is_main) VALUES ($1, $2)', ['MainB', true]);
     const ctx = await mockContext({ email: 'test@uexky.com' });
-    for (let i = 0; i < threadTags.length; i += 1) {
-    /* eslint-disable no-await-in-loop */
+    await threadTags.reduce(async (promise, threadTag) => {
+      await promise;
       const thread = await ThreadModel.new({
-        /* eslint-enable no-await-in-loop */
         ctx,
         thread: {
           anonymous: true,
           content: 'test content',
-          mainTag: threadTags[i].mainTag,
-          subTags: threadTags[i].subTags,
+          mainTag: threadTag.mainTag,
+          subTags: threadTag.subTags,
           title: '',
         },
       });
       threadIds.push(thread.id);
-    }
+    }, Promise.resolve());
   });
   it('after beginning', async () => {
     const { threads, sliceInfo } = await ThreadModel.findSlice({
