@@ -8,9 +8,9 @@ let pgPool;
 const connectDb = async (pgUri) => {
   if (!pgUri) throw new ParamsError('Invalid mongoUri/dbName');
   pgPool = new Pool({ connectionString: pgUri });
-  pgPool.on('error', (err) => {
-    log.error('Unexpected error on idle client', err.stack);
-    process.exit(-1);
+  pgPool.on('error', (error) => {
+    log.error('Unexpected error on idle client', error.stack);
+    throw new InternalError(`Pg client error: ${error.message}`);
   });
   return pgPool;
 };
@@ -19,13 +19,13 @@ const customErrors = new Set([
   'AuthError', 'InternalError', 'NotFoundError',
   'ParamsError', 'PermissionError',
 ]);
-const handleError = (e) => {
-  const name = e.name || '';
+const handleError = (error) => {
+  const name = error.name || '';
   if (customErrors.has(name)) {
-    throw e;
+    throw error;
   } else {
-    log.error(`transcation error: ${e.stack}`);
-    throw new InternalError(`pg transcation error: ${e.message}`);
+    log.error(`Transaction error: ${error.stack}`);
+    throw new InternalError(`Pg transaction error: ${error.message}`);
   }
 };
 
@@ -37,22 +37,22 @@ const query = async (text, params, client) => {
     } else {
       result = await pgPool.query(text, params);
     }
-  } catch (e) {
-    log.error(`pg query '${text}' with params ${params}, error: ${e.stack}`);
-    throw new InternalError(`pg query error: ${e.message}`);
+  } catch (error) {
+    log.error(`pg query '${text}' with params ${params}, error: ${error.stack}`);
+    throw new InternalError(`Pg query error: ${error.message}`);
   }
   return result || {};
 };
 
-const doTransaction = async (transcation) => {
+const doTransaction = async (transaction) => {
   const client = await pgPool.connect();
   try {
     await client.query('BEGIN');
-    await transcation(client);
+    await transaction(client);
     await client.query('COMMIT');
-  } catch (e) {
+  } catch (error) {
     await client.query('ROLLBACK');
-    handleError(e);
+    handleError(error);
   } finally {
     client.release();
   }

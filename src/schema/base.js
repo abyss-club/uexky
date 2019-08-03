@@ -6,6 +6,7 @@ export default `
   type SliceInfo {
     firstCursor: String!
     lastCursor: String!
+    # If more results exist after lastCursor.
     hasNext: Boolean!
   }
 

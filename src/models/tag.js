@@ -56,9 +56,9 @@ const TagModel = {
       [[mainTag, ...subTags]], txn,
     );
     if (mainTags.length !== 1) {
-      throw new ParamsError('you must specified one and only one main tag');
+      throw new ParamsError('One and only one main tag should be specified.');
     } else if (mainTags[0].name !== mainTag) {
-      throw new ParamsError(`${mainTag} is not main tag`);
+      throw new ParamsError(`${mainTag} is not a valid main tag.`);
     }
     if (!isNew) {
       await query('DELETE FROM threads_tags WHERE thread_id = $1', [id.suid], txn);

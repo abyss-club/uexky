@@ -16,7 +16,7 @@ const expireTime = {
 };
 
 // Code = {
-//   addToAuth(email): send to login mail to email address, with link incluced code
+//   addToAuth(email): send to login mail to email address, with link included code
 //   getEmailByCode(authCode): read code, find out which email want to login
 // }
 // In redis:
@@ -34,8 +34,8 @@ const Code = {
     const redis = getRedis();
     try {
       await redis.set(code, email, 'EX', expireTime.code);
-    } catch (e) {
-      log.error('set redis error', e);
+    } catch (redisErr) {
+      log.error('set redis error', redisErr);
     }
     await sendAuthMail(email, code);
     return code;
