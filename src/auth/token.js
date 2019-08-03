@@ -1,5 +1,4 @@
-import Joi from '@hapi/joi';
-
+// import Joi from '@hapi/joi';
 import getRedis from '~/utils/redis';
 import { Base64 } from '~/uid';
 import { AuthError, ParamsError } from '~/utils/error';
@@ -29,7 +28,7 @@ const Token = {
     const redis = getRedis();
     const email = await redis.get(token);
     if (!email) {
-      throw new AuthError('Email not found');
+      throw new AuthError('Email not found.');
     }
     if (refresh) {
       await redis.set(token, email, 'EX', expireTime.token);

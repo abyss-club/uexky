@@ -35,7 +35,7 @@ async function querySlice(sq, {
   select, where, before, after, order, desc, params, name, make, toCursor,
 }) {
   if ((enable(sq.before) && enable(sq.after)) || (!enable(sq.before) && !enable(sq.after))) {
-    throw new ParamsError('you must specific either before or after');
+    throw new ParamsError('Either before or after should be specified.');
   }
 
   const needDesc = ((enable(sq.after) && desc) || (enable(sq.before) && !desc));

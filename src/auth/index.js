@@ -33,8 +33,8 @@ function authHandler() {
           'Set-Cookie': genCookie(token),
         });
         ctx.response.status = 302;
-      } catch (e) {
-        log.error(e);
+      } catch (error) {
+        log.error(error);
         ctx.throw(401, '验证信息错误或已失效');
       }
     }

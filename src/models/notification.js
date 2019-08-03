@@ -10,13 +10,8 @@ const NOTI_TYPES = {
   QUOTED: 'quoted',
 };
 const isValidType = (type) => {
-  const types = Object.keys(NOTI_TYPES);
-  for (let i = 0; i < types.length; i += 1) {
-    if (NOTI_TYPES[types[i]] === type) {
-      return true;
-    }
-  }
-  return false;
+  const types = Object.values(NOTI_TYPES);
+  return types.includes(type);
 };
 
 // content
@@ -62,7 +57,7 @@ const makeNoti = (raw, type, user) => {
       postId: UID.parse(raw.content.postId),
     };
   }
-  throw new ParamsError(`unknown notification type: ${type}`);
+  throw new ParamsError(`Unknown notification type: ${type}`);
 };
 
 const notiSliceOpt = {
@@ -78,7 +73,7 @@ const NotificationModel = {
 
   async getUnreadCount({ ctx, type }) {
     if (!isValidType(type)) {
-      throw new ParamsError(`unknown notification type: ${type}`);
+      throw new ParamsError(`Unknown notification type: ${type}`);
     }
     const user = ctx.auth.signedInUser();
     const sql = `
@@ -92,7 +87,7 @@ const NotificationModel = {
 
   async findNotiSlice({ ctx, type, query: sq }) {
     if (!isValidType(type)) {
-      throw new ParamsError(`unknown notification type: ${type}`);
+      throw new ParamsError(`Unknown notification type: ${type}`);
     }
     const user = ctx.auth.signedInUser();
     const opt = {

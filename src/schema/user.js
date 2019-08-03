@@ -37,9 +37,9 @@ export default `
     #       null:  normal user.
     role: String
 
-    # return threads published by user.
+    # Threads published by the user.
     threads(query: SliceQuery!): ThreadSlice!
-    # return threads replied by user
+    # Threads replied by the user.
     posts(query: SliceQuery!): PostSlice!
   }
 `;

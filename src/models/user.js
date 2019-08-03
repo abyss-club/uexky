@@ -84,8 +84,8 @@ const UserModel = {
     if (!email) {
       return {
         isSignedIn: false,
-        signedInUser: () => { throw new AuthError('you are not signed in'); },
-        ensurePermission: () => { throw new PermissionError('permission denyed'); },
+        signedInUser: () => { throw new AuthError('Not signed in.'); },
+        ensurePermission: () => { throw new PermissionError('Permission denied.'); },
       };
     }
     // signed in
@@ -103,21 +103,21 @@ const UserModel = {
       },
       ensurePermission(action) {
         if (!user) {
-          throw new AuthError('not login');
+          throw new AuthError('Not signed in.');
         }
         const ar = actionRole[action] || '';
         if (ar === ROLE.ADMIN) {
           if (user.role !== ROLE.ADMIN) {
-            throw new PermissionError('you are not admin');
+            throw new PermissionError('User is not admin.');
           }
           return;
         } if (ar === ROLE.MOD) {
           if ((user.role !== ROLE.ADMIN) && (user.role !== ROLE.MOD)) {
-            throw new PermissionError('you are not mod');
+            throw new PermissionError('User is not mod.');
           }
           return;
         } if (user.role === ROLE.BANNED) {
-          throw new PermissionError('you are banned');
+          throw new PermissionError('User is banned.');
         }
       },
     };
@@ -134,11 +134,11 @@ const UserModel = {
     const sql = 'UPDATE public.user SET name=$1 WHERE email=$2';
     try {
       await query(sql, [name, user.email]);
-    } catch (e) {
-      if (e.message.includes('duplicate key')) {
-        throw new ParamsError('duplicate name');
+    } catch (error) {
+      if (error.message.includes('duplicate key')) {
+        throw new ParamsError('Name is duplicated.');
       }
-      throw e;
+      throw error;
     }
     user.name = name;
     return user;
@@ -168,7 +168,7 @@ const UserModel = {
         'SELECT count(*) FROM tag WHERE name=ANY($1)', [tags],
       );
       if (parseInt(rows[0].count, 10) !== tags.length) {
-        throw new ParamsError('invalid tags');
+        throw new ParamsError('Invalid tags.');
       }
       await Promise.all(tags.map(async (tag) => {
         await txn.query(sql, [user.id, tag]);

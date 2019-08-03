@@ -54,7 +54,7 @@ const PostModel = {
       [UID.parse(postId).suid],
     );
     if ((rows || []).length === 0) {
-      throw new NotFoundError(`can't find post ${postId}`);
+      throw new NotFoundError(`Post ${postId} not found.`);
     }
     return makePost(rows[0]);
   },
@@ -123,10 +123,10 @@ const PostModel = {
         'SELECT locked as locked FROM thread WHERE id=$1', [raw.threadId.suid],
       );
       if ((ts || []).length === 0) {
-        throw new NotFoundError(`thread ${raw.threadId.duid} not found`);
+        throw new NotFoundError(`Thread ${raw.threadId.duid} not found`);
       }
       if (ts[0].locked) {
-        throw new ParamsError(`thread ${raw.threadId.duid} is locked`);
+        throw new ParamsError(`Thread ${raw.threadId.duid} is locked`);
       }
 
       if (input.anonymous) {
@@ -135,7 +135,7 @@ const PostModel = {
         });
       } else {
         if (!user.name) {
-          throw new ParamsError('you don\'t have a name');
+          throw new ParamsError('Name not yet set.');
         }
         raw.userName = user.name;
       }
