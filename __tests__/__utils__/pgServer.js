@@ -14,6 +14,7 @@ const migrate = () => pgMigrate({
   dir: path.join(__dirname, '../../migrations'),
   migrationsTable: 'migrations',
   log: () => {}, // do not to log migration
+  count: 999, // do all migrate
 }).catch((error) => {
   console.error(error);
 });
