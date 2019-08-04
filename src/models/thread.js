@@ -17,6 +17,7 @@ const makeThread = function makeThread(raw) {
     author: raw.anonymous ? UID.parse(raw.anonymous_id).duid : raw.user_name,
     title: raw.title === '' ? '无题' : raw.title,
     content: raw.blocked ? blockedContent : raw.content,
+    last_post_id: UID.parse(raw.last_post_id),
 
     async getMainTag() {
       const { rows } = await query(`SELECT *
@@ -41,13 +42,13 @@ const makeThread = function makeThread(raw) {
 
 const threadSliceOpt = {
   select: 'SELECT * FROM thread',
-  before: before => `id > ${UID.parse(before).suid}`,
-  after: after => `id < ${UID.parse(after).suid}`,
-  order: 'ORDER BY id',
+  before: before => `last_post_id > ${UID.parse(before).suid}`,
+  after: after => `last_post_id < ${UID.parse(after).suid}`,
+  order: 'ORDER BY last_post_id',
   desc: true,
   name: 'threads',
   make: makeThread,
-  toCursor: thread => thread.id.duid,
+  toCursor: thread => thread.last_post_id.duid,
 };
 
 const ThreadModel = {
@@ -85,6 +86,7 @@ const ThreadModel = {
       anonymousId: null,
       title: input.title,
       content: input.content,
+      last_post_id: threadId,
     };
     let newThread;
     await doTransaction(async (txn) => {
@@ -97,10 +99,10 @@ const ThreadModel = {
         raw.userName = user.name;
       }
       const { rows } = await txn.query(`INSERT INTO thread
-        (id, anonymous, user_id, user_name, anonymous_id, title, content)
-        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        (id, anonymous, user_id, user_name, anonymous_id, title, content, last_post_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
       [raw.id.suid, raw.anonymous, raw.userId, raw.userName,
-        raw.anonymousId && raw.anonymousId.suid, raw.title, raw.content]);
+        raw.anonymousId && raw.anonymousId.suid, raw.title, raw.content, raw.last_post_id.suid]);
       newThread = makeThread(rows[0]);
       await TagModel.setThreadTags({
         ctx,

@@ -145,6 +145,10 @@ const PostModel = {
       [raw.id.suid, raw.threadId.suid, raw.anonymous, raw.userId, raw.userName,
         raw.anonymousId && raw.anonymousId.suid, raw.content]);
       newPost = makePost(rows[0]);
+      await txn.query(`UPDATE thread
+        SET updated_at=now(),
+            last_post_id=$1
+        WHERE id=$2`, [raw.id.suid, raw.threadId.suid]);
       if (raw.quoteIds.length > 0) {
         await Promise.all(raw.quoteIds.map(qid => txn.query(`INSERT
            INTO posts_quotes (quoter_id, quoted_id)
