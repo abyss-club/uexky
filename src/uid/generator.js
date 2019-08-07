@@ -19,7 +19,7 @@ const newSuid = (function makeGenerator() {
   };
   const run = async () => {
     const now = new Date();
-    if ((store.workerID === '') && (now.getTime() > store.expiredAt)) {
+    if ((store.workerID === '') || (now.getTime() > store.expiredAt)) {
       store.workerID = await WorkerIdModel().newWorkerId();
       store.expiredAt = now + workerExpireMilliSeconds;
     }
@@ -40,7 +40,7 @@ const newSuid = (function makeGenerator() {
     await setTimeout(1000 - now.getMilliseconds());
     store.timestamp += 1;
     store.seq = nextSeq;
-    store.firstSeqInTs = nextSeq;
+    store.firstSeq = nextSeq;
   };
 
   return async () => {
