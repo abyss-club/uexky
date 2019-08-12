@@ -9,7 +9,7 @@ function authMiddleware(endpoint) {
   return async (ctx, next) => {
     const token = ctx.cookies.get('token') || '';
     if ((ctx.url === endpoint) && (token !== '')) {
-      const email = await Token.getEmailByToken(token);
+      const email = await Token.getEmailByToken(token, true);
       ctx.auth = await UserModel.authContext({ email });
       ctx.response.set({ 'Set-Cookie': genCookie(token) });
     } else {
