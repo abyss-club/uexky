@@ -8,8 +8,11 @@ import Token from './token';
 function authMiddleware(endpoint) {
   return async (ctx, next) => {
     const token = ctx.cookies.get('token') || '';
+    let email;
     if ((ctx.url === endpoint) && (token !== '')) {
-      const email = await Token.getEmailByToken(token, true);
+      email = await Token.getEmailByToken(token, true);
+    }
+    if (email) {
       ctx.auth = await UserModel.authContext({ email });
       ctx.response.set({ 'Set-Cookie': genCookie(token) });
     } else {
