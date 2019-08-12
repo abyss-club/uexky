@@ -12,7 +12,7 @@ const emailSchema = Joi.object().keys({
 
 const expireTime = {
   code: 1200, // 20 minutes
-  token: 86400 * 7, // one week
+  token: 86400 * 30, // one month
 };
 
 // Code = {
