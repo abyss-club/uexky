@@ -11,7 +11,7 @@ describe('Testing token', () => {
   const mockEmail = 'test@example.com';
   it('validate token by email', async () => {
     const token = await Token.genNewToken(mockEmail);
-    const email = await Token.getEmailByToken(token);
+    const email = await Token.getEmailByToken(token, true);
     expect(email).toEqual(mockEmail);
   });
 });
