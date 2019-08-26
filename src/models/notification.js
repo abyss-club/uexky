@@ -101,7 +101,7 @@ const NotificationModel = {
     if (slice.sliceInfo.lastCursor !== '') {
       await query(
         `UPDATE public.user SET "last_read_${type}_noti"=$1`,
-        [parseInt(slice.sliceInfo.lastCursor, 10)],
+        [parseInt(slice.sliceInfo.firstCursor, 10)],
       );
     }
     return slice;
