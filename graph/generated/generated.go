@@ -14,7 +14,7 @@ import (
 	"github.com/99designs/gqlgen/graphql/introspection"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
-	"gitlab.com/abyss.club/uexky/entity"
+	"gitlab.com/abyss.club/uexky/service"
 )
 
 // region    ************************** generated!.gotpl **************************
@@ -37,6 +37,7 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
+	User() UserResolver
 }
 
 type DirectiveRoot struct {
@@ -49,7 +50,7 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		User func(childComplexity int, name string) int
+		User func(childComplexity int, id int) int
 	}
 
 	User struct {
@@ -61,11 +62,14 @@ type ComplexityRoot struct {
 }
 
 type MutationResolver interface {
-	SetName(ctx context.Context, id int, name *string) (*entity.User, error)
-	SetLevel(ctx context.Context, id int, level int) (*entity.User, error)
+	SetName(ctx context.Context, id int, name *string) (*service.User, error)
+	SetLevel(ctx context.Context, id int, level int) (*service.User, error)
 }
 type QueryResolver interface {
-	User(ctx context.Context, name string) (*entity.User, error)
+	User(ctx context.Context, id int) (*service.User, error)
+}
+type UserResolver interface {
+	Friends(ctx context.Context, obj *service.User) ([]*service.User, error)
 }
 
 type executableSchema struct {
@@ -117,7 +121,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.User(childComplexity, args["name"].(string)), true
+		return e.complexity.Query.User(childComplexity, args["id"].(int)), true
 
 	case "User.friends":
 		if e.complexity.User.Friends == nil {
@@ -212,7 +216,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	&ast.Source{Name: "graph/schema/demo.gql", Input: `type Query {
-  user(name: String!): User!
+  user(id: Int!): User!
 }
 
 type Mutation {
@@ -295,14 +299,14 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_user_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["name"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+	var arg0 int
+	if tmp, ok := rawArgs["id"]; ok {
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["name"] = arg0
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -378,9 +382,9 @@ func (ec *executionContext) _Mutation_setName(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*entity.User)
+	res := resTmp.(*service.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋentityᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋserviceᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_setLevel(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -419,9 +423,9 @@ func (ec *executionContext) _Mutation_setLevel(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*entity.User)
+	res := resTmp.(*service.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋentityᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋserviceᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_user(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -448,7 +452,7 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().User(rctx, args["name"].(string))
+		return ec.resolvers.Query().User(rctx, args["id"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -460,9 +464,9 @@ func (ec *executionContext) _Query_user(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*entity.User)
+	res := resTmp.(*service.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋentityᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋserviceᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -534,7 +538,7 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *service.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -568,7 +572,7 @@ func (ec *executionContext) _User_id(ctx context.Context, field graphql.Collecte
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_name(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_name(ctx context.Context, field graphql.CollectedField, obj *service.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -599,7 +603,7 @@ func (ec *executionContext) _User_name(ctx context.Context, field graphql.Collec
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_level(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_level(ctx context.Context, field graphql.CollectedField, obj *service.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -633,7 +637,7 @@ func (ec *executionContext) _User_level(ctx context.Context, field graphql.Colle
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_friends(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_friends(ctx context.Context, field graphql.CollectedField, obj *service.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -644,13 +648,13 @@ func (ec *executionContext) _User_friends(ctx context.Context, field graphql.Col
 		Object:   "User",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Friends, nil
+		return ec.resolvers.User().Friends(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -662,9 +666,9 @@ func (ec *executionContext) _User_friends(ctx context.Context, field graphql.Col
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*entity.User)
+	res := resTmp.([]*service.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋentityᚐUserᚄ(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋserviceᚐUserᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -1812,7 +1816,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 
 var userImplementors = []string{"User"}
 
-func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *entity.User) graphql.Marshaler {
+func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *service.User) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, userImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -1824,20 +1828,29 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._User_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._User_name(ctx, field, obj)
 		case "level":
 			out.Values[i] = ec._User_level(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "friends":
-			out.Values[i] = ec._User_friends(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_friends(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2136,11 +2149,11 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNUser2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋentityᚐUser(ctx context.Context, sel ast.SelectionSet, v entity.User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋserviceᚐUser(ctx context.Context, sel ast.SelectionSet, v service.User) graphql.Marshaler {
 	return ec._User(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNUser2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋentityᚐUserᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋserviceᚐUserᚄ(ctx context.Context, sel ast.SelectionSet, v []*service.User) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -2164,7 +2177,7 @@ func (ec *executionContext) marshalNUser2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuex
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋentityᚐUser(ctx, sel, v[i])
+			ret[i] = ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋserviceᚐUser(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -2177,7 +2190,7 @@ func (ec *executionContext) marshalNUser2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuex
 	return ret
 }
 
-func (ec *executionContext) marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋentityᚐUser(ctx context.Context, sel ast.SelectionSet, v *entity.User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋserviceᚐUser(ctx context.Context, sel ast.SelectionSet, v *service.User) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
