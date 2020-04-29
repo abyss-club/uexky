@@ -1,0 +1,15 @@
+type Query {
+  user(name: String!): User!
+}
+
+type Mutation {
+  setName(id: Int!, name: String): User!
+  setLevel(id: Int!, level: Int!): User!
+}
+
+type User {
+  id: Int!
+  name: String
+  level: Int!
+  friends: [User!]!
+}
