@@ -2,15 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 
-	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/99designs/gqlgen/graphql/playground"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	"gitlab.com/abyss.club/uexky/graph/generated"
 )
 
 func init() {
@@ -31,13 +26,14 @@ var rootCmd = &cobra.Command{
 }
 
 func runService() {
-	port := "8000"
-	resolver := InitResolver()
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &resolver}))
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	fmt.Println("hello, world")
+	// port := "8000"
+	// resolver := InitResolver()
+	// srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &resolver}))
+	// http.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	// http.Handle("/query", srv)
+	// log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
+	// log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
 func Execute() {
