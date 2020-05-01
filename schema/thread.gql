@@ -2,7 +2,7 @@ extend type Query {
   # A slice of thread.
   threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
   # A thread object.
-  thread(id: String!): Thread!
+  thread(id: UID!): Thread!
 }
 
 extend type Mutation {
@@ -25,7 +25,7 @@ input ThreadInput {
 
 type Thread {
   # UUID with 8 chars in length, and will increase to 9 after 30 years.
-  id: String!
+  id: UID!
   createdAt: Time!
   # Thread was published anonymously or not.
   anonymous: Boolean!

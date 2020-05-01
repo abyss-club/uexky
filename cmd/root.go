@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/abyss.club/uexky/wire"
 )
 
 func init() {
@@ -27,13 +28,8 @@ var rootCmd = &cobra.Command{
 
 func runService() {
 	fmt.Println("hello, world")
-	// port := "8000"
-	// resolver := InitResolver()
-	// srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &resolver}))
-	// http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	// http.Handle("/query", srv)
-	// log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	// log.Fatal(http.ListenAndServe(":"+port, nil))
+	server := wire.InitServer()
+	log.Fatal(server.Run())
 }
 
 func Execute() {

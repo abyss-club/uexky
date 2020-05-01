@@ -5,19 +5,18 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
-	"gitlab.com/abyss.club/uexky/uexky/types"
+	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 func (r *queryResolver) MainTags(ctx context.Context) ([]string, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.Service.GetMainTags(ctx)
 }
 
 func (r *queryResolver) Recommended(ctx context.Context) ([]string, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.Service.GetRecommendedTags(ctx)
 }
 
-func (r *queryResolver) Tags(ctx context.Context, query *string, limit *int) ([]*types.Tag, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) Tags(ctx context.Context, query *string, limit *int) ([]*entity.Tag, error) {
+	return r.Service.SearchTags(ctx, query, limit)
 }

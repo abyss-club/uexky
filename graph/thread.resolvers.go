@@ -5,19 +5,19 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
-	"gitlab.com/abyss.club/uexky/uexky/types"
+	"gitlab.com/abyss.club/uexky/lib/uid"
+	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
-func (r *mutationResolver) PubThread(ctx context.Context, thread types.ThreadInput) (*types.Thread, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {
+	return r.Service.PubThread(ctx, thread)
 }
 
-func (r *queryResolver) ThreadSlice(ctx context.Context, tags []string, query types.SliceQuery) (*types.ThreadSlice, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) ThreadSlice(ctx context.Context, tags []string, query entity.SliceQuery) (*entity.ThreadSlice, error) {
+	return r.Service.SearchThreads(ctx, tags, query)
 }
 
-func (r *queryResolver) Thread(ctx context.Context, id string) (*types.Thread, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) Thread(ctx context.Context, id uid.UID) (*entity.Thread, error) {
+	return r.Service.GetThreadByID(ctx, id)
 }

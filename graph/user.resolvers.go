@@ -5,51 +5,51 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
-	"gitlab.com/abyss.club/uexky/uexky/types"
+	"gitlab.com/abyss.club/uexky/lib/uid"
+	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 func (r *mutationResolver) Auth(ctx context.Context, email string) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+	return r.Service.SignInByEmail(ctx, email)
 }
 
-func (r *mutationResolver) SetName(ctx context.Context, name string) (*types.User, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) SetName(ctx context.Context, name string) (*entity.User, error) {
+	return r.Service.SetUserName(ctx, name)
 }
 
-func (r *mutationResolver) SyncTags(ctx context.Context, tags []*string) (*types.User, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) SyncTags(ctx context.Context, tags []*string) (*entity.User, error) {
+	return r.Service.SyncUserTags(ctx, tags)
 }
 
-func (r *mutationResolver) AddSubbedTag(ctx context.Context, tag string) (*types.User, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) AddSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
+	return r.Service.AddUserSubbedTag(ctx, tag)
 }
 
-func (r *mutationResolver) DelSubbedTag(ctx context.Context, tag string) (*types.User, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) DelSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
+	return r.Service.DelUserSubbedTag(ctx, tag)
 }
 
-func (r *mutationResolver) BanUser(ctx context.Context, postID *string, threadID *string) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error) {
+	return r.Service.BanUser(ctx, postID, threadID)
 }
 
-func (r *mutationResolver) BlockPost(ctx context.Context, postID string) (*types.Post, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, error) {
+	return r.Service.BlockPost(ctx, postID)
 }
 
-func (r *mutationResolver) LockThread(ctx context.Context, threadID string) (*types.Thread, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
+	return r.Service.LockThread(ctx, threadID)
 }
 
-func (r *mutationResolver) BlockThread(ctx context.Context, threadID string) (*types.Thread, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
+	return r.Service.BlockThread(ctx, threadID)
 }
 
-func (r *mutationResolver) EditTags(ctx context.Context, threadID string, mainTag string, subTags []string) (*types.Thread, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *mutationResolver) EditTags(ctx context.Context, threadID uid.UID, mainTag string, subTags []string) (*entity.Thread, error) {
+	return r.Service.EditTags(ctx, threadID, mainTag, subTags)
 }
 
-func (r *queryResolver) Profile(ctx context.Context) (*types.User, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) Profile(ctx context.Context) (*entity.User, error) {
+	return r.Service.Profile(ctx)
 }

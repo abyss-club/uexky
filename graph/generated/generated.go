@@ -15,7 +15,8 @@ import (
 	"github.com/99designs/gqlgen/graphql/introspection"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
-	"gitlab.com/abyss.club/uexky/uexky/types"
+	"gitlab.com/abyss.club/uexky/lib/uid"
+	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 // region    ************************** generated!.gotpl **************************
@@ -38,6 +39,7 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
+	SystemNoti() SystemNotiResolver
 }
 
 type DirectiveRoot struct {
@@ -47,14 +49,14 @@ type ComplexityRoot struct {
 	Mutation struct {
 		AddSubbedTag func(childComplexity int, tag string) int
 		Auth         func(childComplexity int, email string) int
-		BanUser      func(childComplexity int, postID *string, threadID *string) int
-		BlockPost    func(childComplexity int, postID string) int
-		BlockThread  func(childComplexity int, threadID string) int
+		BanUser      func(childComplexity int, postID *uid.UID, threadID *uid.UID) int
+		BlockPost    func(childComplexity int, postID uid.UID) int
+		BlockThread  func(childComplexity int, threadID uid.UID) int
 		DelSubbedTag func(childComplexity int, tag string) int
-		EditTags     func(childComplexity int, threadID string, mainTag string, subTags []string) int
-		LockThread   func(childComplexity int, threadID string) int
-		PubPost      func(childComplexity int, post types.PostInput) int
-		PubThread    func(childComplexity int, thread types.ThreadInput) int
+		EditTags     func(childComplexity int, threadID uid.UID, mainTag string, subTags []string) int
+		LockThread   func(childComplexity int, threadID uid.UID) int
+		PubPost      func(childComplexity int, post entity.PostInput) int
+		PubThread    func(childComplexity int, thread entity.ThreadInput) int
 		SetName      func(childComplexity int, name string) int
 		SyncTags     func(childComplexity int, tags []*string) int
 	}
@@ -84,13 +86,13 @@ type ComplexityRoot struct {
 
 	Query struct {
 		MainTags        func(childComplexity int) int
-		Notification    func(childComplexity int, typeArg string, query types.SliceQuery) int
-		Post            func(childComplexity int, id string) int
+		Notification    func(childComplexity int, typeArg string, query entity.SliceQuery) int
+		Post            func(childComplexity int, id uid.UID) int
 		Profile         func(childComplexity int) int
 		Recommended     func(childComplexity int) int
 		Tags            func(childComplexity int, query *string, limit *int) int
-		Thread          func(childComplexity int, id string) int
-		ThreadSlice     func(childComplexity int, tags []string, query types.SliceQuery) int
+		Thread          func(childComplexity int, id uid.UID) int
+		ThreadSlice     func(childComplexity int, tags []string, query entity.SliceQuery) int
 		UnreadNotiCount func(childComplexity int) int
 	}
 
@@ -144,7 +146,7 @@ type ComplexityRoot struct {
 		ID         func(childComplexity int) int
 		Locked     func(childComplexity int) int
 		MainTag    func(childComplexity int) int
-		Replies    func(childComplexity int, query types.SliceQuery) int
+		Replies    func(childComplexity int, query entity.SliceQuery) int
 		ReplyCount func(childComplexity int) int
 		SubTags    func(childComplexity int) int
 		Title      func(childComplexity int) int
@@ -169,37 +171,40 @@ type ComplexityRoot struct {
 	User struct {
 		Email   func(childComplexity int) int
 		Name    func(childComplexity int) int
-		Posts   func(childComplexity int, query types.SliceQuery) int
+		Posts   func(childComplexity int, query entity.SliceQuery) int
 		Role    func(childComplexity int) int
 		Tags    func(childComplexity int) int
-		Threads func(childComplexity int, query types.SliceQuery) int
+		Threads func(childComplexity int, query entity.SliceQuery) int
 	}
 }
 
 type MutationResolver interface {
-	PubPost(ctx context.Context, post types.PostInput) (*types.Post, error)
-	PubThread(ctx context.Context, thread types.ThreadInput) (*types.Thread, error)
+	PubPost(ctx context.Context, post entity.PostInput) (*entity.Post, error)
+	PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error)
 	Auth(ctx context.Context, email string) (bool, error)
-	SetName(ctx context.Context, name string) (*types.User, error)
-	SyncTags(ctx context.Context, tags []*string) (*types.User, error)
-	AddSubbedTag(ctx context.Context, tag string) (*types.User, error)
-	DelSubbedTag(ctx context.Context, tag string) (*types.User, error)
-	BanUser(ctx context.Context, postID *string, threadID *string) (bool, error)
-	BlockPost(ctx context.Context, postID string) (*types.Post, error)
-	LockThread(ctx context.Context, threadID string) (*types.Thread, error)
-	BlockThread(ctx context.Context, threadID string) (*types.Thread, error)
-	EditTags(ctx context.Context, threadID string, mainTag string, subTags []string) (*types.Thread, error)
+	SetName(ctx context.Context, name string) (*entity.User, error)
+	SyncTags(ctx context.Context, tags []*string) (*entity.User, error)
+	AddSubbedTag(ctx context.Context, tag string) (*entity.User, error)
+	DelSubbedTag(ctx context.Context, tag string) (*entity.User, error)
+	BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error)
+	BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, error)
+	LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error)
+	BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error)
+	EditTags(ctx context.Context, threadID uid.UID, mainTag string, subTags []string) (*entity.Thread, error)
 }
 type QueryResolver interface {
-	UnreadNotiCount(ctx context.Context) (*types.UnreadNotiCount, error)
-	Notification(ctx context.Context, typeArg string, query types.SliceQuery) (*types.NotiSlice, error)
-	Post(ctx context.Context, id string) (*types.Post, error)
+	UnreadNotiCount(ctx context.Context) (*entity.UnreadNotiCount, error)
+	Notification(ctx context.Context, typeArg string, query entity.SliceQuery) (*entity.NotiSlice, error)
+	Post(ctx context.Context, id uid.UID) (*entity.Post, error)
 	MainTags(ctx context.Context) ([]string, error)
 	Recommended(ctx context.Context) ([]string, error)
-	Tags(ctx context.Context, query *string, limit *int) ([]*types.Tag, error)
-	ThreadSlice(ctx context.Context, tags []string, query types.SliceQuery) (*types.ThreadSlice, error)
-	Thread(ctx context.Context, id string) (*types.Thread, error)
-	Profile(ctx context.Context) (*types.User, error)
+	Tags(ctx context.Context, query *string, limit *int) ([]*entity.Tag, error)
+	ThreadSlice(ctx context.Context, tags []string, query entity.SliceQuery) (*entity.ThreadSlice, error)
+	Thread(ctx context.Context, id uid.UID) (*entity.Thread, error)
+	Profile(ctx context.Context) (*entity.User, error)
+}
+type SystemNotiResolver interface {
+	Content(ctx context.Context, obj *entity.SystemNoti) (string, error)
 }
 
 type executableSchema struct {
@@ -251,7 +256,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.BanUser(childComplexity, args["postId"].(*string), args["threadId"].(*string)), true
+		return e.complexity.Mutation.BanUser(childComplexity, args["postId"].(*uid.UID), args["threadId"].(*uid.UID)), true
 
 	case "Mutation.blockPost":
 		if e.complexity.Mutation.BlockPost == nil {
@@ -263,7 +268,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.BlockPost(childComplexity, args["postId"].(string)), true
+		return e.complexity.Mutation.BlockPost(childComplexity, args["postId"].(uid.UID)), true
 
 	case "Mutation.blockThread":
 		if e.complexity.Mutation.BlockThread == nil {
@@ -275,7 +280,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.BlockThread(childComplexity, args["threadId"].(string)), true
+		return e.complexity.Mutation.BlockThread(childComplexity, args["threadId"].(uid.UID)), true
 
 	case "Mutation.delSubbedTag":
 		if e.complexity.Mutation.DelSubbedTag == nil {
@@ -299,7 +304,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.EditTags(childComplexity, args["threadId"].(string), args["mainTag"].(string), args["subTags"].([]string)), true
+		return e.complexity.Mutation.EditTags(childComplexity, args["threadId"].(uid.UID), args["mainTag"].(string), args["subTags"].([]string)), true
 
 	case "Mutation.lockThread":
 		if e.complexity.Mutation.LockThread == nil {
@@ -311,7 +316,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.LockThread(childComplexity, args["threadId"].(string)), true
+		return e.complexity.Mutation.LockThread(childComplexity, args["threadId"].(uid.UID)), true
 
 	case "Mutation.pubPost":
 		if e.complexity.Mutation.PubPost == nil {
@@ -323,7 +328,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.PubPost(childComplexity, args["post"].(types.PostInput)), true
+		return e.complexity.Mutation.PubPost(childComplexity, args["post"].(entity.PostInput)), true
 
 	case "Mutation.pubThread":
 		if e.complexity.Mutation.PubThread == nil {
@@ -335,7 +340,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.PubThread(childComplexity, args["thread"].(types.ThreadInput)), true
+		return e.complexity.Mutation.PubThread(childComplexity, args["thread"].(entity.ThreadInput)), true
 
 	case "Mutation.setName":
 		if e.complexity.Mutation.SetName == nil {
@@ -476,7 +481,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Notification(childComplexity, args["type"].(string), args["query"].(types.SliceQuery)), true
+		return e.complexity.Query.Notification(childComplexity, args["type"].(string), args["query"].(entity.SliceQuery)), true
 
 	case "Query.post":
 		if e.complexity.Query.Post == nil {
@@ -488,7 +493,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Post(childComplexity, args["id"].(string)), true
+		return e.complexity.Query.Post(childComplexity, args["id"].(uid.UID)), true
 
 	case "Query.profile":
 		if e.complexity.Query.Profile == nil {
@@ -526,7 +531,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Thread(childComplexity, args["id"].(string)), true
+		return e.complexity.Query.Thread(childComplexity, args["id"].(uid.UID)), true
 
 	case "Query.threadSlice":
 		if e.complexity.Query.ThreadSlice == nil {
@@ -538,7 +543,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.ThreadSlice(childComplexity, args["tags"].([]string), args["query"].(types.SliceQuery)), true
+		return e.complexity.Query.ThreadSlice(childComplexity, args["tags"].([]string), args["query"].(entity.SliceQuery)), true
 
 	case "Query.unreadNotiCount":
 		if e.complexity.Query.UnreadNotiCount == nil {
@@ -795,7 +800,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Thread.Replies(childComplexity, args["query"].(types.SliceQuery)), true
+		return e.complexity.Thread.Replies(childComplexity, args["query"].(entity.SliceQuery)), true
 
 	case "Thread.replyCount":
 		if e.complexity.Thread.ReplyCount == nil {
@@ -891,7 +896,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.User.Posts(childComplexity, args["query"].(types.SliceQuery)), true
+		return e.complexity.User.Posts(childComplexity, args["query"].(entity.SliceQuery)), true
 
 	case "User.role":
 		if e.complexity.User.Role == nil {
@@ -917,7 +922,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.User.Threads(childComplexity, args["query"].(types.SliceQuery)), true
+		return e.complexity.User.Threads(childComplexity, args["query"].(entity.SliceQuery)), true
 
 	}
 	return 0, false
@@ -1097,7 +1102,7 @@ type QuotedNoti {
 `, BuiltIn: false},
 	&ast.Source{Name: "schema/post.gql", Input: `extend type Query {
   # A post object.
-  post(id: String!): Post!
+  post(id: UID!): Post!
 }
 
 extend type Mutation {
@@ -1119,7 +1124,7 @@ input PostInput {
 
 # Object describing a Post.
 type Post {
-  id: String!
+  id: UID!
   createdAt: Time!
   anonymous: Boolean!
   # Name if not anonymous, anonymous ID otherwise.
@@ -1168,7 +1173,7 @@ type Tag {
   # A slice of thread.
   threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
   # A thread object.
-  thread(id: String!): Thread!
+  thread(id: UID!): Thread!
 }
 
 extend type Mutation {
@@ -1191,7 +1196,7 @@ input ThreadInput {
 
 type Thread {
   # UUID with 8 chars in length, and will increase to 9 after 30 years.
-  id: String!
+  id: UID!
   createdAt: Time!
   # Thread was published anonymously or not.
   anonymous: Boolean!
@@ -1248,11 +1253,11 @@ extend type Mutation {
   delSubbedTag(tag: String!): User!
 
   # mod's apis:
-  banUser(postId: String, threadId: String): Boolean!
-  blockPost(postId: String!): Post!
-  lockThread(threadId: String!): Thread!
-  blockThread(threadId: String!): Thread!
-  editTags(threadId: String!, mainTag: String!, subTags: [String!]!): Thread!
+  banUser(postId: UID, threadId: UID): Boolean!
+  blockPost(postId: UID!): Post!
+  lockThread(threadId: UID!): Thread!
+  blockThread(threadId: UID!): Thread!
+  editTags(threadId: UID!, mainTag: String!, subTags: [String!]!): Thread!
 }
 
 type User {
@@ -1311,17 +1316,17 @@ func (ec *executionContext) field_Mutation_auth_args(ctx context.Context, rawArg
 func (ec *executionContext) field_Mutation_banUser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *string
+	var arg0 *uid.UID
 	if tmp, ok := rawArgs["postId"]; ok {
-		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		arg0, err = ec.unmarshalOUID2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["postId"] = arg0
-	var arg1 *string
+	var arg1 *uid.UID
 	if tmp, ok := rawArgs["threadId"]; ok {
-		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		arg1, err = ec.unmarshalOUID2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1333,9 +1338,9 @@ func (ec *executionContext) field_Mutation_banUser_args(ctx context.Context, raw
 func (ec *executionContext) field_Mutation_blockPost_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
+	var arg0 uid.UID
 	if tmp, ok := rawArgs["postId"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1347,9 +1352,9 @@ func (ec *executionContext) field_Mutation_blockPost_args(ctx context.Context, r
 func (ec *executionContext) field_Mutation_blockThread_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
+	var arg0 uid.UID
 	if tmp, ok := rawArgs["threadId"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1375,9 +1380,9 @@ func (ec *executionContext) field_Mutation_delSubbedTag_args(ctx context.Context
 func (ec *executionContext) field_Mutation_editTags_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
+	var arg0 uid.UID
 	if tmp, ok := rawArgs["threadId"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1405,9 +1410,9 @@ func (ec *executionContext) field_Mutation_editTags_args(ctx context.Context, ra
 func (ec *executionContext) field_Mutation_lockThread_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
+	var arg0 uid.UID
 	if tmp, ok := rawArgs["threadId"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1419,9 +1424,9 @@ func (ec *executionContext) field_Mutation_lockThread_args(ctx context.Context, 
 func (ec *executionContext) field_Mutation_pubPost_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 types.PostInput
+	var arg0 entity.PostInput
 	if tmp, ok := rawArgs["post"]; ok {
-		arg0, err = ec.unmarshalNPostInput2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostInput(ctx, tmp)
+		arg0, err = ec.unmarshalNPostInput2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1433,9 +1438,9 @@ func (ec *executionContext) field_Mutation_pubPost_args(ctx context.Context, raw
 func (ec *executionContext) field_Mutation_pubThread_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 types.ThreadInput
+	var arg0 entity.ThreadInput
 	if tmp, ok := rawArgs["thread"]; ok {
-		arg0, err = ec.unmarshalNThreadInput2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadInput(ctx, tmp)
+		arg0, err = ec.unmarshalNThreadInput2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1497,9 +1502,9 @@ func (ec *executionContext) field_Query_notification_args(ctx context.Context, r
 		}
 	}
 	args["type"] = arg0
-	var arg1 types.SliceQuery
+	var arg1 entity.SliceQuery
 	if tmp, ok := rawArgs["query"]; ok {
-		arg1, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceQuery(ctx, tmp)
+		arg1, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceQuery(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1511,9 +1516,9 @@ func (ec *executionContext) field_Query_notification_args(ctx context.Context, r
 func (ec *executionContext) field_Query_post_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
+	var arg0 uid.UID
 	if tmp, ok := rawArgs["id"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1555,9 +1560,9 @@ func (ec *executionContext) field_Query_threadSlice_args(ctx context.Context, ra
 		}
 	}
 	args["tags"] = arg0
-	var arg1 types.SliceQuery
+	var arg1 entity.SliceQuery
 	if tmp, ok := rawArgs["query"]; ok {
-		arg1, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceQuery(ctx, tmp)
+		arg1, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceQuery(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1569,9 +1574,9 @@ func (ec *executionContext) field_Query_threadSlice_args(ctx context.Context, ra
 func (ec *executionContext) field_Query_thread_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
+	var arg0 uid.UID
 	if tmp, ok := rawArgs["id"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1583,9 +1588,9 @@ func (ec *executionContext) field_Query_thread_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Thread_replies_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 types.SliceQuery
+	var arg0 entity.SliceQuery
 	if tmp, ok := rawArgs["query"]; ok {
-		arg0, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceQuery(ctx, tmp)
+		arg0, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceQuery(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1597,9 +1602,9 @@ func (ec *executionContext) field_Thread_replies_args(ctx context.Context, rawAr
 func (ec *executionContext) field_User_posts_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 types.SliceQuery
+	var arg0 entity.SliceQuery
 	if tmp, ok := rawArgs["query"]; ok {
-		arg0, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceQuery(ctx, tmp)
+		arg0, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceQuery(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1611,9 +1616,9 @@ func (ec *executionContext) field_User_posts_args(ctx context.Context, rawArgs m
 func (ec *executionContext) field_User_threads_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 types.SliceQuery
+	var arg0 entity.SliceQuery
 	if tmp, ok := rawArgs["query"]; ok {
-		arg0, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceQuery(ctx, tmp)
+		arg0, err = ec.unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceQuery(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1682,7 +1687,7 @@ func (ec *executionContext) _Mutation_pubPost(ctx context.Context, field graphql
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().PubPost(rctx, args["post"].(types.PostInput))
+		return ec.resolvers.Mutation().PubPost(rctx, args["post"].(entity.PostInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1694,9 +1699,9 @@ func (ec *executionContext) _Mutation_pubPost(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Post)
+	res := resTmp.(*entity.Post)
 	fc.Result = res
-	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPost(ctx, field.Selections, res)
+	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_pubThread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1723,7 +1728,7 @@ func (ec *executionContext) _Mutation_pubThread(ctx context.Context, field graph
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().PubThread(rctx, args["thread"].(types.ThreadInput))
+		return ec.resolvers.Mutation().PubThread(rctx, args["thread"].(entity.ThreadInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1735,9 +1740,9 @@ func (ec *executionContext) _Mutation_pubThread(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Thread)
+	res := resTmp.(*entity.Thread)
 	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx, field.Selections, res)
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_auth(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1817,9 +1822,9 @@ func (ec *executionContext) _Mutation_setName(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.User)
+	res := resTmp.(*entity.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_syncTags(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1858,9 +1863,9 @@ func (ec *executionContext) _Mutation_syncTags(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.User)
+	res := resTmp.(*entity.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_addSubbedTag(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1899,9 +1904,9 @@ func (ec *executionContext) _Mutation_addSubbedTag(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.User)
+	res := resTmp.(*entity.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_delSubbedTag(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1940,9 +1945,9 @@ func (ec *executionContext) _Mutation_delSubbedTag(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.User)
+	res := resTmp.(*entity.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_banUser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1969,7 +1974,7 @@ func (ec *executionContext) _Mutation_banUser(ctx context.Context, field graphql
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().BanUser(rctx, args["postId"].(*string), args["threadId"].(*string))
+		return ec.resolvers.Mutation().BanUser(rctx, args["postId"].(*uid.UID), args["threadId"].(*uid.UID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2010,7 +2015,7 @@ func (ec *executionContext) _Mutation_blockPost(ctx context.Context, field graph
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().BlockPost(rctx, args["postId"].(string))
+		return ec.resolvers.Mutation().BlockPost(rctx, args["postId"].(uid.UID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2022,9 +2027,9 @@ func (ec *executionContext) _Mutation_blockPost(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Post)
+	res := resTmp.(*entity.Post)
 	fc.Result = res
-	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPost(ctx, field.Selections, res)
+	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_lockThread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2051,7 +2056,7 @@ func (ec *executionContext) _Mutation_lockThread(ctx context.Context, field grap
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().LockThread(rctx, args["threadId"].(string))
+		return ec.resolvers.Mutation().LockThread(rctx, args["threadId"].(uid.UID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2063,9 +2068,9 @@ func (ec *executionContext) _Mutation_lockThread(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Thread)
+	res := resTmp.(*entity.Thread)
 	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx, field.Selections, res)
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_blockThread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2092,7 +2097,7 @@ func (ec *executionContext) _Mutation_blockThread(ctx context.Context, field gra
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().BlockThread(rctx, args["threadId"].(string))
+		return ec.resolvers.Mutation().BlockThread(rctx, args["threadId"].(uid.UID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2104,9 +2109,9 @@ func (ec *executionContext) _Mutation_blockThread(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Thread)
+	res := resTmp.(*entity.Thread)
 	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx, field.Selections, res)
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_editTags(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2133,7 +2138,7 @@ func (ec *executionContext) _Mutation_editTags(ctx context.Context, field graphq
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().EditTags(rctx, args["threadId"].(string), args["mainTag"].(string), args["subTags"].([]string))
+		return ec.resolvers.Mutation().EditTags(rctx, args["threadId"].(uid.UID), args["mainTag"].(string), args["subTags"].([]string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2145,12 +2150,12 @@ func (ec *executionContext) _Mutation_editTags(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Thread)
+	res := resTmp.(*entity.Thread)
 	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx, field.Selections, res)
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _NotiSlice_system(ctx context.Context, field graphql.CollectedField, obj *types.NotiSlice) (ret graphql.Marshaler) {
+func (ec *executionContext) _NotiSlice_system(ctx context.Context, field graphql.CollectedField, obj *entity.NotiSlice) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2176,12 +2181,12 @@ func (ec *executionContext) _NotiSlice_system(ctx context.Context, field graphql
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*types.SystemNoti)
+	res := resTmp.([]*entity.SystemNoti)
 	fc.Result = res
-	return ec.marshalOSystemNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSystemNotiᚄ(ctx, field.Selections, res)
+	return ec.marshalOSystemNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSystemNotiᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _NotiSlice_replied(ctx context.Context, field graphql.CollectedField, obj *types.NotiSlice) (ret graphql.Marshaler) {
+func (ec *executionContext) _NotiSlice_replied(ctx context.Context, field graphql.CollectedField, obj *entity.NotiSlice) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2207,12 +2212,12 @@ func (ec *executionContext) _NotiSlice_replied(ctx context.Context, field graphq
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*types.RepliedNoti)
+	res := resTmp.([]*entity.RepliedNoti)
 	fc.Result = res
-	return ec.marshalORepliedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐRepliedNotiᚄ(ctx, field.Selections, res)
+	return ec.marshalORepliedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐRepliedNotiᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _NotiSlice_quoted(ctx context.Context, field graphql.CollectedField, obj *types.NotiSlice) (ret graphql.Marshaler) {
+func (ec *executionContext) _NotiSlice_quoted(ctx context.Context, field graphql.CollectedField, obj *entity.NotiSlice) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2238,12 +2243,12 @@ func (ec *executionContext) _NotiSlice_quoted(ctx context.Context, field graphql
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*types.QuotedNoti)
+	res := resTmp.([]*entity.QuotedNoti)
 	fc.Result = res
-	return ec.marshalOQuotedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐQuotedNotiᚄ(ctx, field.Selections, res)
+	return ec.marshalOQuotedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐQuotedNotiᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _NotiSlice_sliceInfo(ctx context.Context, field graphql.CollectedField, obj *types.NotiSlice) (ret graphql.Marshaler) {
+func (ec *executionContext) _NotiSlice_sliceInfo(ctx context.Context, field graphql.CollectedField, obj *entity.NotiSlice) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2272,12 +2277,12 @@ func (ec *executionContext) _NotiSlice_sliceInfo(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.SliceInfo)
+	res := resTmp.(*entity.SliceInfo)
 	fc.Result = res
-	return ec.marshalNSliceInfo2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceInfo(ctx, field.Selections, res)
+	return ec.marshalNSliceInfo2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceInfo(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Post_id(ctx context.Context, field graphql.CollectedField, obj *types.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_id(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2306,12 +2311,12 @@ func (ec *executionContext) _Post_id(ctx context.Context, field graphql.Collecte
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(uid.UID)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Post_createdAt(ctx context.Context, field graphql.CollectedField, obj *types.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_createdAt(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2345,7 +2350,7 @@ func (ec *executionContext) _Post_createdAt(ctx context.Context, field graphql.C
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Post_anonymous(ctx context.Context, field graphql.CollectedField, obj *types.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_anonymous(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2379,7 +2384,7 @@ func (ec *executionContext) _Post_anonymous(ctx context.Context, field graphql.C
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Post_author(ctx context.Context, field graphql.CollectedField, obj *types.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_author(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2413,7 +2418,7 @@ func (ec *executionContext) _Post_author(ctx context.Context, field graphql.Coll
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Post_content(ctx context.Context, field graphql.CollectedField, obj *types.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_content(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2447,7 +2452,7 @@ func (ec *executionContext) _Post_content(ctx context.Context, field graphql.Col
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Post_quotes(ctx context.Context, field graphql.CollectedField, obj *types.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_quotes(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2458,13 +2463,13 @@ func (ec *executionContext) _Post_quotes(ctx context.Context, field graphql.Coll
 		Object:   "Post",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Quotes, nil
+		return obj.Quotes(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2473,12 +2478,12 @@ func (ec *executionContext) _Post_quotes(ctx context.Context, field graphql.Coll
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*types.Post)
+	res := resTmp.([]*entity.Post)
 	fc.Result = res
-	return ec.marshalOPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostᚄ(ctx, field.Selections, res)
+	return ec.marshalOPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Post_quotedCount(ctx context.Context, field graphql.CollectedField, obj *types.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_quotedCount(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2489,13 +2494,13 @@ func (ec *executionContext) _Post_quotedCount(ctx context.Context, field graphql
 		Object:   "Post",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.QuotedCount, nil
+		return obj.QuotedCount(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2512,7 +2517,7 @@ func (ec *executionContext) _Post_quotedCount(ctx context.Context, field graphql
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Post_blocked(ctx context.Context, field graphql.CollectedField, obj *types.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_blocked(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2546,7 +2551,7 @@ func (ec *executionContext) _Post_blocked(ctx context.Context, field graphql.Col
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _PostSlice_posts(ctx context.Context, field graphql.CollectedField, obj *types.PostSlice) (ret graphql.Marshaler) {
+func (ec *executionContext) _PostSlice_posts(ctx context.Context, field graphql.CollectedField, obj *entity.PostSlice) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2575,12 +2580,12 @@ func (ec *executionContext) _PostSlice_posts(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*types.Post)
+	res := resTmp.([]*entity.Post)
 	fc.Result = res
-	return ec.marshalNPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostᚄ(ctx, field.Selections, res)
+	return ec.marshalNPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _PostSlice_sliceInfo(ctx context.Context, field graphql.CollectedField, obj *types.PostSlice) (ret graphql.Marshaler) {
+func (ec *executionContext) _PostSlice_sliceInfo(ctx context.Context, field graphql.CollectedField, obj *entity.PostSlice) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2609,9 +2614,9 @@ func (ec *executionContext) _PostSlice_sliceInfo(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.SliceInfo)
+	res := resTmp.(*entity.SliceInfo)
 	fc.Result = res
-	return ec.marshalNSliceInfo2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceInfo(ctx, field.Selections, res)
+	return ec.marshalNSliceInfo2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceInfo(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_unreadNotiCount(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2643,9 +2648,9 @@ func (ec *executionContext) _Query_unreadNotiCount(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.UnreadNotiCount)
+	res := resTmp.(*entity.UnreadNotiCount)
 	fc.Result = res
-	return ec.marshalNUnreadNotiCount2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUnreadNotiCount(ctx, field.Selections, res)
+	return ec.marshalNUnreadNotiCount2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUnreadNotiCount(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_notification(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2672,7 +2677,7 @@ func (ec *executionContext) _Query_notification(ctx context.Context, field graph
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Notification(rctx, args["type"].(string), args["query"].(types.SliceQuery))
+		return ec.resolvers.Query().Notification(rctx, args["type"].(string), args["query"].(entity.SliceQuery))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2684,9 +2689,9 @@ func (ec *executionContext) _Query_notification(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.NotiSlice)
+	res := resTmp.(*entity.NotiSlice)
 	fc.Result = res
-	return ec.marshalNNotiSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐNotiSlice(ctx, field.Selections, res)
+	return ec.marshalNNotiSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐNotiSlice(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_post(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2713,7 +2718,7 @@ func (ec *executionContext) _Query_post(ctx context.Context, field graphql.Colle
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Post(rctx, args["id"].(string))
+		return ec.resolvers.Query().Post(rctx, args["id"].(uid.UID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2725,9 +2730,9 @@ func (ec *executionContext) _Query_post(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Post)
+	res := resTmp.(*entity.Post)
 	fc.Result = res
-	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPost(ctx, field.Selections, res)
+	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_mainTags(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2834,9 +2839,9 @@ func (ec *executionContext) _Query_tags(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*types.Tag)
+	res := resTmp.([]*entity.Tag)
 	fc.Result = res
-	return ec.marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐTag(ctx, field.Selections, res)
+	return ec.marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_threadSlice(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2863,7 +2868,7 @@ func (ec *executionContext) _Query_threadSlice(ctx context.Context, field graphq
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().ThreadSlice(rctx, args["tags"].([]string), args["query"].(types.SliceQuery))
+		return ec.resolvers.Query().ThreadSlice(rctx, args["tags"].([]string), args["query"].(entity.SliceQuery))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2875,9 +2880,9 @@ func (ec *executionContext) _Query_threadSlice(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.ThreadSlice)
+	res := resTmp.(*entity.ThreadSlice)
 	fc.Result = res
-	return ec.marshalNThreadSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadSlice(ctx, field.Selections, res)
+	return ec.marshalNThreadSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadSlice(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_thread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2904,7 +2909,7 @@ func (ec *executionContext) _Query_thread(ctx context.Context, field graphql.Col
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Thread(rctx, args["id"].(string))
+		return ec.resolvers.Query().Thread(rctx, args["id"].(uid.UID))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2916,9 +2921,9 @@ func (ec *executionContext) _Query_thread(ctx context.Context, field graphql.Col
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Thread)
+	res := resTmp.(*entity.Thread)
 	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx, field.Selections, res)
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_profile(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2950,9 +2955,9 @@ func (ec *executionContext) _Query_profile(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.User)
+	res := resTmp.(*entity.User)
 	fc.Result = res
-	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUser(ctx, field.Selections, res)
+	return ec.marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3024,7 +3029,7 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _QuotedNoti_id(ctx context.Context, field graphql.CollectedField, obj *types.QuotedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _QuotedNoti_id(ctx context.Context, field graphql.CollectedField, obj *entity.QuotedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3058,7 +3063,7 @@ func (ec *executionContext) _QuotedNoti_id(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _QuotedNoti_type(ctx context.Context, field graphql.CollectedField, obj *types.QuotedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _QuotedNoti_type(ctx context.Context, field graphql.CollectedField, obj *entity.QuotedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3092,7 +3097,7 @@ func (ec *executionContext) _QuotedNoti_type(ctx context.Context, field graphql.
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _QuotedNoti_eventTime(ctx context.Context, field graphql.CollectedField, obj *types.QuotedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _QuotedNoti_eventTime(ctx context.Context, field graphql.CollectedField, obj *entity.QuotedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3126,7 +3131,7 @@ func (ec *executionContext) _QuotedNoti_eventTime(ctx context.Context, field gra
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _QuotedNoti_hasRead(ctx context.Context, field graphql.CollectedField, obj *types.QuotedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _QuotedNoti_hasRead(ctx context.Context, field graphql.CollectedField, obj *entity.QuotedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3137,13 +3142,13 @@ func (ec *executionContext) _QuotedNoti_hasRead(ctx context.Context, field graph
 		Object:   "QuotedNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.HasRead, nil
+		return obj.HasRead(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3160,7 +3165,7 @@ func (ec *executionContext) _QuotedNoti_hasRead(ctx context.Context, field graph
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _QuotedNoti_thread(ctx context.Context, field graphql.CollectedField, obj *types.QuotedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _QuotedNoti_thread(ctx context.Context, field graphql.CollectedField, obj *entity.QuotedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3171,13 +3176,13 @@ func (ec *executionContext) _QuotedNoti_thread(ctx context.Context, field graphq
 		Object:   "QuotedNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Thread, nil
+		return obj.Thread(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3189,12 +3194,12 @@ func (ec *executionContext) _QuotedNoti_thread(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Thread)
+	res := resTmp.(*entity.Thread)
 	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx, field.Selections, res)
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _QuotedNoti_quotedPost(ctx context.Context, field graphql.CollectedField, obj *types.QuotedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _QuotedNoti_quotedPost(ctx context.Context, field graphql.CollectedField, obj *entity.QuotedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3205,13 +3210,13 @@ func (ec *executionContext) _QuotedNoti_quotedPost(ctx context.Context, field gr
 		Object:   "QuotedNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.QuotedPost, nil
+		return obj.QuotedPost(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3223,12 +3228,12 @@ func (ec *executionContext) _QuotedNoti_quotedPost(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Post)
+	res := resTmp.(*entity.Post)
 	fc.Result = res
-	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPost(ctx, field.Selections, res)
+	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _QuotedNoti_post(ctx context.Context, field graphql.CollectedField, obj *types.QuotedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _QuotedNoti_post(ctx context.Context, field graphql.CollectedField, obj *entity.QuotedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3239,13 +3244,13 @@ func (ec *executionContext) _QuotedNoti_post(ctx context.Context, field graphql.
 		Object:   "QuotedNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Post, nil
+		return obj.Post(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3257,12 +3262,12 @@ func (ec *executionContext) _QuotedNoti_post(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Post)
+	res := resTmp.(*entity.Post)
 	fc.Result = res
-	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPost(ctx, field.Selections, res)
+	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _RepliedNoti_id(ctx context.Context, field graphql.CollectedField, obj *types.RepliedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _RepliedNoti_id(ctx context.Context, field graphql.CollectedField, obj *entity.RepliedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3296,7 +3301,7 @@ func (ec *executionContext) _RepliedNoti_id(ctx context.Context, field graphql.C
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _RepliedNoti_type(ctx context.Context, field graphql.CollectedField, obj *types.RepliedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _RepliedNoti_type(ctx context.Context, field graphql.CollectedField, obj *entity.RepliedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3330,7 +3335,7 @@ func (ec *executionContext) _RepliedNoti_type(ctx context.Context, field graphql
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _RepliedNoti_eventTime(ctx context.Context, field graphql.CollectedField, obj *types.RepliedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _RepliedNoti_eventTime(ctx context.Context, field graphql.CollectedField, obj *entity.RepliedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3364,7 +3369,7 @@ func (ec *executionContext) _RepliedNoti_eventTime(ctx context.Context, field gr
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _RepliedNoti_hasRead(ctx context.Context, field graphql.CollectedField, obj *types.RepliedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _RepliedNoti_hasRead(ctx context.Context, field graphql.CollectedField, obj *entity.RepliedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3375,13 +3380,13 @@ func (ec *executionContext) _RepliedNoti_hasRead(ctx context.Context, field grap
 		Object:   "RepliedNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.HasRead, nil
+		return obj.HasRead(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3398,7 +3403,7 @@ func (ec *executionContext) _RepliedNoti_hasRead(ctx context.Context, field grap
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _RepliedNoti_thread(ctx context.Context, field graphql.CollectedField, obj *types.RepliedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _RepliedNoti_thread(ctx context.Context, field graphql.CollectedField, obj *entity.RepliedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3409,13 +3414,13 @@ func (ec *executionContext) _RepliedNoti_thread(ctx context.Context, field graph
 		Object:   "RepliedNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Thread, nil
+		return obj.Thread(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3427,12 +3432,12 @@ func (ec *executionContext) _RepliedNoti_thread(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.Thread)
+	res := resTmp.(*entity.Thread)
 	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx, field.Selections, res)
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _RepliedNoti_repliers(ctx context.Context, field graphql.CollectedField, obj *types.RepliedNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _RepliedNoti_repliers(ctx context.Context, field graphql.CollectedField, obj *entity.RepliedNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3443,13 +3448,13 @@ func (ec *executionContext) _RepliedNoti_repliers(ctx context.Context, field gra
 		Object:   "RepliedNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Repliers, nil
+		return obj.Repliers(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3466,7 +3471,7 @@ func (ec *executionContext) _RepliedNoti_repliers(ctx context.Context, field gra
 	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SliceInfo_firstCursor(ctx context.Context, field graphql.CollectedField, obj *types.SliceInfo) (ret graphql.Marshaler) {
+func (ec *executionContext) _SliceInfo_firstCursor(ctx context.Context, field graphql.CollectedField, obj *entity.SliceInfo) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3500,7 +3505,7 @@ func (ec *executionContext) _SliceInfo_firstCursor(ctx context.Context, field gr
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SliceInfo_lastCursor(ctx context.Context, field graphql.CollectedField, obj *types.SliceInfo) (ret graphql.Marshaler) {
+func (ec *executionContext) _SliceInfo_lastCursor(ctx context.Context, field graphql.CollectedField, obj *entity.SliceInfo) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3534,7 +3539,7 @@ func (ec *executionContext) _SliceInfo_lastCursor(ctx context.Context, field gra
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SliceInfo_hasNext(ctx context.Context, field graphql.CollectedField, obj *types.SliceInfo) (ret graphql.Marshaler) {
+func (ec *executionContext) _SliceInfo_hasNext(ctx context.Context, field graphql.CollectedField, obj *entity.SliceInfo) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3568,7 +3573,7 @@ func (ec *executionContext) _SliceInfo_hasNext(ctx context.Context, field graphq
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SystemNoti_id(ctx context.Context, field graphql.CollectedField, obj *types.SystemNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _SystemNoti_id(ctx context.Context, field graphql.CollectedField, obj *entity.SystemNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3602,7 +3607,7 @@ func (ec *executionContext) _SystemNoti_id(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SystemNoti_type(ctx context.Context, field graphql.CollectedField, obj *types.SystemNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _SystemNoti_type(ctx context.Context, field graphql.CollectedField, obj *entity.SystemNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3636,7 +3641,7 @@ func (ec *executionContext) _SystemNoti_type(ctx context.Context, field graphql.
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SystemNoti_eventTime(ctx context.Context, field graphql.CollectedField, obj *types.SystemNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _SystemNoti_eventTime(ctx context.Context, field graphql.CollectedField, obj *entity.SystemNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3670,7 +3675,7 @@ func (ec *executionContext) _SystemNoti_eventTime(ctx context.Context, field gra
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SystemNoti_hasRead(ctx context.Context, field graphql.CollectedField, obj *types.SystemNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _SystemNoti_hasRead(ctx context.Context, field graphql.CollectedField, obj *entity.SystemNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3681,13 +3686,13 @@ func (ec *executionContext) _SystemNoti_hasRead(ctx context.Context, field graph
 		Object:   "SystemNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.HasRead, nil
+		return obj.HasRead(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3704,7 +3709,7 @@ func (ec *executionContext) _SystemNoti_hasRead(ctx context.Context, field graph
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SystemNoti_title(ctx context.Context, field graphql.CollectedField, obj *types.SystemNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _SystemNoti_title(ctx context.Context, field graphql.CollectedField, obj *entity.SystemNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3715,13 +3720,13 @@ func (ec *executionContext) _SystemNoti_title(ctx context.Context, field graphql
 		Object:   "SystemNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Title, nil
+		return obj.Title(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3738,7 +3743,7 @@ func (ec *executionContext) _SystemNoti_title(ctx context.Context, field graphql
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _SystemNoti_content(ctx context.Context, field graphql.CollectedField, obj *types.SystemNoti) (ret graphql.Marshaler) {
+func (ec *executionContext) _SystemNoti_content(ctx context.Context, field graphql.CollectedField, obj *entity.SystemNoti) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3749,13 +3754,13 @@ func (ec *executionContext) _SystemNoti_content(ctx context.Context, field graph
 		Object:   "SystemNoti",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Content, nil
+		return ec.resolvers.SystemNoti().Content(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3772,7 +3777,7 @@ func (ec *executionContext) _SystemNoti_content(ctx context.Context, field graph
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Tag_name(ctx context.Context, field graphql.CollectedField, obj *types.Tag) (ret graphql.Marshaler) {
+func (ec *executionContext) _Tag_name(ctx context.Context, field graphql.CollectedField, obj *entity.Tag) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3806,7 +3811,7 @@ func (ec *executionContext) _Tag_name(ctx context.Context, field graphql.Collect
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Tag_isMain(ctx context.Context, field graphql.CollectedField, obj *types.Tag) (ret graphql.Marshaler) {
+func (ec *executionContext) _Tag_isMain(ctx context.Context, field graphql.CollectedField, obj *entity.Tag) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3840,7 +3845,7 @@ func (ec *executionContext) _Tag_isMain(ctx context.Context, field graphql.Colle
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Tag_belongsTo(ctx context.Context, field graphql.CollectedField, obj *types.Tag) (ret graphql.Marshaler) {
+func (ec *executionContext) _Tag_belongsTo(ctx context.Context, field graphql.CollectedField, obj *entity.Tag) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3874,7 +3879,7 @@ func (ec *executionContext) _Tag_belongsTo(ctx context.Context, field graphql.Co
 	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_id(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_id(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3903,12 +3908,12 @@ func (ec *executionContext) _Thread_id(ctx context.Context, field graphql.Collec
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(uid.UID)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_createdAt(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_createdAt(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3942,7 +3947,7 @@ func (ec *executionContext) _Thread_createdAt(ctx context.Context, field graphql
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_anonymous(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_anonymous(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3976,7 +3981,7 @@ func (ec *executionContext) _Thread_anonymous(ctx context.Context, field graphql
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_author(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_author(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4010,7 +4015,7 @@ func (ec *executionContext) _Thread_author(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_title(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_title(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4041,7 +4046,7 @@ func (ec *executionContext) _Thread_title(ctx context.Context, field graphql.Col
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_content(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_content(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4075,7 +4080,7 @@ func (ec *executionContext) _Thread_content(ctx context.Context, field graphql.C
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_mainTag(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_mainTag(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4109,7 +4114,7 @@ func (ec *executionContext) _Thread_mainTag(ctx context.Context, field graphql.C
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_subTags(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_subTags(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4140,7 +4145,7 @@ func (ec *executionContext) _Thread_subTags(ctx context.Context, field graphql.C
 	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_replies(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_replies(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4151,7 +4156,7 @@ func (ec *executionContext) _Thread_replies(ctx context.Context, field graphql.C
 		Object:   "Thread",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
@@ -4164,7 +4169,7 @@ func (ec *executionContext) _Thread_replies(ctx context.Context, field graphql.C
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Replies, nil
+		return obj.Replies(ctx, args["query"].(entity.SliceQuery))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4176,12 +4181,12 @@ func (ec *executionContext) _Thread_replies(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.PostSlice)
+	res := resTmp.(*entity.PostSlice)
 	fc.Result = res
-	return ec.marshalNPostSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostSlice(ctx, field.Selections, res)
+	return ec.marshalNPostSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostSlice(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_replyCount(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_replyCount(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4192,13 +4197,13 @@ func (ec *executionContext) _Thread_replyCount(ctx context.Context, field graphq
 		Object:   "Thread",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ReplyCount, nil
+		return obj.ReplyCount(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4215,7 +4220,7 @@ func (ec *executionContext) _Thread_replyCount(ctx context.Context, field graphq
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_catalog(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_catalog(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4226,13 +4231,13 @@ func (ec *executionContext) _Thread_catalog(ctx context.Context, field graphql.C
 		Object:   "Thread",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Catalog, nil
+		return obj.Catalog(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4241,12 +4246,12 @@ func (ec *executionContext) _Thread_catalog(ctx context.Context, field graphql.C
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*types.ThreadCatalogItem)
+	res := resTmp.([]*entity.ThreadCatalogItem)
 	fc.Result = res
-	return ec.marshalOThreadCatalogItem2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadCatalogItemᚄ(ctx, field.Selections, res)
+	return ec.marshalOThreadCatalogItem2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadCatalogItemᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_blocked(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_blocked(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4280,7 +4285,7 @@ func (ec *executionContext) _Thread_blocked(ctx context.Context, field graphql.C
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_locked(ctx context.Context, field graphql.CollectedField, obj *types.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_locked(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4314,7 +4319,7 @@ func (ec *executionContext) _Thread_locked(ctx context.Context, field graphql.Co
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ThreadCatalogItem_postId(ctx context.Context, field graphql.CollectedField, obj *types.ThreadCatalogItem) (ret graphql.Marshaler) {
+func (ec *executionContext) _ThreadCatalogItem_postId(ctx context.Context, field graphql.CollectedField, obj *entity.ThreadCatalogItem) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4348,7 +4353,7 @@ func (ec *executionContext) _ThreadCatalogItem_postId(ctx context.Context, field
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ThreadCatalogItem_createdAt(ctx context.Context, field graphql.CollectedField, obj *types.ThreadCatalogItem) (ret graphql.Marshaler) {
+func (ec *executionContext) _ThreadCatalogItem_createdAt(ctx context.Context, field graphql.CollectedField, obj *entity.ThreadCatalogItem) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4382,7 +4387,7 @@ func (ec *executionContext) _ThreadCatalogItem_createdAt(ctx context.Context, fi
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ThreadSlice_threads(ctx context.Context, field graphql.CollectedField, obj *types.ThreadSlice) (ret graphql.Marshaler) {
+func (ec *executionContext) _ThreadSlice_threads(ctx context.Context, field graphql.CollectedField, obj *entity.ThreadSlice) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4411,12 +4416,12 @@ func (ec *executionContext) _ThreadSlice_threads(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*types.Thread)
+	res := resTmp.([]*entity.Thread)
 	fc.Result = res
-	return ec.marshalNThread2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadᚄ(ctx, field.Selections, res)
+	return ec.marshalNThread2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ThreadSlice_sliceInfo(ctx context.Context, field graphql.CollectedField, obj *types.ThreadSlice) (ret graphql.Marshaler) {
+func (ec *executionContext) _ThreadSlice_sliceInfo(ctx context.Context, field graphql.CollectedField, obj *entity.ThreadSlice) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4445,12 +4450,12 @@ func (ec *executionContext) _ThreadSlice_sliceInfo(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.SliceInfo)
+	res := resTmp.(*entity.SliceInfo)
 	fc.Result = res
-	return ec.marshalNSliceInfo2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceInfo(ctx, field.Selections, res)
+	return ec.marshalNSliceInfo2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceInfo(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _UnreadNotiCount_system(ctx context.Context, field graphql.CollectedField, obj *types.UnreadNotiCount) (ret graphql.Marshaler) {
+func (ec *executionContext) _UnreadNotiCount_system(ctx context.Context, field graphql.CollectedField, obj *entity.UnreadNotiCount) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4484,7 +4489,7 @@ func (ec *executionContext) _UnreadNotiCount_system(ctx context.Context, field g
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _UnreadNotiCount_replied(ctx context.Context, field graphql.CollectedField, obj *types.UnreadNotiCount) (ret graphql.Marshaler) {
+func (ec *executionContext) _UnreadNotiCount_replied(ctx context.Context, field graphql.CollectedField, obj *entity.UnreadNotiCount) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4518,7 +4523,7 @@ func (ec *executionContext) _UnreadNotiCount_replied(ctx context.Context, field 
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _UnreadNotiCount_quoted(ctx context.Context, field graphql.CollectedField, obj *types.UnreadNotiCount) (ret graphql.Marshaler) {
+func (ec *executionContext) _UnreadNotiCount_quoted(ctx context.Context, field graphql.CollectedField, obj *entity.UnreadNotiCount) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4552,7 +4557,7 @@ func (ec *executionContext) _UnreadNotiCount_quoted(ctx context.Context, field g
 	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *types.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4586,7 +4591,7 @@ func (ec *executionContext) _User_email(ctx context.Context, field graphql.Colle
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_name(ctx context.Context, field graphql.CollectedField, obj *types.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_name(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4617,7 +4622,7 @@ func (ec *executionContext) _User_name(ctx context.Context, field graphql.Collec
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_tags(ctx context.Context, field graphql.CollectedField, obj *types.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_tags(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4648,7 +4653,7 @@ func (ec *executionContext) _User_tags(ctx context.Context, field graphql.Collec
 	return ec.marshalOString2ᚕstringᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_role(ctx context.Context, field graphql.CollectedField, obj *types.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_role(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4679,7 +4684,7 @@ func (ec *executionContext) _User_role(ctx context.Context, field graphql.Collec
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_threads(ctx context.Context, field graphql.CollectedField, obj *types.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_threads(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4715,12 +4720,12 @@ func (ec *executionContext) _User_threads(ctx context.Context, field graphql.Col
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.ThreadSlice)
+	res := resTmp.(*entity.ThreadSlice)
 	fc.Result = res
-	return ec.marshalNThreadSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadSlice(ctx, field.Selections, res)
+	return ec.marshalNThreadSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadSlice(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _User_posts(ctx context.Context, field graphql.CollectedField, obj *types.User) (ret graphql.Marshaler) {
+func (ec *executionContext) _User_posts(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4756,9 +4761,9 @@ func (ec *executionContext) _User_posts(ctx context.Context, field graphql.Colle
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*types.PostSlice)
+	res := resTmp.(*entity.PostSlice)
 	fc.Result = res
-	return ec.marshalNPostSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostSlice(ctx, field.Selections, res)
+	return ec.marshalNPostSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostSlice(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -5816,8 +5821,8 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputPostInput(ctx context.Context, obj interface{}) (types.PostInput, error) {
-	var it types.PostInput
+func (ec *executionContext) unmarshalInputPostInput(ctx context.Context, obj interface{}) (entity.PostInput, error) {
+	var it entity.PostInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -5852,8 +5857,8 @@ func (ec *executionContext) unmarshalInputPostInput(ctx context.Context, obj int
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputSliceQuery(ctx context.Context, obj interface{}) (types.SliceQuery, error) {
-	var it types.SliceQuery
+func (ec *executionContext) unmarshalInputSliceQuery(ctx context.Context, obj interface{}) (entity.SliceQuery, error) {
+	var it entity.SliceQuery
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -5882,8 +5887,8 @@ func (ec *executionContext) unmarshalInputSliceQuery(ctx context.Context, obj in
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputThreadInput(ctx context.Context, obj interface{}) (types.ThreadInput, error) {
-	var it types.ThreadInput
+func (ec *executionContext) unmarshalInputThreadInput(ctx context.Context, obj interface{}) (entity.ThreadInput, error) {
+	var it entity.ThreadInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -6020,7 +6025,7 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 var notiSliceImplementors = []string{"NotiSlice"}
 
-func (ec *executionContext) _NotiSlice(ctx context.Context, sel ast.SelectionSet, obj *types.NotiSlice) graphql.Marshaler {
+func (ec *executionContext) _NotiSlice(ctx context.Context, sel ast.SelectionSet, obj *entity.NotiSlice) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, notiSliceImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6053,7 +6058,7 @@ func (ec *executionContext) _NotiSlice(ctx context.Context, sel ast.SelectionSet
 
 var postImplementors = []string{"Post"}
 
-func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj *types.Post) graphql.Marshaler {
+func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj *entity.Post) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, postImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6065,39 +6070,57 @@ func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._Post_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "createdAt":
 			out.Values[i] = ec._Post_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "anonymous":
 			out.Values[i] = ec._Post_anonymous(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "author":
 			out.Values[i] = ec._Post_author(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "content":
 			out.Values[i] = ec._Post_content(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "quotes":
-			out.Values[i] = ec._Post_quotes(ctx, field, obj)
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Post_quotes(ctx, field, obj)
+				return res
+			})
 		case "quotedCount":
-			out.Values[i] = ec._Post_quotedCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Post_quotedCount(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "blocked":
 			out.Values[i] = ec._Post_blocked(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -6112,7 +6135,7 @@ func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj
 
 var postSliceImplementors = []string{"PostSlice"}
 
-func (ec *executionContext) _PostSlice(ctx context.Context, sel ast.SelectionSet, obj *types.PostSlice) graphql.Marshaler {
+func (ec *executionContext) _PostSlice(ctx context.Context, sel ast.SelectionSet, obj *entity.PostSlice) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, postSliceImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6300,7 +6323,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 
 var quotedNotiImplementors = []string{"QuotedNoti"}
 
-func (ec *executionContext) _QuotedNoti(ctx context.Context, sel ast.SelectionSet, obj *types.QuotedNoti) graphql.Marshaler {
+func (ec *executionContext) _QuotedNoti(ctx context.Context, sel ast.SelectionSet, obj *entity.QuotedNoti) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, quotedNotiImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6312,38 +6335,74 @@ func (ec *executionContext) _QuotedNoti(ctx context.Context, sel ast.SelectionSe
 		case "id":
 			out.Values[i] = ec._QuotedNoti_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "type":
 			out.Values[i] = ec._QuotedNoti_type(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "eventTime":
 			out.Values[i] = ec._QuotedNoti_eventTime(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "hasRead":
-			out.Values[i] = ec._QuotedNoti_hasRead(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._QuotedNoti_hasRead(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "thread":
-			out.Values[i] = ec._QuotedNoti_thread(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._QuotedNoti_thread(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "quotedPost":
-			out.Values[i] = ec._QuotedNoti_quotedPost(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._QuotedNoti_quotedPost(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "post":
-			out.Values[i] = ec._QuotedNoti_post(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._QuotedNoti_post(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6357,7 +6416,7 @@ func (ec *executionContext) _QuotedNoti(ctx context.Context, sel ast.SelectionSe
 
 var repliedNotiImplementors = []string{"RepliedNoti"}
 
-func (ec *executionContext) _RepliedNoti(ctx context.Context, sel ast.SelectionSet, obj *types.RepliedNoti) graphql.Marshaler {
+func (ec *executionContext) _RepliedNoti(ctx context.Context, sel ast.SelectionSet, obj *entity.RepliedNoti) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, repliedNotiImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6369,33 +6428,60 @@ func (ec *executionContext) _RepliedNoti(ctx context.Context, sel ast.SelectionS
 		case "id":
 			out.Values[i] = ec._RepliedNoti_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "type":
 			out.Values[i] = ec._RepliedNoti_type(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "eventTime":
 			out.Values[i] = ec._RepliedNoti_eventTime(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "hasRead":
-			out.Values[i] = ec._RepliedNoti_hasRead(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RepliedNoti_hasRead(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "thread":
-			out.Values[i] = ec._RepliedNoti_thread(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RepliedNoti_thread(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "repliers":
-			out.Values[i] = ec._RepliedNoti_repliers(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RepliedNoti_repliers(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6409,7 +6495,7 @@ func (ec *executionContext) _RepliedNoti(ctx context.Context, sel ast.SelectionS
 
 var sliceInfoImplementors = []string{"SliceInfo"}
 
-func (ec *executionContext) _SliceInfo(ctx context.Context, sel ast.SelectionSet, obj *types.SliceInfo) graphql.Marshaler {
+func (ec *executionContext) _SliceInfo(ctx context.Context, sel ast.SelectionSet, obj *entity.SliceInfo) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, sliceInfoImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6446,7 +6532,7 @@ func (ec *executionContext) _SliceInfo(ctx context.Context, sel ast.SelectionSet
 
 var systemNotiImplementors = []string{"SystemNoti"}
 
-func (ec *executionContext) _SystemNoti(ctx context.Context, sel ast.SelectionSet, obj *types.SystemNoti) graphql.Marshaler {
+func (ec *executionContext) _SystemNoti(ctx context.Context, sel ast.SelectionSet, obj *entity.SystemNoti) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, systemNotiImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6458,33 +6544,60 @@ func (ec *executionContext) _SystemNoti(ctx context.Context, sel ast.SelectionSe
 		case "id":
 			out.Values[i] = ec._SystemNoti_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "type":
 			out.Values[i] = ec._SystemNoti_type(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "eventTime":
 			out.Values[i] = ec._SystemNoti_eventTime(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "hasRead":
-			out.Values[i] = ec._SystemNoti_hasRead(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SystemNoti_hasRead(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "title":
-			out.Values[i] = ec._SystemNoti_title(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SystemNoti_title(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "content":
-			out.Values[i] = ec._SystemNoti_content(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._SystemNoti_content(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6498,7 +6611,7 @@ func (ec *executionContext) _SystemNoti(ctx context.Context, sel ast.SelectionSe
 
 var tagImplementors = []string{"Tag"}
 
-func (ec *executionContext) _Tag(ctx context.Context, sel ast.SelectionSet, obj *types.Tag) graphql.Marshaler {
+func (ec *executionContext) _Tag(ctx context.Context, sel ast.SelectionSet, obj *entity.Tag) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, tagImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6535,7 +6648,7 @@ func (ec *executionContext) _Tag(ctx context.Context, sel ast.SelectionSet, obj 
 
 var threadImplementors = []string{"Thread"}
 
-func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, obj *types.Thread) graphql.Marshaler {
+func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, obj *entity.Thread) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, threadImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6547,58 +6660,85 @@ func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, o
 		case "id":
 			out.Values[i] = ec._Thread_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "createdAt":
 			out.Values[i] = ec._Thread_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "anonymous":
 			out.Values[i] = ec._Thread_anonymous(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "author":
 			out.Values[i] = ec._Thread_author(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "title":
 			out.Values[i] = ec._Thread_title(ctx, field, obj)
 		case "content":
 			out.Values[i] = ec._Thread_content(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "mainTag":
 			out.Values[i] = ec._Thread_mainTag(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "subTags":
 			out.Values[i] = ec._Thread_subTags(ctx, field, obj)
 		case "replies":
-			out.Values[i] = ec._Thread_replies(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Thread_replies(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "replyCount":
-			out.Values[i] = ec._Thread_replyCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Thread_replyCount(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "catalog":
-			out.Values[i] = ec._Thread_catalog(ctx, field, obj)
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Thread_catalog(ctx, field, obj)
+				return res
+			})
 		case "blocked":
 			out.Values[i] = ec._Thread_blocked(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "locked":
 			out.Values[i] = ec._Thread_locked(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -6613,7 +6753,7 @@ func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, o
 
 var threadCatalogItemImplementors = []string{"ThreadCatalogItem"}
 
-func (ec *executionContext) _ThreadCatalogItem(ctx context.Context, sel ast.SelectionSet, obj *types.ThreadCatalogItem) graphql.Marshaler {
+func (ec *executionContext) _ThreadCatalogItem(ctx context.Context, sel ast.SelectionSet, obj *entity.ThreadCatalogItem) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, threadCatalogItemImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6645,7 +6785,7 @@ func (ec *executionContext) _ThreadCatalogItem(ctx context.Context, sel ast.Sele
 
 var threadSliceImplementors = []string{"ThreadSlice"}
 
-func (ec *executionContext) _ThreadSlice(ctx context.Context, sel ast.SelectionSet, obj *types.ThreadSlice) graphql.Marshaler {
+func (ec *executionContext) _ThreadSlice(ctx context.Context, sel ast.SelectionSet, obj *entity.ThreadSlice) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, threadSliceImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6677,7 +6817,7 @@ func (ec *executionContext) _ThreadSlice(ctx context.Context, sel ast.SelectionS
 
 var unreadNotiCountImplementors = []string{"UnreadNotiCount"}
 
-func (ec *executionContext) _UnreadNotiCount(ctx context.Context, sel ast.SelectionSet, obj *types.UnreadNotiCount) graphql.Marshaler {
+func (ec *executionContext) _UnreadNotiCount(ctx context.Context, sel ast.SelectionSet, obj *entity.UnreadNotiCount) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, unreadNotiCountImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -6714,7 +6854,7 @@ func (ec *executionContext) _UnreadNotiCount(ctx context.Context, sel ast.Select
 
 var userImplementors = []string{"User"}
 
-func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *types.User) graphql.Marshaler {
+func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *entity.User) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, userImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -7028,11 +7168,11 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
-func (ec *executionContext) marshalNNotiSlice2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐNotiSlice(ctx context.Context, sel ast.SelectionSet, v types.NotiSlice) graphql.Marshaler {
+func (ec *executionContext) marshalNNotiSlice2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐNotiSlice(ctx context.Context, sel ast.SelectionSet, v entity.NotiSlice) graphql.Marshaler {
 	return ec._NotiSlice(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNNotiSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐNotiSlice(ctx context.Context, sel ast.SelectionSet, v *types.NotiSlice) graphql.Marshaler {
+func (ec *executionContext) marshalNNotiSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐNotiSlice(ctx context.Context, sel ast.SelectionSet, v *entity.NotiSlice) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7042,11 +7182,11 @@ func (ec *executionContext) marshalNNotiSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋu
 	return ec._NotiSlice(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNPost2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPost(ctx context.Context, sel ast.SelectionSet, v types.Post) graphql.Marshaler {
+func (ec *executionContext) marshalNPost2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx context.Context, sel ast.SelectionSet, v entity.Post) graphql.Marshaler {
 	return ec._Post(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostᚄ(ctx context.Context, sel ast.SelectionSet, v []*types.Post) graphql.Marshaler {
+func (ec *executionContext) marshalNPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.Post) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -7070,7 +7210,7 @@ func (ec *executionContext) marshalNPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuex
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPost(ctx, sel, v[i])
+			ret[i] = ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7083,7 +7223,7 @@ func (ec *executionContext) marshalNPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuex
 	return ret
 }
 
-func (ec *executionContext) marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPost(ctx context.Context, sel ast.SelectionSet, v *types.Post) graphql.Marshaler {
+func (ec *executionContext) marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx context.Context, sel ast.SelectionSet, v *entity.Post) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7093,15 +7233,15 @@ func (ec *executionContext) marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexky�
 	return ec._Post(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNPostInput2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostInput(ctx context.Context, v interface{}) (types.PostInput, error) {
+func (ec *executionContext) unmarshalNPostInput2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostInput(ctx context.Context, v interface{}) (entity.PostInput, error) {
 	return ec.unmarshalInputPostInput(ctx, v)
 }
 
-func (ec *executionContext) marshalNPostSlice2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostSlice(ctx context.Context, sel ast.SelectionSet, v types.PostSlice) graphql.Marshaler {
+func (ec *executionContext) marshalNPostSlice2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostSlice(ctx context.Context, sel ast.SelectionSet, v entity.PostSlice) graphql.Marshaler {
 	return ec._PostSlice(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNPostSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostSlice(ctx context.Context, sel ast.SelectionSet, v *types.PostSlice) graphql.Marshaler {
+func (ec *executionContext) marshalNPostSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostSlice(ctx context.Context, sel ast.SelectionSet, v *entity.PostSlice) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7111,11 +7251,11 @@ func (ec *executionContext) marshalNPostSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋu
 	return ec._PostSlice(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNQuotedNoti2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐQuotedNoti(ctx context.Context, sel ast.SelectionSet, v types.QuotedNoti) graphql.Marshaler {
+func (ec *executionContext) marshalNQuotedNoti2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐQuotedNoti(ctx context.Context, sel ast.SelectionSet, v entity.QuotedNoti) graphql.Marshaler {
 	return ec._QuotedNoti(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNQuotedNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐQuotedNoti(ctx context.Context, sel ast.SelectionSet, v *types.QuotedNoti) graphql.Marshaler {
+func (ec *executionContext) marshalNQuotedNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐQuotedNoti(ctx context.Context, sel ast.SelectionSet, v *entity.QuotedNoti) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7125,11 +7265,11 @@ func (ec *executionContext) marshalNQuotedNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋ
 	return ec._QuotedNoti(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNRepliedNoti2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐRepliedNoti(ctx context.Context, sel ast.SelectionSet, v types.RepliedNoti) graphql.Marshaler {
+func (ec *executionContext) marshalNRepliedNoti2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐRepliedNoti(ctx context.Context, sel ast.SelectionSet, v entity.RepliedNoti) graphql.Marshaler {
 	return ec._RepliedNoti(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNRepliedNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐRepliedNoti(ctx context.Context, sel ast.SelectionSet, v *types.RepliedNoti) graphql.Marshaler {
+func (ec *executionContext) marshalNRepliedNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐRepliedNoti(ctx context.Context, sel ast.SelectionSet, v *entity.RepliedNoti) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7139,11 +7279,11 @@ func (ec *executionContext) marshalNRepliedNoti2ᚖgitlabᚗcomᚋabyssᚗclub�
 	return ec._RepliedNoti(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNSliceInfo2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceInfo(ctx context.Context, sel ast.SelectionSet, v types.SliceInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNSliceInfo2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceInfo(ctx context.Context, sel ast.SelectionSet, v entity.SliceInfo) graphql.Marshaler {
 	return ec._SliceInfo(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSliceInfo2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceInfo(ctx context.Context, sel ast.SelectionSet, v *types.SliceInfo) graphql.Marshaler {
+func (ec *executionContext) marshalNSliceInfo2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceInfo(ctx context.Context, sel ast.SelectionSet, v *entity.SliceInfo) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7153,7 +7293,7 @@ func (ec *executionContext) marshalNSliceInfo2ᚖgitlabᚗcomᚋabyssᚗclubᚋu
 	return ec._SliceInfo(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSliceQuery(ctx context.Context, v interface{}) (types.SliceQuery, error) {
+func (ec *executionContext) unmarshalNSliceQuery2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceQuery(ctx context.Context, v interface{}) (entity.SliceQuery, error) {
 	return ec.unmarshalInputSliceQuery(ctx, v)
 }
 
@@ -7229,11 +7369,11 @@ func (ec *executionContext) marshalNString2ᚕᚖstring(ctx context.Context, sel
 	return ret
 }
 
-func (ec *executionContext) marshalNSystemNoti2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSystemNoti(ctx context.Context, sel ast.SelectionSet, v types.SystemNoti) graphql.Marshaler {
+func (ec *executionContext) marshalNSystemNoti2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSystemNoti(ctx context.Context, sel ast.SelectionSet, v entity.SystemNoti) graphql.Marshaler {
 	return ec._SystemNoti(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSystemNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSystemNoti(ctx context.Context, sel ast.SelectionSet, v *types.SystemNoti) graphql.Marshaler {
+func (ec *executionContext) marshalNSystemNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSystemNoti(ctx context.Context, sel ast.SelectionSet, v *entity.SystemNoti) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7243,7 +7383,7 @@ func (ec *executionContext) marshalNSystemNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋ
 	return ec._SystemNoti(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐTag(ctx context.Context, sel ast.SelectionSet, v []*types.Tag) graphql.Marshaler {
+func (ec *executionContext) marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx context.Context, sel ast.SelectionSet, v []*entity.Tag) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -7267,7 +7407,7 @@ func (ec *executionContext) marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexk
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalOTag2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐTag(ctx, sel, v[i])
+			ret[i] = ec.marshalOTag2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7280,11 +7420,11 @@ func (ec *executionContext) marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexk
 	return ret
 }
 
-func (ec *executionContext) marshalNThread2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx context.Context, sel ast.SelectionSet, v types.Thread) graphql.Marshaler {
+func (ec *executionContext) marshalNThread2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx context.Context, sel ast.SelectionSet, v entity.Thread) graphql.Marshaler {
 	return ec._Thread(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNThread2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadᚄ(ctx context.Context, sel ast.SelectionSet, v []*types.Thread) graphql.Marshaler {
+func (ec *executionContext) marshalNThread2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.Thread) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -7308,7 +7448,7 @@ func (ec *executionContext) marshalNThread2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋu
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx, sel, v[i])
+			ret[i] = ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7321,7 +7461,7 @@ func (ec *executionContext) marshalNThread2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋu
 	return ret
 }
 
-func (ec *executionContext) marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThread(ctx context.Context, sel ast.SelectionSet, v *types.Thread) graphql.Marshaler {
+func (ec *executionContext) marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx context.Context, sel ast.SelectionSet, v *entity.Thread) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7331,11 +7471,11 @@ func (ec *executionContext) marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexk
 	return ec._Thread(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNThreadCatalogItem2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadCatalogItem(ctx context.Context, sel ast.SelectionSet, v types.ThreadCatalogItem) graphql.Marshaler {
+func (ec *executionContext) marshalNThreadCatalogItem2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadCatalogItem(ctx context.Context, sel ast.SelectionSet, v entity.ThreadCatalogItem) graphql.Marshaler {
 	return ec._ThreadCatalogItem(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNThreadCatalogItem2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadCatalogItem(ctx context.Context, sel ast.SelectionSet, v *types.ThreadCatalogItem) graphql.Marshaler {
+func (ec *executionContext) marshalNThreadCatalogItem2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadCatalogItem(ctx context.Context, sel ast.SelectionSet, v *entity.ThreadCatalogItem) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7345,15 +7485,15 @@ func (ec *executionContext) marshalNThreadCatalogItem2ᚖgitlabᚗcomᚋabyssᚗ
 	return ec._ThreadCatalogItem(ctx, sel, v)
 }
 
-func (ec *executionContext) unmarshalNThreadInput2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadInput(ctx context.Context, v interface{}) (types.ThreadInput, error) {
+func (ec *executionContext) unmarshalNThreadInput2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadInput(ctx context.Context, v interface{}) (entity.ThreadInput, error) {
 	return ec.unmarshalInputThreadInput(ctx, v)
 }
 
-func (ec *executionContext) marshalNThreadSlice2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadSlice(ctx context.Context, sel ast.SelectionSet, v types.ThreadSlice) graphql.Marshaler {
+func (ec *executionContext) marshalNThreadSlice2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadSlice(ctx context.Context, sel ast.SelectionSet, v entity.ThreadSlice) graphql.Marshaler {
 	return ec._ThreadSlice(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNThreadSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadSlice(ctx context.Context, sel ast.SelectionSet, v *types.ThreadSlice) graphql.Marshaler {
+func (ec *executionContext) marshalNThreadSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadSlice(ctx context.Context, sel ast.SelectionSet, v *entity.ThreadSlice) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7377,11 +7517,20 @@ func (ec *executionContext) marshalNTime2timeᚐTime(ctx context.Context, sel as
 	return res
 }
 
-func (ec *executionContext) marshalNUnreadNotiCount2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUnreadNotiCount(ctx context.Context, sel ast.SelectionSet, v types.UnreadNotiCount) graphql.Marshaler {
+func (ec *executionContext) unmarshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx context.Context, v interface{}) (uid.UID, error) {
+	var res uid.UID
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx context.Context, sel ast.SelectionSet, v uid.UID) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) marshalNUnreadNotiCount2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUnreadNotiCount(ctx context.Context, sel ast.SelectionSet, v entity.UnreadNotiCount) graphql.Marshaler {
 	return ec._UnreadNotiCount(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNUnreadNotiCount2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUnreadNotiCount(ctx context.Context, sel ast.SelectionSet, v *types.UnreadNotiCount) graphql.Marshaler {
+func (ec *executionContext) marshalNUnreadNotiCount2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUnreadNotiCount(ctx context.Context, sel ast.SelectionSet, v *entity.UnreadNotiCount) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7391,11 +7540,11 @@ func (ec *executionContext) marshalNUnreadNotiCount2ᚖgitlabᚗcomᚋabyssᚗcl
 	return ec._UnreadNotiCount(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNUser2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUser(ctx context.Context, sel ast.SelectionSet, v types.User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUser(ctx context.Context, sel ast.SelectionSet, v entity.User) graphql.Marshaler {
 	return ec._User(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐUser(ctx context.Context, sel ast.SelectionSet, v *types.User) graphql.Marshaler {
+func (ec *executionContext) marshalNUser2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐUser(ctx context.Context, sel ast.SelectionSet, v *entity.User) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -7677,7 +7826,7 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return ec.marshalOInt2int(ctx, sel, *v)
 }
 
-func (ec *executionContext) marshalOPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPostᚄ(ctx context.Context, sel ast.SelectionSet, v []*types.Post) graphql.Marshaler {
+func (ec *executionContext) marshalOPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPostᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.Post) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -7704,7 +7853,7 @@ func (ec *executionContext) marshalOPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuex
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐPost(ctx, sel, v[i])
+			ret[i] = ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7717,7 +7866,7 @@ func (ec *executionContext) marshalOPost2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuex
 	return ret
 }
 
-func (ec *executionContext) marshalOQuotedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐQuotedNotiᚄ(ctx context.Context, sel ast.SelectionSet, v []*types.QuotedNoti) graphql.Marshaler {
+func (ec *executionContext) marshalOQuotedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐQuotedNotiᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.QuotedNoti) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -7744,7 +7893,7 @@ func (ec *executionContext) marshalOQuotedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclub
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNQuotedNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐQuotedNoti(ctx, sel, v[i])
+			ret[i] = ec.marshalNQuotedNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐQuotedNoti(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7757,7 +7906,7 @@ func (ec *executionContext) marshalOQuotedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclub
 	return ret
 }
 
-func (ec *executionContext) marshalORepliedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐRepliedNotiᚄ(ctx context.Context, sel ast.SelectionSet, v []*types.RepliedNoti) graphql.Marshaler {
+func (ec *executionContext) marshalORepliedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐRepliedNotiᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.RepliedNoti) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -7784,7 +7933,7 @@ func (ec *executionContext) marshalORepliedNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclu
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNRepliedNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐRepliedNoti(ctx, sel, v[i])
+			ret[i] = ec.marshalNRepliedNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐRepliedNoti(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7852,7 +8001,7 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return ec.marshalOString2string(ctx, sel, *v)
 }
 
-func (ec *executionContext) marshalOSystemNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSystemNotiᚄ(ctx context.Context, sel ast.SelectionSet, v []*types.SystemNoti) graphql.Marshaler {
+func (ec *executionContext) marshalOSystemNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSystemNotiᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.SystemNoti) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -7879,7 +8028,7 @@ func (ec *executionContext) marshalOSystemNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclub
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNSystemNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐSystemNoti(ctx, sel, v[i])
+			ret[i] = ec.marshalNSystemNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSystemNoti(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7892,18 +8041,18 @@ func (ec *executionContext) marshalOSystemNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclub
 	return ret
 }
 
-func (ec *executionContext) marshalOTag2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐTag(ctx context.Context, sel ast.SelectionSet, v types.Tag) graphql.Marshaler {
+func (ec *executionContext) marshalOTag2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx context.Context, sel ast.SelectionSet, v entity.Tag) graphql.Marshaler {
 	return ec._Tag(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalOTag2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐTag(ctx context.Context, sel ast.SelectionSet, v *types.Tag) graphql.Marshaler {
+func (ec *executionContext) marshalOTag2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx context.Context, sel ast.SelectionSet, v *entity.Tag) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
 	return ec._Tag(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOThreadCatalogItem2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadCatalogItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*types.ThreadCatalogItem) graphql.Marshaler {
+func (ec *executionContext) marshalOThreadCatalogItem2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadCatalogItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.ThreadCatalogItem) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -7930,7 +8079,7 @@ func (ec *executionContext) marshalOThreadCatalogItem2ᚕᚖgitlabᚗcomᚋabyss
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNThreadCatalogItem2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋtypesᚐThreadCatalogItem(ctx, sel, v[i])
+			ret[i] = ec.marshalNThreadCatalogItem2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadCatalogItem(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7941,6 +8090,30 @@ func (ec *executionContext) marshalOThreadCatalogItem2ᚕᚖgitlabᚗcomᚋabyss
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) unmarshalOUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx context.Context, v interface{}) (uid.UID, error) {
+	var res uid.UID
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalOUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx context.Context, sel ast.SelectionSet, v uid.UID) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalOUID2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx context.Context, v interface{}) (*uid.UID, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalOUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, v)
+	return &res, err
+}
+
+func (ec *executionContext) marshalOUID2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx context.Context, sel ast.SelectionSet, v *uid.UID) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

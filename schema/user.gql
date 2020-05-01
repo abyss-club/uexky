@@ -17,11 +17,11 @@ extend type Mutation {
   delSubbedTag(tag: String!): User!
 
   # mod's apis:
-  banUser(postId: String, threadId: String): Boolean!
-  blockPost(postId: String!): Post!
-  lockThread(threadId: String!): Thread!
-  blockThread(threadId: String!): Thread!
-  editTags(threadId: String!, mainTag: String!, subTags: [String!]!): Thread!
+  banUser(postId: UID, threadId: UID): Boolean!
+  blockPost(postId: UID!): Post!
+  lockThread(threadId: UID!): Thread!
+  blockThread(threadId: UID!): Thread!
+  editTags(threadId: UID!, mainTag: String!, subTags: [String!]!): Thread!
 }
 
 type User {

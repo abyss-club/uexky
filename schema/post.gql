@@ -1,6 +1,6 @@
 extend type Query {
   # A post object.
-  post(id: String!): Post!
+  post(id: UID!): Post!
 }
 
 extend type Mutation {
@@ -22,7 +22,7 @@ input PostInput {
 
 # Object describing a Post.
 type Post {
-  id: String!
+  id: UID!
   createdAt: Time!
   anonymous: Boolean!
   # Name if not anonymous, anonymous ID otherwise.
