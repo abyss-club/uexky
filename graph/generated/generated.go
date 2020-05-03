@@ -40,6 +40,7 @@ type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
 	SystemNoti() SystemNotiResolver
+	User() UserResolver
 }
 
 type DirectiveRoot struct {
@@ -205,6 +206,12 @@ type QueryResolver interface {
 }
 type SystemNotiResolver interface {
 	Content(ctx context.Context, obj *entity.SystemNoti) (string, error)
+}
+type UserResolver interface {
+	Tags(ctx context.Context, obj *entity.User) ([]string, error)
+
+	Threads(ctx context.Context, obj *entity.User, query entity.SliceQuery) (*entity.ThreadSlice, error)
+	Posts(ctx context.Context, obj *entity.User, query entity.SliceQuery) (*entity.PostSlice, error)
 }
 
 type executableSchema struct {
@@ -4633,13 +4640,13 @@ func (ec *executionContext) _User_tags(ctx context.Context, field graphql.Collec
 		Object:   "User",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Tags, nil
+		return ec.resolvers.User().Tags(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4695,7 +4702,7 @@ func (ec *executionContext) _User_threads(ctx context.Context, field graphql.Col
 		Object:   "User",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
@@ -4708,7 +4715,7 @@ func (ec *executionContext) _User_threads(ctx context.Context, field graphql.Col
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Threads, nil
+		return ec.resolvers.User().Threads(rctx, obj, args["query"].(entity.SliceQuery))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4736,7 +4743,7 @@ func (ec *executionContext) _User_posts(ctx context.Context, field graphql.Colle
 		Object:   "User",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
@@ -4749,7 +4756,7 @@ func (ec *executionContext) _User_posts(ctx context.Context, field graphql.Colle
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Posts, nil
+		return ec.resolvers.User().Posts(rctx, obj, args["query"].(entity.SliceQuery))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6866,24 +6873,51 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "email":
 			out.Values[i] = ec._User_email(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._User_name(ctx, field, obj)
 		case "tags":
-			out.Values[i] = ec._User_tags(ctx, field, obj)
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_tags(ctx, field, obj)
+				return res
+			})
 		case "role":
 			out.Values[i] = ec._User_role(ctx, field, obj)
 		case "threads":
-			out.Values[i] = ec._User_threads(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_threads(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "posts":
-			out.Values[i] = ec._User_posts(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_posts(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

@@ -11,11 +11,15 @@ import (
 type NotiRepo interface{}
 
 type NotiService struct {
-	repo NotiRepo `wire:"-"` // TODO
+	Repo NotiRepo
 }
 
-func NewNotiService(repo NotiRepo) NotiService {
-	return NotiService{repo}
+func (n *NotiService) GetUnreadNotiCount(ctx context.Context) (*UnreadNotiCount, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (n *NotiService) GetNotification(ctx context.Context, typeArg string, query SliceQuery) (*NotiSlice, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 type SystemNotiContent struct {
@@ -28,6 +32,10 @@ type SystemNoti struct {
 	Type      string            `json:"type"`
 	EventTime time.Time         `json:"eventTime"`
 	Content   SystemNotiContent `json:"content"`
+}
+
+func (n *NotiService) NewSystemNoti(ctx context.Context, title, context string) error {
+	panic(fmt.Errorf("not implemented"))
 }
 
 func (n *SystemNoti) HasRead(ctx context.Context) (bool, error) {
@@ -53,6 +61,10 @@ type RepliedNoti struct {
 	Content   RepliedNotiContent `json:"content"`
 }
 
+func (n *NotiService) NewRepliedNoti(ctx context.Context, thread *Thread, reply *Post) error {
+	panic(fmt.Errorf("not implemented"))
+}
+
 func (n *RepliedNoti) HasRead(ctx context.Context) (bool, error) {
 	panic(fmt.Errorf("not implemented"))
 }
@@ -76,6 +88,12 @@ type QuotedNoti struct {
 	Type      string            `json:"type"`
 	EventTime time.Time         `json:"eventTime"`
 	Content   QuotedNotiContent `json:"content"`
+}
+
+func (n *NotiService) NewQuotedNoti(
+	ctx context.Context, thread *Thread, post *Post, quotedPost *Post,
+) error {
+	panic(fmt.Errorf("not implemented"))
 }
 
 func (n *QuotedNoti) HasRead(ctx context.Context) (bool, error) {

@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 
+	"gitlab.com/abyss.club/uexky/graph/generated"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
@@ -53,3 +54,20 @@ func (r *mutationResolver) EditTags(ctx context.Context, threadID uid.UID, mainT
 func (r *queryResolver) Profile(ctx context.Context) (*entity.User, error) {
 	return r.Service.Profile(ctx)
 }
+
+func (r *userResolver) Tags(ctx context.Context, obj *entity.User) ([]string, error) {
+	return r.Service.GetUserTags(ctx, obj)
+}
+
+func (r *userResolver) Threads(ctx context.Context, obj *entity.User, query entity.SliceQuery) (*entity.ThreadSlice, error) {
+	return r.Service.GetUserThreads(ctx, obj, query)
+}
+
+func (r *userResolver) Posts(ctx context.Context, obj *entity.User, query entity.SliceQuery) (*entity.PostSlice, error) {
+	return r.Service.GetUserPosts(ctx, obj, query)
+}
+
+// User returns generated.UserResolver implementation.
+func (r *Resolver) User() generated.UserResolver { return &userResolver{r} }
+
+type userResolver struct{ *Resolver }
