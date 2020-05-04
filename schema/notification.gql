@@ -4,9 +4,15 @@ extend type Query {
   # Notifications for current user.
   notification(
     # One of 'system', 'replied' or 'quoted'.
-    type: String!,
+    type: NotiType!,
     query: SliceQuery!,
   ): NotiSlice!
+}
+
+enum NotiType {
+  system
+  replied
+  quoted
 }
 
 # Count of different types of unread notifications.
@@ -36,9 +42,9 @@ type NotiSlice {
 # Object describing a system notification.
 type SystemNoti {
   # ID contains different types of format.
-  id: String!
+  id: Int!
   # Type of Notification. "system", "replied" or "quoted".
-  type: String!
+  type: NotiType!
   # Time when a notify event triggers. E.g. The time when a system event is
   # announced from the server.
   eventTime: Time!
@@ -53,9 +59,9 @@ type SystemNoti {
 # Object describing a replied notification.
 type RepliedNoti {
   # ID contains different types of format.
-  id: String!
+  id: Int!
   # Type of Notification. "system", "replied" or "quoted".
-  type: String!
+  type: NotiType!
   # Time when a notify event triggers. E.g. The time when a thread is replied.
   eventTime: Time!
   # The notification is read or not.
@@ -70,9 +76,9 @@ type RepliedNoti {
 # Object describing a quoted notification.
 type QuotedNoti {
   # ID contains different types of format.
-  id: String!
+  id: Int!
   # Type of Notification. "system", "replied" or "quoted".
-  type: String!
+  type: NotiType!
   # Timestamp when a notify event triggers. E.g. When a post is quoted.
   eventTime: Time!
   # The notification is read or not.

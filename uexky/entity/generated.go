@@ -3,6 +3,9 @@
 package entity
 
 import (
+	"fmt"
+	"io"
+	"strconv"
 	"time"
 
 	"gitlab.com/abyss.club/uexky/lib/uid"
@@ -61,4 +64,47 @@ type UnreadNotiCount struct {
 	System  int `json:"system"`
 	Replied int `json:"replied"`
 	Quoted  int `json:"quoted"`
+}
+
+type NotiType string
+
+const (
+	NotiTypeSystem  NotiType = "system"
+	NotiTypeReplied NotiType = "replied"
+	NotiTypeQuoted  NotiType = "quoted"
+)
+
+var AllNotiType = []NotiType{
+	NotiTypeSystem,
+	NotiTypeReplied,
+	NotiTypeQuoted,
+}
+
+func (e NotiType) IsValid() bool {
+	switch e {
+	case NotiTypeSystem, NotiTypeReplied, NotiTypeQuoted:
+		return true
+	}
+	return false
+}
+
+func (e NotiType) String() string {
+	return string(e)
+}
+
+func (e *NotiType) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = NotiType(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid NotiType", str)
+	}
+	return nil
+}
+
+func (e NotiType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }

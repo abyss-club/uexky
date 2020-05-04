@@ -39,6 +39,8 @@ type Config struct {
 type ResolverRoot interface {
 	Mutation() MutationResolver
 	Query() QueryResolver
+	QuotedNoti() QuotedNotiResolver
+	RepliedNoti() RepliedNotiResolver
 	SystemNoti() SystemNotiResolver
 	User() UserResolver
 }
@@ -87,7 +89,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		MainTags        func(childComplexity int) int
-		Notification    func(childComplexity int, typeArg string, query entity.SliceQuery) int
+		Notification    func(childComplexity int, typeArg entity.NotiType, query entity.SliceQuery) int
 		Post            func(childComplexity int, id uid.UID) int
 		Profile         func(childComplexity int) int
 		Recommended     func(childComplexity int) int
@@ -195,7 +197,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	UnreadNotiCount(ctx context.Context) (*entity.UnreadNotiCount, error)
-	Notification(ctx context.Context, typeArg string, query entity.SliceQuery) (*entity.NotiSlice, error)
+	Notification(ctx context.Context, typeArg entity.NotiType, query entity.SliceQuery) (*entity.NotiSlice, error)
 	Post(ctx context.Context, id uid.UID) (*entity.Post, error)
 	MainTags(ctx context.Context) ([]string, error)
 	Recommended(ctx context.Context) ([]string, error)
@@ -204,7 +206,20 @@ type QueryResolver interface {
 	Thread(ctx context.Context, id uid.UID) (*entity.Thread, error)
 	Profile(ctx context.Context) (*entity.User, error)
 }
+type QuotedNotiResolver interface {
+	HasRead(ctx context.Context, obj *entity.QuotedNoti) (bool, error)
+	Thread(ctx context.Context, obj *entity.QuotedNoti) (*entity.Thread, error)
+	QuotedPost(ctx context.Context, obj *entity.QuotedNoti) (*entity.Post, error)
+	Post(ctx context.Context, obj *entity.QuotedNoti) (*entity.Post, error)
+}
+type RepliedNotiResolver interface {
+	HasRead(ctx context.Context, obj *entity.RepliedNoti) (bool, error)
+	Thread(ctx context.Context, obj *entity.RepliedNoti) (*entity.Thread, error)
+	Repliers(ctx context.Context, obj *entity.RepliedNoti) ([]string, error)
+}
 type SystemNotiResolver interface {
+	HasRead(ctx context.Context, obj *entity.SystemNoti) (bool, error)
+
 	Content(ctx context.Context, obj *entity.SystemNoti) (string, error)
 }
 type UserResolver interface {
@@ -488,7 +503,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Notification(childComplexity, args["type"].(string), args["query"].(entity.SliceQuery)), true
+		return e.complexity.Query.Notification(childComplexity, args["type"].(entity.NotiType), args["query"].(entity.SliceQuery)), true
 
 	case "Query.post":
 		if e.complexity.Query.Post == nil {
@@ -1026,9 +1041,15 @@ input SliceQuery {
   # Notifications for current user.
   notification(
     # One of 'system', 'replied' or 'quoted'.
-    type: String!,
+    type: NotiType!,
     query: SliceQuery!,
   ): NotiSlice!
+}
+
+enum NotiType {
+  system
+  replied
+  quoted
 }
 
 # Count of different types of unread notifications.
@@ -1058,9 +1079,9 @@ type NotiSlice {
 # Object describing a system notification.
 type SystemNoti {
   # ID contains different types of format.
-  id: String!
+  id: Int!
   # Type of Notification. "system", "replied" or "quoted".
-  type: String!
+  type: NotiType!
   # Time when a notify event triggers. E.g. The time when a system event is
   # announced from the server.
   eventTime: Time!
@@ -1075,9 +1096,9 @@ type SystemNoti {
 # Object describing a replied notification.
 type RepliedNoti {
   # ID contains different types of format.
-  id: String!
+  id: Int!
   # Type of Notification. "system", "replied" or "quoted".
-  type: String!
+  type: NotiType!
   # Time when a notify event triggers. E.g. The time when a thread is replied.
   eventTime: Time!
   # The notification is read or not.
@@ -1092,9 +1113,9 @@ type RepliedNoti {
 # Object describing a quoted notification.
 type QuotedNoti {
   # ID contains different types of format.
-  id: String!
+  id: Int!
   # Type of Notification. "system", "replied" or "quoted".
-  type: String!
+  type: NotiType!
   # Timestamp when a notify event triggers. E.g. When a post is quoted.
   eventTime: Time!
   # The notification is read or not.
@@ -1501,9 +1522,9 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_notification_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 string
+	var arg0 entity.NotiType
 	if tmp, ok := rawArgs["type"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		arg0, err = ec.unmarshalNNotiType2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐNotiType(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2684,7 +2705,7 @@ func (ec *executionContext) _Query_notification(ctx context.Context, field graph
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Notification(rctx, args["type"].(string), args["query"].(entity.SliceQuery))
+		return ec.resolvers.Query().Notification(rctx, args["type"].(entity.NotiType), args["query"].(entity.SliceQuery))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3065,9 +3086,9 @@ func (ec *executionContext) _QuotedNoti_id(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _QuotedNoti_type(ctx context.Context, field graphql.CollectedField, obj *entity.QuotedNoti) (ret graphql.Marshaler) {
@@ -3099,9 +3120,9 @@ func (ec *executionContext) _QuotedNoti_type(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(entity.NotiType)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNNotiType2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐNotiType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _QuotedNoti_eventTime(ctx context.Context, field graphql.CollectedField, obj *entity.QuotedNoti) (ret graphql.Marshaler) {
@@ -3155,7 +3176,7 @@ func (ec *executionContext) _QuotedNoti_hasRead(ctx context.Context, field graph
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.HasRead(ctx)
+		return ec.resolvers.QuotedNoti().HasRead(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3189,7 +3210,7 @@ func (ec *executionContext) _QuotedNoti_thread(ctx context.Context, field graphq
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Thread(ctx)
+		return ec.resolvers.QuotedNoti().Thread(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3223,7 +3244,7 @@ func (ec *executionContext) _QuotedNoti_quotedPost(ctx context.Context, field gr
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.QuotedPost(ctx)
+		return ec.resolvers.QuotedNoti().QuotedPost(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3257,7 +3278,7 @@ func (ec *executionContext) _QuotedNoti_post(ctx context.Context, field graphql.
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Post(ctx)
+		return ec.resolvers.QuotedNoti().Post(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3303,9 +3324,9 @@ func (ec *executionContext) _RepliedNoti_id(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _RepliedNoti_type(ctx context.Context, field graphql.CollectedField, obj *entity.RepliedNoti) (ret graphql.Marshaler) {
@@ -3337,9 +3358,9 @@ func (ec *executionContext) _RepliedNoti_type(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(entity.NotiType)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNNotiType2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐNotiType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _RepliedNoti_eventTime(ctx context.Context, field graphql.CollectedField, obj *entity.RepliedNoti) (ret graphql.Marshaler) {
@@ -3393,7 +3414,7 @@ func (ec *executionContext) _RepliedNoti_hasRead(ctx context.Context, field grap
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.HasRead(ctx)
+		return ec.resolvers.RepliedNoti().HasRead(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3427,7 +3448,7 @@ func (ec *executionContext) _RepliedNoti_thread(ctx context.Context, field graph
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Thread(ctx)
+		return ec.resolvers.RepliedNoti().Thread(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3461,7 +3482,7 @@ func (ec *executionContext) _RepliedNoti_repliers(ctx context.Context, field gra
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Repliers(ctx)
+		return ec.resolvers.RepliedNoti().Repliers(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3609,9 +3630,9 @@ func (ec *executionContext) _SystemNoti_id(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(int)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SystemNoti_type(ctx context.Context, field graphql.CollectedField, obj *entity.SystemNoti) (ret graphql.Marshaler) {
@@ -3643,9 +3664,9 @@ func (ec *executionContext) _SystemNoti_type(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(entity.NotiType)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNNotiType2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐNotiType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _SystemNoti_eventTime(ctx context.Context, field graphql.CollectedField, obj *entity.SystemNoti) (ret graphql.Marshaler) {
@@ -3699,7 +3720,7 @@ func (ec *executionContext) _SystemNoti_hasRead(ctx context.Context, field graph
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.HasRead(ctx)
+		return ec.resolvers.SystemNoti().HasRead(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3733,7 +3754,7 @@ func (ec *executionContext) _SystemNoti_title(ctx context.Context, field graphql
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Title(ctx)
+		return obj.Title(), nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -6578,19 +6599,10 @@ func (ec *executionContext) _SystemNoti(ctx context.Context, sel ast.SelectionSe
 				return res
 			})
 		case "title":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._SystemNoti_title(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
+			out.Values[i] = ec._SystemNoti_title(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "content":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -7232,6 +7244,15 @@ func (ec *executionContext) marshalNNotiSlice2ᚖgitlabᚗcomᚋabyssᚗclubᚋu
 		return graphql.Null
 	}
 	return ec._NotiSlice(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNNotiType2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐNotiType(ctx context.Context, v interface{}) (entity.NotiType, error) {
+	var res entity.NotiType
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNNotiType2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐNotiType(ctx context.Context, sel ast.SelectionSet, v entity.NotiType) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNPost2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx context.Context, sel ast.SelectionSet, v entity.Post) graphql.Marshaler {

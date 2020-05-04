@@ -1,27 +1,102 @@
-// noti aggragate: SystemNoti, RepliedNoti, QuotedNoti
+// forum notificatoin: systemNoti repliedNoti quotedNoti
 
 package entity
 
 import (
 	"context"
-	"fmt"
 	"time"
-)
 
-type NotiRepo interface{}
+	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/lib/uid"
+)
 
 type NotiService struct {
 	Repo NotiRepo
 }
 
 func (n *NotiService) GetUnreadNotiCount(ctx context.Context, user *User) (*UnreadNotiCount, error) {
-	panic(fmt.Errorf("not implemented"))
+	return n.Repo.GetUserUnreadCount(ctx, user.ID)
 }
 
 func (n *NotiService) GetNotification(
-	ctx context.Context, user *User, typeArg string, query SliceQuery,
+	ctx context.Context, user *User, typeArg NotiType, query SliceQuery,
 ) (*NotiSlice, error) {
-	panic(fmt.Errorf("not implemented"))
+	slice, err := n.Repo.GetNotiSlice(ctx, &NotiSearch{UserID: user.ID, Type: typeArg}, query)
+	if err != nil {
+		return nil, err
+	}
+	read := user.LastReadNoti.Get(typeArg)
+	max := slice.GetMaxID(typeArg)
+	if max >= read {
+		if err := n.Repo.UpdateReadID(ctx, user.ID, typeArg, max); err != nil {
+			return nil, err
+		}
+		user.LastReadNoti.Set(typeArg, max)
+	}
+	return slice, nil
+}
+
+func ParseNotiType(s string) (NotiType, error) {
+	t := NotiType(s)
+	if !t.IsValid() {
+		return NotiType(""), errors.Errorf("invalid noti type: %s", s)
+	}
+	return t, nil
+}
+
+type LastReadNoti struct {
+	SystemNoti  int
+	RepliedNoti int
+	QuotedNoti  int
+}
+
+func (lrn *LastReadNoti) Get(t NotiType) int {
+	switch t {
+	case NotiTypeQuoted:
+		return lrn.QuotedNoti
+	case NotiTypeReplied:
+		return lrn.RepliedNoti
+	case NotiTypeSystem:
+		return lrn.SystemNoti
+	default:
+		return 0
+	}
+}
+
+func (lrn *LastReadNoti) Set(t NotiType, id int) {
+	switch t {
+	case NotiTypeQuoted:
+		lrn.QuotedNoti = id
+	case NotiTypeReplied:
+		lrn.RepliedNoti = id
+	case NotiTypeSystem:
+		lrn.SystemNoti = id
+	}
+}
+
+func (ns *NotiSlice) GetMaxID(t NotiType) int {
+	max := 0
+	switch t {
+	case NotiTypeQuoted:
+		for _, n := range ns.Quoted {
+			if n.ID > max {
+				max = n.ID
+			}
+		}
+	case NotiTypeReplied:
+		for _, n := range ns.Replied {
+			if n.ID > max {
+				max = n.ID
+			}
+		}
+	case NotiTypeSystem:
+		for _, n := range ns.System {
+			if n.ID > max {
+				max = n.ID
+			}
+		}
+	}
+	return max
 }
 
 type SystemNotiContent struct {
@@ -30,53 +105,66 @@ type SystemNotiContent struct {
 }
 
 type SystemNoti struct {
-	ID        string            `json:"id"`
-	Type      string            `json:"type"`
+	ID        int               `json:"id"`
+	Type      NotiType          `json:"type"`
 	EventTime time.Time         `json:"eventTime"`
 	Content   SystemNotiContent `json:"content"`
 }
 
-func (n *NotiService) NewSystemNoti(ctx context.Context, title, context string) error {
-	panic(fmt.Errorf("not implemented"))
+func (n *NotiService) NewSystemNoti(ctx context.Context, title, content string) error {
+	noti := &SystemNoti{
+		Type:      NotiTypeSystem,
+		EventTime: time.Now(),
+		Content: SystemNotiContent{
+			Title:       title,
+			ContentText: content,
+		},
+	}
+	return n.Repo.InsertNoti(ctx, NotiInsert{System: noti})
 }
 
-func (n *SystemNoti) HasRead(ctx context.Context) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+func (n *SystemNoti) HasRead(user *User) bool {
+	return user.LastReadNoti.SystemNoti >= n.ID
 }
 
-func (n *SystemNoti) Title(ctx context.Context) (string, error) {
-	panic(fmt.Errorf("not implemented"))
+func (n *SystemNoti) Title() string {
+	return n.Content.Title
 }
 
-func (n *SystemNoti) ContentText(ctx context.Context) (string, error) {
-	panic(fmt.Errorf("not implemented"))
+func (n *SystemNoti) ContentText() string {
+	return n.Content.ContentText
 }
 
 type RepliedNotiContent struct {
 	ThreadID string `json:"threadId"` // int64.toString()
+
+	Thread *Thread `json:"-"`
 }
 
 type RepliedNoti struct {
-	ID        string             `json:"id"`
-	Type      string             `json:"type"`
+	ID        int                `json:"id"`
+	Type      NotiType           `json:"type"`
 	EventTime time.Time          `json:"eventTime"`
 	Content   RepliedNotiContent `json:"content"`
 }
 
 func (n *NotiService) NewRepliedNoti(ctx context.Context, thread *Thread, reply *Post) error {
-	panic(fmt.Errorf("not implemented"))
+	noti := &RepliedNoti{
+		Type:      NotiTypeReplied,
+		EventTime: time.Now(),
+		Content: RepliedNotiContent{
+			ThreadID: thread.ID.ToBase64String(),
+		},
+	}
+	return n.Repo.InsertNoti(ctx, NotiInsert{Replied: noti})
 }
 
-func (n *RepliedNoti) HasRead(ctx context.Context) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+func (n *RepliedNoti) HasRead(user *User) bool {
+	return user.LastReadNoti.RepliedNoti >= n.ID
 }
 
-func (n *RepliedNoti) Thread(ctx context.Context) (*Thread, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-
-func (n *RepliedNoti) Repliers(ctx context.Context) ([]string, error) {
-	panic(fmt.Errorf("not implemented"))
+func (n *RepliedNoti) ThreadID() (uid.UID, error) {
+	return uid.ParseUID(n.Content.ThreadID)
 }
 
 type QuotedNotiContent struct {
@@ -86,8 +174,8 @@ type QuotedNotiContent struct {
 }
 
 type QuotedNoti struct {
-	ID        string            `json:"id"`
-	Type      string            `json:"type"`
+	ID        int               `json:"id"`
+	Type      NotiType          `json:"type"`
 	EventTime time.Time         `json:"eventTime"`
 	Content   QuotedNotiContent `json:"content"`
 }
@@ -95,21 +183,30 @@ type QuotedNoti struct {
 func (n *NotiService) NewQuotedNoti(
 	ctx context.Context, thread *Thread, post *Post, quotedPost *Post,
 ) error {
-	panic(fmt.Errorf("not implemented"))
+	noti := &QuotedNoti{
+		Type:      NotiTypeQuoted,
+		EventTime: time.Now(),
+		Content: QuotedNotiContent{
+			ThreadID: thread.ID.ToBase64String(),
+			QuotedID: quotedPost.ID.ToBase64String(),
+			PostID:   post.ID.ToBase64String(),
+		},
+	}
+	return n.Repo.InsertNoti(ctx, NotiInsert{Quoted: noti})
 }
 
-func (n *QuotedNoti) HasRead(ctx context.Context) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
+func (n *QuotedNoti) HasRead(user *User) bool {
+	return user.LastReadNoti.QuotedNoti >= n.ID
 }
 
-func (n *QuotedNoti) Thread(ctx context.Context) (*Thread, error) {
-	panic(fmt.Errorf("not implemented"))
+func (n *QuotedNoti) ThreadID() (uid.UID, error) {
+	return uid.ParseUID(n.Content.ThreadID)
 }
 
-func (n *QuotedNoti) QuotedPost(ctx context.Context) (*Post, error) {
-	panic(fmt.Errorf("not implemented"))
+func (n *QuotedNoti) QuotedPostID() (uid.UID, error) {
+	return uid.ParseUID(n.Content.QuotedID)
 }
 
-func (n *QuotedNoti) Post(ctx context.Context) (*Post, error) {
-	panic(fmt.Errorf("not implemented"))
+func (n *QuotedNoti) PostID() (uid.UID, error) {
+	return uid.ParseUID(n.Content.PostID)
 }

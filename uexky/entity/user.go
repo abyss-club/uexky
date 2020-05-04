@@ -84,12 +84,13 @@ var ActionRole = map[Action]Role{
 }
 
 type User struct {
-	ID    int     `json:"-"`
 	Email string  `json:"email"`
 	Name  *string `json:"name"`
 	Role  *string `json:"role"`
 
-	tags []string
+	ID           int          `json:"-"`
+	LastReadNoti LastReadNoti `json:"-"`
+	tags         []string
 }
 
 func (u *User) EnsurePermission(ctx context.Context, action Action) error {

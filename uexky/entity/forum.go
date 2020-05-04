@@ -50,6 +50,10 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		thread.Author = *user.Name
 	}
 	err := f.Repo.InsertThread(ctx, user.ID, thread)
+	if err != nil {
+		return nil, err
+	}
+	err = thread.EditTags(ctx, thread.mainTag, thread.subTags)
 	return thread, err
 }
 
