@@ -19,7 +19,7 @@ func (r *mutationResolver) SetName(ctx context.Context, name string) (*entity.Us
 	return r.Service.SetUserName(ctx, name)
 }
 
-func (r *mutationResolver) SyncTags(ctx context.Context, tags []*string) (*entity.User, error) {
+func (r *mutationResolver) SyncTags(ctx context.Context, tags []string) (*entity.User, error) {
 	return r.Service.SyncUserTags(ctx, tags)
 }
 

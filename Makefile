@@ -3,7 +3,7 @@ PKG := "gitlab.com/abyss.club/$(PROJECT_NAME)"
 PKG_LIST := $(shell go list ${PKG}/... | grep -v /vendor/)
 GO_FILES := $(shell find . -name '*.go' | grep -v /vendor/ | grep -v _test.go)
 
-.PHONY: all tedst mod tool gen build clean
+.PHONY: all test mod tool gen build clean
 
 all: mod build
 
@@ -18,12 +18,20 @@ mod: ## Get the dependencies
 
 tool: ## Get/Update tools
 	@go get -u github.com/99designs/gqlgen
+	@go get -u github.com/google/wire
+	@go get -u github.com/dizzyfool/genna
 
-gen: ## generate all
-	@go run github.com/99designs/gqlgen generate
-# 	@cd ./wire
-# 	@go run github.com/google/wire/cmd/wire
-# 	@cd -
+gen: gengql genwire genpg
+
+gengql: ## generate all
+	@gqlgen generate
+
+genwire:
+	@cd ./wire;wire;cd -
+
+genpg:
+	@genna model -c $(pguri) -o repo/model/models_gen.go -f -k -g 9
+	@genna search -c $(pguri) -o repo/model/search_gen.go -f -k -g 9
 
 build: dep ## Build the binary file
 	@go build -i -v $(PKG)

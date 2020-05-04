@@ -17,7 +17,7 @@ type UserService struct {
 	Mail MailService
 }
 
-func (s *UserService) GetUserRequirePermission(ctx context.Context, action Action) (*User, error) {
+func (s *UserService) RequirePermission(ctx context.Context, action Action) (*User, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
@@ -84,9 +84,12 @@ var ActionRole = map[Action]Role{
 }
 
 type User struct {
+	ID    int     `json:"-"`
 	Email string  `json:"email"`
 	Name  *string `json:"name"`
 	Role  *string `json:"role"`
+
+	tags []string
 }
 
 func (u *User) EnsurePermission(ctx context.Context, action Action) error {

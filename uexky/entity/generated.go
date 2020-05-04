@@ -4,6 +4,8 @@ package entity
 
 import (
 	"time"
+
+	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
 type NotiSlice struct {
@@ -14,7 +16,7 @@ type NotiSlice struct {
 }
 
 type PostInput struct {
-	ThreadID  string   `json:"threadId"`
+	ThreadID  uid.UID  `json:"threadId"`
 	Anonymous bool     `json:"anonymous"`
 	Content   string   `json:"content"`
 	QuoteIds  []string `json:"quoteIds"`

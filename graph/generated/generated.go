@@ -59,7 +59,7 @@ type ComplexityRoot struct {
 		PubPost      func(childComplexity int, post entity.PostInput) int
 		PubThread    func(childComplexity int, thread entity.ThreadInput) int
 		SetName      func(childComplexity int, name string) int
-		SyncTags     func(childComplexity int, tags []*string) int
+		SyncTags     func(childComplexity int, tags []string) int
 	}
 
 	NotiSlice struct {
@@ -184,7 +184,7 @@ type MutationResolver interface {
 	PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error)
 	Auth(ctx context.Context, email string) (bool, error)
 	SetName(ctx context.Context, name string) (*entity.User, error)
-	SyncTags(ctx context.Context, tags []*string) (*entity.User, error)
+	SyncTags(ctx context.Context, tags []string) (*entity.User, error)
 	AddSubbedTag(ctx context.Context, tag string) (*entity.User, error)
 	DelSubbedTag(ctx context.Context, tag string) (*entity.User, error)
 	BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error)
@@ -371,7 +371,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SyncTags(childComplexity, args["tags"].([]*string)), true
+		return e.complexity.Mutation.SyncTags(childComplexity, args["tags"].([]string)), true
 
 	case "NotiSlice.quoted":
 		if e.complexity.NotiSlice.Quoted == nil {
@@ -1120,7 +1120,7 @@ extend type Mutation {
 # Input object describing a Post to be published.
 input PostInput {
   # ID of the replying thread's.
-  threadId: String!
+  threadId: UID!
   # Should be sent as anonymous or not.
   anonymous: Boolean!
   # Markdown formatted content.
@@ -1253,7 +1253,7 @@ extend type Mutation {
   # Set the Name of user.
   setName(name: String!): User!
   # Directly edit tags subscribed by user.
-  syncTags(tags: [String]!): User!
+  syncTags(tags: [String!]!): User!
   # Add tags subscribed by user.
   addSubbedTag(tag: String!): User!
   # Delete tags subscribed by user.
@@ -1473,9 +1473,9 @@ func (ec *executionContext) field_Mutation_setName_args(ctx context.Context, raw
 func (ec *executionContext) field_Mutation_syncTags_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 []*string
+	var arg0 []string
 	if tmp, ok := rawArgs["tags"]; ok {
-		arg0, err = ec.unmarshalNString2ᚕᚖstring(ctx, tmp)
+		arg0, err = ec.unmarshalNString2ᚕstringᚄ(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1858,7 +1858,7 @@ func (ec *executionContext) _Mutation_syncTags(ctx context.Context, field graphq
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SyncTags(rctx, args["tags"].([]*string))
+		return ec.resolvers.Mutation().SyncTags(rctx, args["tags"].([]string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4098,13 +4098,13 @@ func (ec *executionContext) _Thread_mainTag(ctx context.Context, field graphql.C
 		Object:   "Thread",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.MainTag, nil
+		return obj.MainTag(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4132,13 +4132,13 @@ func (ec *executionContext) _Thread_subTags(ctx context.Context, field graphql.C
 		Object:   "Thread",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.SubTags, nil
+		return obj.SubTags(ctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5836,7 +5836,7 @@ func (ec *executionContext) unmarshalInputPostInput(ctx context.Context, obj int
 		switch k {
 		case "threadId":
 			var err error
-			it.ThreadID, err = ec.unmarshalNString2string(ctx, v)
+			it.ThreadID, err = ec.unmarshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -6692,12 +6692,30 @@ func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, o
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "mainTag":
-			out.Values[i] = ec._Thread_mainTag(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Thread_mainTag(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "subTags":
-			out.Values[i] = ec._Thread_subTags(ctx, field, obj)
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Thread_subTags(ctx, field, obj)
+				return res
+			})
 		case "replies":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -7369,35 +7387,6 @@ func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel
 	ret := make(graphql.Array, len(v))
 	for i := range v {
 		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
-	}
-
-	return ret
-}
-
-func (ec *executionContext) unmarshalNString2ᚕᚖstring(ctx context.Context, v interface{}) ([]*string, error) {
-	var vSlice []interface{}
-	if v != nil {
-		if tmp1, ok := v.([]interface{}); ok {
-			vSlice = tmp1
-		} else {
-			vSlice = []interface{}{v}
-		}
-	}
-	var err error
-	res := make([]*string, len(vSlice))
-	for i := range vSlice {
-		res[i], err = ec.unmarshalOString2ᚖstring(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNString2ᚕᚖstring(ctx context.Context, sel ast.SelectionSet, v []*string) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	for i := range v {
-		ret[i] = ec.marshalOString2ᚖstring(ctx, sel, v[i])
 	}
 
 	return ret

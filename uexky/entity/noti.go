@@ -14,11 +14,13 @@ type NotiService struct {
 	Repo NotiRepo
 }
 
-func (n *NotiService) GetUnreadNotiCount(ctx context.Context) (*UnreadNotiCount, error) {
+func (n *NotiService) GetUnreadNotiCount(ctx context.Context, user *User) (*UnreadNotiCount, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (n *NotiService) GetNotification(ctx context.Context, typeArg string, query SliceQuery) (*NotiSlice, error) {
+func (n *NotiService) GetNotification(
+	ctx context.Context, user *User, typeArg string, query SliceQuery,
+) (*NotiSlice, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 

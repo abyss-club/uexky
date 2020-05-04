@@ -11,7 +11,7 @@ extend type Mutation {
 # Input object describing a Post to be published.
 input PostInput {
   # ID of the replying thread's.
-  threadId: String!
+  threadId: UID!
   # Should be sent as anonymous or not.
   anonymous: Boolean!
   # Markdown formatted content.

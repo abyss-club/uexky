@@ -10,7 +10,7 @@ extend type Mutation {
   # Set the Name of user.
   setName(name: String!): User!
   # Directly edit tags subscribed by user.
-  syncTags(tags: [String]!): User!
+  syncTags(tags: [String!]!): User!
   # Add tags subscribed by user.
   addSubbedTag(tag: String!): User!
   # Delete tags subscribed by user.
