@@ -18,8 +18,16 @@ type Service struct {
 	Noti  *entity.NotiService
 }
 
-func (s *Service) SignInByEmail(ctx context.Context, email string) (bool, error) {
-	return s.User.SignInByEmail(ctx, email) // TODO
+func (s *Service) TrySignInByEmail(ctx context.Context, email string) (bool, error) {
+	return s.User.TrySignInByEmail(ctx, email)
+}
+
+func (s *Service) SignInByCode(ctx context.Context, code string) (entity.Token, error) {
+	return s.User.SignInByCode(ctx, code)
+}
+
+func (s *Service) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, error) {
+	return s.User.CtxWithUserByToken(ctx, tok)
 }
 
 func (s *Service) Profile(ctx context.Context) (*entity.User, error) {
@@ -104,13 +112,13 @@ func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UI
 		if err != nil {
 			return false, err
 		}
-		return user.BanUser(ctx, post.Author, post.Anonymous)
+		return user.BanUser(ctx, post.UserID)
 	} else if threadID != nil {
 		thread, err := s.Forum.GetThreadByID(ctx, *threadID)
 		if err != nil {
 			return false, err
 		}
-		return user.BanUser(ctx, thread.Author, thread.Anonymous)
+		return user.BanUser(ctx, thread.UserID)
 	}
 	return false, errors.New("must specified post id or thread id")
 }

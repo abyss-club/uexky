@@ -152,3 +152,15 @@ func TestUID_MarshalGQL(t *testing.T) {
 		})
 	}
 }
+
+func TestRandomBase64Str(t *testing.T) {
+	length := 30
+	str := RandomBase64Str(length)
+	if len(str) != length {
+		t.Errorf("RandomBase64Str(40) = %v, want length=%v", str, length)
+	}
+	str1 := RandomBase64Str(length)
+	if str == str1 {
+		t.Errorf("RandomBase64Str not return random number")
+	}
+}

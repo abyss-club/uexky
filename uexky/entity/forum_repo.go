@@ -47,7 +47,7 @@ type ForumRepo interface {
 	GetThreadSlice(ctx context.Context, search *ThreadSearch, query SliceQuery) (*ThreadSlice, error)
 	GetThreadCatelog(ctx context.Context, id uid.UID) ([]*ThreadCatalogItem, error)
 	GetThreadTags(ctx context.Context, id uid.UID) (main string, subs []string, err error)
-	InsertThread(ctx context.Context, userID int, thread *Thread) error
+	InsertThread(ctx context.Context, thread *Thread) error
 	UpdateThread(ctx context.Context, id uid.UID, update *ThreadUpdate) error
 
 	GetPost(ctx context.Context, search *PostSearch) (*Post, error)
@@ -55,7 +55,7 @@ type ForumRepo interface {
 	GetPostSlice(ctx context.Context, search *PostSearch, query SliceQuery) (*PostSlice, error)
 	GetPostCount(ctx context.Context, search *PostSearch) (int, error)
 	GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error)
-	InsertPost(ctx context.Context, userID int, post *Post) error
+	InsertPost(ctx context.Context, post *Post) error
 	UpdatePost(ctx context.Context, id uid.UID, update *PostUpdate) error
 
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)

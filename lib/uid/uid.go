@@ -126,3 +126,12 @@ func (u UID) MarshalGQL(w io.Writer) {
 		panic(err)
 	}
 }
+
+func RandomBase64Str(length int) string {
+	bytes := make([]byte, 0, length)
+	for i := 0; i < length; i++ {
+		i := rand.Intn(64)
+		bytes = append(bytes, base64chars[i])
+	}
+	return string(bytes)
+}

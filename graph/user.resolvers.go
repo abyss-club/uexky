@@ -12,7 +12,7 @@ import (
 )
 
 func (r *mutationResolver) Auth(ctx context.Context, email string) (bool, error) {
-	return r.Service.SignInByEmail(ctx, email)
+	return r.Service.TrySignInByEmail(ctx, email)
 }
 
 func (r *mutationResolver) SetName(ctx context.Context, name string) (*entity.User, error) {

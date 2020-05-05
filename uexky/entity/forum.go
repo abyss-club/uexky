@@ -23,7 +23,9 @@ type Thread struct {
 	Content   string    `json:"content"`
 	Blocked   bool      `json:"blocked"`
 	Locked    bool      `json:"locked"`
-	Repo      ForumRepo `json:"-"`
+
+	Repo   ForumRepo `json:"-"`
+	UserID int       `json:"-"`
 
 	mainTag string
 	subTags []string
@@ -36,7 +38,9 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		Anonymous: input.Anonymous,
 		Title:     input.Title,
 		Content:   input.Content,
-		Repo:      f.Repo,
+
+		Repo:   f.Repo,
+		UserID: user.ID,
 
 		mainTag: input.MainTag,
 		subTags: input.SubTags,
@@ -49,7 +53,7 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		}
 		thread.Author = *user.Name
 	}
-	err := f.Repo.InsertThread(ctx, user.ID, thread)
+	err := f.Repo.InsertThread(ctx, thread)
 	if err != nil {
 		return nil, err
 	}
@@ -159,9 +163,10 @@ type Post struct {
 	Content   string    `json:"content"`
 	Blocked   bool      `json:"blocked"`
 
+	Repo     ForumRepo `json:"-"`
+	UserID   int       `json:"-"`
 	ThreadID uid.UID   `json:"-"`
 	QuoteIDs []uid.UID `json:"-"`
-	Repo     ForumRepo `json:"-"`
 }
 
 type NewPostResponse struct {
@@ -177,8 +182,9 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 		Anonymous: input.Anonymous,
 		Content:   input.Content,
 
-		ThreadID: input.ThreadID,
 		Repo:     f.Repo,
+		UserID:   user.ID,
+		ThreadID: input.ThreadID,
 	}
 	if input.Anonymous {
 		post.Author = uid.NewUID().ToBase64String()
@@ -188,7 +194,7 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 		}
 		post.Author = *user.Name
 	}
-	err := f.Repo.InsertPost(ctx, user.ID, post)
+	err := f.Repo.InsertPost(ctx, post)
 	return &NewPostResponse{Post: post}, err
 }
 
