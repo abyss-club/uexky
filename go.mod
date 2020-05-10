@@ -4,8 +4,8 @@ go 1.14
 
 require (
 	github.com/99designs/gqlgen v0.11.3
-	github.com/go-pg/pg v8.0.6+incompatible
 	github.com/go-pg/pg/v9 v9.1.6
+	github.com/golang-migrate/migrate/v4 v4.11.0 // indirect
 	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/google/wire v0.4.0
 	github.com/gorilla/websocket v1.4.2 // indirect
@@ -14,7 +14,7 @@ require (
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/onsi/ginkgo v1.10.2 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/sirupsen/logrus v1.2.0
+	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.5.1 // indirect
