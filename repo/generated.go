@@ -1,6 +1,6 @@
 //nolint
 //lint:file-ignore U1000 ignore unused code, it's generated
-package model
+package repo
 
 import (
 	"time"
@@ -225,127 +225,114 @@ var Columns = struct {
 
 var Tables = struct {
 	AnonymouId struct {
-		Name, Alias string
+		Name string
 	}
 	Config struct {
-		Name, Alias string
+		Name string
 	}
 	Counter struct {
-		Name, Alias string
+		Name string
 	}
 	Notification struct {
-		Name, Alias string
+		Name string
 	}
 	Pgmigration struct {
-		Name, Alias string
+		Name string
 	}
 	Post struct {
-		Name, Alias string
+		Name string
 	}
 	PostsQuote struct {
-		Name, Alias string
+		Name string
 	}
 	Tag struct {
-		Name, Alias string
+		Name string
 	}
 	TagsMainTag struct {
-		Name, Alias string
+		Name string
 	}
 	Thread struct {
-		Name, Alias string
+		Name string
 	}
 	ThreadsTag struct {
-		Name, Alias string
+		Name string
 	}
 	User struct {
-		Name, Alias string
+		Name string
 	}
 	UsersTag struct {
-		Name, Alias string
+		Name string
 	}
 }{
 	AnonymouId: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "anonymous_id",
-		Alias: "t",
+		Name: "anonymous_id",
 	},
 	Config: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "config",
-		Alias: "t",
+		Name: "config",
 	},
 	Counter: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "counter",
-		Alias: "t",
+		Name: "counter",
 	},
 	Notification: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "notification",
-		Alias: "t",
+		Name: "notification",
 	},
 	Pgmigration: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "pgmigrations",
-		Alias: "t",
+		Name: "pgmigrations",
 	},
 	Post: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "post",
-		Alias: "t",
+		Name: "post",
 	},
 	PostsQuote: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "posts_quotes",
-		Alias: "t",
+		Name: "posts_quotes",
 	},
 	Tag: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "tag",
-		Alias: "t",
+		Name: "tag",
 	},
 	TagsMainTag: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "tags_main_tags",
-		Alias: "t",
+		Name: "tags_main_tags",
 	},
 	Thread: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "thread",
-		Alias: "t",
+		Name: "thread",
 	},
 	ThreadsTag: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "threads_tags",
-		Alias: "t",
+		Name: "threads_tags",
 	},
 	User: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "user",
-		Alias: "t",
+		Name: "user",
 	},
 	UsersTag: struct {
-		Name, Alias string
+		Name string
 	}{
-		Name:  "users_tags",
-		Alias: "t",
+		Name: "users_tags",
 	},
 }
 
 type AnonymouId struct {
-	tableName struct{} `pg:"anonymous_id,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"anonymous_id,,discard_unknown_columns"`
 
 	ID          int       `pg:"id,pk"`
 	CreatedAt   time.Time `pg:"created_at,use_zero"`
@@ -356,7 +343,7 @@ type AnonymouId struct {
 }
 
 type Config struct {
-	tableName struct{} `pg:"config,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"config,,discard_unknown_columns"`
 
 	ID        int                    `pg:"id,pk"`
 	RateLimit map[string]interface{} `pg:"rate_limit,use_zero"`
@@ -364,14 +351,14 @@ type Config struct {
 }
 
 type Counter struct {
-	tableName struct{} `pg:"counter,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"counter,,discard_unknown_columns"`
 
 	Name  string `pg:"name,pk"`
 	Count *int   `pg:"count"`
 }
 
 type Notification struct {
-	tableName struct{} `pg:"notification,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"notification,,discard_unknown_columns"`
 
 	ID          int                    `pg:"id,pk"`
 	Key         *string                `pg:"key"`
@@ -386,7 +373,7 @@ type Notification struct {
 }
 
 type Pgmigration struct {
-	tableName struct{} `pg:"pgmigrations,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"pgmigrations,,discard_unknown_columns"`
 
 	ID    int       `pg:"id,pk"`
 	Name  string    `pg:"name,use_zero"`
@@ -394,7 +381,7 @@ type Pgmigration struct {
 }
 
 type Post struct {
-	tableName struct{} `pg:"post,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"post,,discard_unknown_columns"`
 
 	ID          int64     `pg:"id,pk"`
 	CreatedAt   time.Time `pg:"created_at,use_zero"`
@@ -413,7 +400,7 @@ type Post struct {
 }
 
 type PostsQuote struct {
-	tableName struct{} `pg:"posts_quotes,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"posts_quotes,,discard_unknown_columns"`
 
 	ID       int   `pg:"id,pk"`
 	QuoterID int64 `pg:"quoter_id,use_zero"`
@@ -424,7 +411,7 @@ type PostsQuote struct {
 }
 
 type Tag struct {
-	tableName struct{} `pg:"tag,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"tag,,discard_unknown_columns"`
 
 	Name      string    `pg:"name,pk"`
 	IsMain    bool      `pg:"is_main,use_zero"`
@@ -433,7 +420,7 @@ type Tag struct {
 }
 
 type TagsMainTag struct {
-	tableName struct{} `pg:"tags_main_tags,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"tags_main_tags,,discard_unknown_columns"`
 
 	ID        int       `pg:"id,pk"`
 	CreatedAt time.Time `pg:"created_at,use_zero"`
@@ -446,7 +433,7 @@ type TagsMainTag struct {
 }
 
 type Thread struct {
-	tableName struct{} `pg:"thread,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"thread,,discard_unknown_columns"`
 
 	ID          int64     `pg:"id,pk"`
 	CreatedAt   time.Time `pg:"created_at,use_zero"`
@@ -466,7 +453,7 @@ type Thread struct {
 }
 
 type ThreadsTag struct {
-	tableName struct{} `pg:"threads_tags,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"threads_tags,,discard_unknown_columns"`
 
 	ID        int       `pg:"id,pk"`
 	CreatedAt time.Time `pg:"created_at,use_zero"`
@@ -479,7 +466,7 @@ type ThreadsTag struct {
 }
 
 type User struct {
-	tableName struct{} `pg:"user,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"user,,discard_unknown_columns"`
 
 	ID                  int       `pg:"id,pk"`
 	CreatedAt           time.Time `pg:"created_at,use_zero"`
@@ -493,7 +480,7 @@ type User struct {
 }
 
 type UsersTag struct {
-	tableName struct{} `pg:"users_tags,alias:t,,discard_unknown_columns"`
+	tableName struct{} `pg:"users_tags,,discard_unknown_columns"`
 
 	ID      int    `pg:"id,pk"`
 	UserID  int    `pg:"user_id,use_zero"`

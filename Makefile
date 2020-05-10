@@ -30,8 +30,7 @@ genwire:
 	@cd ./wire;wire;cd -
 
 genpg:
-	@genna model -c $(pguri) -o repo/model/models_gen.go -f -k -g 9
-	@genna search -c $(pguri) -o repo/model/search_gen.go -f -k -g 9
+	@genna model -c $(pguri) -o repo/generated.go -fkw --pkg repo --gopg 9
 
 build: dep ## Build the binary file
 	@go build -i -v $(PKG)

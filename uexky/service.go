@@ -301,7 +301,7 @@ func (s *Service) GetRepliedNotiRepliers(ctx context.Context, obj *entity.Replie
 	}
 	var repliers []string
 	for _, p := range slice.Posts {
-		repliers = append(repliers, p.Author)
+		repliers = append(repliers, p.Author())
 	}
 	return repliers, nil
 }

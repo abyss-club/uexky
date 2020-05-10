@@ -14,18 +14,23 @@ type ForumService struct {
 	Repo ForumRepo
 }
 
+type Author struct {
+	AnonymousID *uid.UID
+	UserName    *string
+}
+
 type Thread struct {
 	ID        uid.UID   `json:"id"`
 	CreatedAt time.Time `json:"createdAt"`
 	Anonymous bool      `json:"anonymous"`
-	Author    string    `json:"author"`
 	Title     *string   `json:"title"`
 	Content   string    `json:"content"`
 	Blocked   bool      `json:"blocked"`
 	Locked    bool      `json:"locked"`
 
-	Repo   ForumRepo `json:"-"`
-	UserID int       `json:"-"`
+	Repo      ForumRepo `json:"-"`
+	UserID    int       `json:"-"`
+	AuthorObj Author    `json:"author"`
 
 	mainTag string
 	subTags []string
@@ -46,12 +51,13 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		subTags: input.SubTags,
 	}
 	if input.Anonymous {
-		thread.Author = uid.NewUID().ToBase64String()
+		aid := uid.NewUID()
+		thread.AuthorObj.AnonymousID = &aid
 	} else {
 		if user.Name == nil {
 			return nil, errors.New("user name must be set")
 		}
-		thread.Author = *user.Name
+		thread.AuthorObj.UserName = user.Name
 	}
 	err := f.Repo.InsertThread(ctx, thread)
 	if err != nil {
@@ -66,21 +72,28 @@ func (f *ForumService) GetThreadByID(ctx context.Context, threadID uid.UID) (*Th
 }
 
 func (f *ForumService) GetUserThreads(ctx context.Context, user *User, query SliceQuery) (*ThreadSlice, error) {
-	return f.Repo.GetThreadSlice(ctx, &ThreadSearch{UserID: &user.ID}, query)
+	return f.Repo.GetThreadSlice(ctx, &ThreadsSearch{UserID: &user.ID}, query)
 }
 
 func (f *ForumService) SearchThreads(
 	ctx context.Context, tags []string, query SliceQuery,
 ) (*ThreadSlice, error) {
-	return f.Repo.GetThreadSlice(ctx, &ThreadSearch{Tags: tags}, query)
+	return f.Repo.GetThreadSlice(ctx, &ThreadsSearch{Tags: tags}, query)
+}
+
+func (n *Thread) Author() string {
+	if !n.Anonymous {
+		return *n.AuthorObj.UserName
+	}
+	return n.AuthorObj.AnonymousID.ToBase64String()
 }
 
 func (n *Thread) Replies(ctx context.Context, query SliceQuery) (*PostSlice, error) {
-	return n.Repo.GetPostSlice(ctx, &PostSearch{ThreadID: &n.ID}, query)
+	return n.Repo.GetPostSlice(ctx, &PostsSearch{ThreadID: &n.ID}, query)
 }
 
 func (n *Thread) ReplyCount(ctx context.Context) (int, error) {
-	return n.Repo.GetPostCount(ctx, &PostSearch{ThreadID: &n.ID})
+	return n.Repo.GetPostCount(ctx, &PostsSearch{ThreadID: &n.ID})
 }
 
 func (n *Thread) Catalog(ctx context.Context) ([]*ThreadCatalogItem, error) {
@@ -159,14 +172,14 @@ type Post struct {
 	ID        uid.UID   `json:"id"`
 	CreatedAt time.Time `json:"createdAt"`
 	Anonymous bool      `json:"anonymous"`
-	Author    string    `json:"author"`
 	Content   string    `json:"content"`
 	Blocked   bool      `json:"blocked"`
 
-	Repo     ForumRepo `json:"-"`
-	UserID   int       `json:"-"`
-	ThreadID uid.UID   `json:"-"`
-	QuoteIDs []uid.UID `json:"-"`
+	Repo        ForumRepo `json:"-"`
+	UserID      int       `json:"-"`
+	ThreadID    uid.UID   `json:"-"`
+	AuthorObj   Author    `json:"-"`
+	QuotedPosts []*Post   `json:"-"`
 }
 
 type NewPostResponse struct {
@@ -187,12 +200,13 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 		ThreadID: input.ThreadID,
 	}
 	if input.Anonymous {
-		post.Author = uid.NewUID().ToBase64String()
+		aid := uid.NewUID()
+		post.AuthorObj.AnonymousID = &aid // TODO
 	} else {
 		if user.Name == nil {
 			return nil, errors.New("user name must be set")
 		}
-		post.Author = *user.Name
+		post.AuthorObj.UserName = user.Name
 	}
 	err := f.Repo.InsertPost(ctx, post)
 	return &NewPostResponse{Post: post}, err
@@ -203,14 +217,26 @@ func (f *ForumService) GetPostByID(ctx context.Context, postID uid.UID) (*Post, 
 }
 
 func (f *ForumService) GetUserPosts(ctx context.Context, user *User, query SliceQuery) (*PostSlice, error) {
-	return f.Repo.GetPostSlice(ctx, &PostSearch{UserID: &user.ID}, query)
+	return f.Repo.GetPostSlice(ctx, &PostsSearch{UserID: &user.ID}, query)
+}
+
+func (p *Post) Author() string {
+	if !p.Anonymous {
+		return *p.AuthorObj.UserName
+	}
+	return p.AuthorObj.AnonymousID.ToBase64String()
 }
 
 func (p *Post) Quotes(ctx context.Context) ([]*Post, error) {
-	if len(p.QuoteIDs) == 0 {
-		return nil, nil
+	if p.QuotedPosts != nil {
+		return p.QuotedPosts, nil
 	}
-	return p.Repo.GetPosts(ctx, &PostSearch{IDs: p.QuoteIDs})
+	quotedPosts, err := p.Repo.GetPostQuotesPosts(ctx, p.ID)
+	if err != nil {
+		return nil, err
+	}
+	p.QuotedPosts = quotedPosts
+	return p.QuotedPosts, nil
 }
 
 func (p *Post) QuotedCount(ctx context.Context) (int, error) {
