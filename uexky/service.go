@@ -199,10 +199,17 @@ func (s *Service) PubPost(ctx context.Context, post entity.PostInput) (*entity.P
 	}
 	go func() {
 		ctx := context.Background()
+		// TODO: new db session
 		if err := s.Noti.NewRepliedNoti(ctx, res.Thread, res.Post); err != nil {
 			log.Error(err)
+			return
 		}
-		for _, qp := range res.QuotedPost {
+		quotePosts, err := res.Post.Quotes(ctx)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		for _, qp := range quotePosts {
 			if err := s.Noti.NewQuotedNoti(ctx, res.Thread, res.Post, qp); err != nil {
 				log.Error(err)
 			}

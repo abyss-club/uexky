@@ -4,9 +4,11 @@ package entity
 
 import (
 	"context"
-	"errors"
 	"time"
 
+	"github.com/pkg/errors"
+
+	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
@@ -42,6 +44,22 @@ type Thread struct {
 	AuthorObj Author    `json:"-"`
 }
 
+func validateThreadTags(allMainTags []string, mainTag string, subTags []string) ([]string, error) {
+	if !algo.InStrSlice(allMainTags, mainTag) {
+		return nil, errors.Errorf("invalid main tag: %s", mainTag)
+	}
+	var subTagSet []string
+	for _, st := range subTags {
+		if algo.InStrSlice(allMainTags, st) {
+			return nil, errors.New("must specify only one main tag")
+		}
+		if !algo.InStrSlice(subTagSet, st) {
+			subTagSet = append(subTagSet, st)
+		}
+	}
+	return subTagSet, nil
+}
+
 func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadInput) (*Thread, error) {
 	thread := &Thread{
 		ID:        uid.NewUID(),
@@ -66,8 +84,16 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		}
 		thread.AuthorObj.UserName = user.Name
 	}
-	err := f.Repo.InsertThread(ctx, thread)
+	allMainTags, err := f.GetMainTags(ctx)
 	if err != nil {
+		return nil, err
+	}
+	subTags, err := validateThreadTags(allMainTags, input.MainTag, input.SubTags)
+	if err != nil {
+		return nil, err
+	}
+	thread.SubTags = subTags
+	if err := f.Repo.InsertThread(ctx, thread); err != nil {
 		return nil, err
 	}
 	return thread, err
@@ -104,13 +130,20 @@ func (n *Thread) Catalog(ctx context.Context) ([]*ThreadCatalogItem, error) {
 }
 
 func (n *Thread) EditTags(ctx context.Context, mainTag string, subTags []string) error {
-	update := &ThreadUpdate{MainTag: &mainTag, SubTags: subTags}
-	err := n.Repo.UpdateThread(ctx, n.ID, update)
+	allMainTags, err := n.Repo.GetMainTags(ctx)
 	if err != nil {
 		return err
 	}
+	subTagSet, err := validateThreadTags(allMainTags, mainTag, subTags)
+	if err != nil {
+		return err
+	}
+	update := &ThreadUpdate{MainTag: &mainTag, SubTags: subTagSet}
+	if err := n.Repo.UpdateThread(ctx, n.ID, update); err != nil {
+		return err
+	}
 	n.MainTag = mainTag
-	n.SubTags = subTags
+	n.SubTags = subTagSet
 	return nil
 }
 
@@ -133,10 +166,10 @@ func (n *Thread) Block(ctx context.Context) error {
 }
 
 type PostData struct {
-	ThreadID    uid.UID
-	Author      Author
-	QuotedIDs   []uid.UID
-	QuotedPosts []*Post
+	ThreadID   uid.UID
+	Author     Author
+	QuoteIDs   []uid.UID
+	QuotePosts []*Post
 }
 
 type Post struct {
@@ -151,12 +184,23 @@ type Post struct {
 }
 
 type NewPostResponse struct {
-	Post       *Post
-	Thread     *Thread
-	QuotedPost []*Post
+	Post   *Post
+	Thread *Thread
 }
 
 func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput) (*NewPostResponse, error) {
+	thread, err := f.Repo.GetThread(ctx, &ThreadSearch{ID: &input.ThreadID})
+	if err != nil {
+		return nil, err
+	}
+	var quoteIDs []uid.UID
+	for _, qid := range input.QuoteIds {
+		id, err := uid.ParseUID(qid)
+		if err != nil {
+			return nil, err
+		}
+		quoteIDs = append(quoteIDs, id)
+	}
 	post := &Post{
 		ID:        uid.NewUID(),
 		CreatedAt: time.Now(),
@@ -167,19 +211,27 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 		Data: PostData{
 			Author:   Author{UserID: user.ID},
 			ThreadID: input.ThreadID,
+			QuoteIDs: quoteIDs,
 		},
 	}
 	if input.Anonymous {
-		aid := uid.NewUID()
-		post.Data.Author.AnonymousID = &aid // TODO: find aid
+		if user.ID == thread.AuthorObj.UserID {
+			post.Data.Author.AnonymousID = thread.AuthorObj.AnonymousID
+		} else {
+			aid, err := f.Repo.GetAnonyID(ctx, user.ID, thread.ID)
+			if err != nil {
+				return nil, err
+			}
+			post.Data.Author.AnonymousID = &aid
+		}
 	} else {
 		if user.Name == nil {
 			return nil, errors.New("user name must be set")
 		}
 		post.Data.Author.UserName = user.Name
 	}
-	err := f.Repo.InsertPost(ctx, post)
-	return &NewPostResponse{Post: post}, err
+	err = f.Repo.InsertPost(ctx, post)
+	return &NewPostResponse{Post: post, Thread: thread}, err
 }
 
 func (f *ForumService) GetPostByID(ctx context.Context, postID uid.UID) (*Post, error) {
@@ -195,15 +247,15 @@ func (p *Post) Author() string {
 }
 
 func (p *Post) Quotes(ctx context.Context) ([]*Post, error) {
-	if p.Data.QuotedPosts != nil {
-		return p.Data.QuotedPosts, nil
+	if p.Data.QuotePosts != nil {
+		return p.Data.QuotePosts, nil
 	}
-	quotedPosts, err := p.Repo.GetPosts(ctx, &PostsSearch{IDs: p.Data.QuotedIDs})
+	quotedPosts, err := p.Repo.GetPosts(ctx, &PostsSearch{IDs: p.Data.QuoteIDs})
 	if err != nil {
 		return nil, err
 	}
-	p.Data.QuotedPosts = quotedPosts
-	return p.Data.QuotedPosts, nil
+	p.Data.QuotePosts = quotedPosts
+	return p.Data.QuotePosts, nil
 }
 
 func (p *Post) QuotedCount(ctx context.Context) (int, error) {

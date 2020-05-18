@@ -2,10 +2,10 @@ package repo
 
 import (
 	"context"
-	"errors"
 
 	"github.com/go-pg/pg/v9/orm"
 
+	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
@@ -28,11 +28,15 @@ func (f *Forum) toEntityThread(t *Thread) *entity.Thread {
 		Anonymous: t.Anonymous,
 		Title:     t.Title,
 		Content:   t.Content,
+		MainTag:   t.Tags[0],
+		SubTags:   t.Tags,
 		Blocked:   t.Blocked,
 		Locked:    t.Locked,
 
-		Repo:   f,
-		UserID: t.UserID,
+		Repo: f,
+		AuthorObj: entity.Author{
+			UserID: t.UserID,
+		},
 	}
 	if t.Anonymous {
 		thread.AuthorObj.AnonymousID = (*uid.UID)(t.AnonymousID)
@@ -123,42 +127,24 @@ func (f *Forum) GetThreadCatelog(ctx context.Context, id uid.UID) ([]*entity.Thr
 	return cats, nil
 }
 
-func (f *Forum) GetThreadTags(ctx context.Context, id uid.UID) (main string, subs []string, err error) {
-	var tags []Tag
-	if err := f.db(ctx).Model(&tags).
-		Join("INNER JOIN threads_tags ON threads_tags.tag_name = tag.name").
-		Where("threads_tags.threads_id = ?", id).Select(); err != nil {
-		return "", nil, err
-	}
-	for _, t := range tags {
-		if t.IsMain {
-			main = t.Name
-		} else {
-			subs = append(subs, t.Name)
-		}
-	}
-	return
-}
-
 func (f *Forum) GetAnonyID(ctx context.Context, userID int, threadID uid.UID) (uid.UID, error) {
-	aid := AnonymouId{
-		ThreadID:    int64(threadID),
-		UserID:      userID,
-		AnonymousID: int64(uid.NewUID()),
+	var posts []Post
+	q := f.db(ctx).Model(&posts).Column(Columns.Post.AnonymousID).
+		Where("thread_id = ?", threadID).Where("anonymous = true").Order("id DESC").Limit(1)
+	if err := q.Select(); err != nil {
+		return uid.UID(0), err
 	}
-	q := f.db(ctx).Model(&aid).OnConflict("(thread_id, user_id) DO UPDATE").
-		Set("updated_at = now()").Returning("*")
-	if _, err := q.Insert(); err != nil {
-		return 0, err
+	if len(posts) > 0 {
+		return uid.UID(*posts[0].AnonymousID), nil
 	}
-	return uid.UID(aid.AnonymousID), nil
+	return uid.NewUID(), nil
 }
 
 func (f *Forum) InsertThread(ctx context.Context, thread *entity.Thread) error {
 	t := Thread{
 		ID:         int64(thread.ID),
 		Anonymous:  thread.Anonymous,
-		UserID:     thread.UserID,
+		UserID:     thread.AuthorObj.UserID,
 		Title:      thread.Title,
 		Content:    thread.Content,
 		LastPostID: int64(thread.ID),
@@ -168,75 +154,27 @@ func (f *Forum) InsertThread(ctx context.Context, thread *entity.Thread) error {
 	} else {
 		t.UserName = thread.AuthorObj.UserName
 	}
+	t.Tags = []string{thread.MainTag}
+	t.Tags = append(t.Tags, thread.SubTags...)
 	return f.db(ctx).Insert(&t)
 }
 
 func (f *Forum) UpdateThread(ctx context.Context, id uid.UID, update *entity.ThreadUpdate) error {
-	if update.Blocked != nil || update.Locked != nil {
-		thread := Thread{}
-		q := f.db(ctx).Model(&thread).Where("id = ?", id)
-		if update.Blocked != nil {
-			q.Set("blocked = ?Blocked", update)
-		}
-		if update.Locked != nil {
-			q.Set("locked = ?Locked", update)
-		}
-		_, err := q.Update()
-		if err != nil {
-			return err
-		}
+	thread := Thread{}
+	q := f.db(ctx).Model(&thread).Where("id = ?", id)
+	if update.Blocked != nil {
+		q.Set("blocked = ?Blocked", update)
 	}
-	if update.MainTag != nil || update.SubTags != nil {
-		if !(update.MainTag != nil && update.SubTags != nil) {
-			return errors.New("must specify both main tag and sub tags")
-		}
-		if err := f.setThreadTags(ctx, id, update, false); err != nil {
-			return err
-		}
+	if update.Locked != nil {
+		q.Set("locked = ?Locked", update)
 	}
-	return nil
-}
-
-func (f *Forum) setThreadTags(ctx context.Context, id uid.UID, update *entity.ThreadUpdate, isNew bool) error {
-	tags := update.SubTags
 	if update.MainTag != nil {
-		tags = append(tags, *update.MainTag)
+		tags := []string{*update.MainTag}
+		tags = append(tags, update.SubTags...)
+		q.Set("tags = ?", tags)
 	}
-	// validate params
-	var mainTags []Tag
-	if err := f.db(ctx).Model(&mainTags).Where("is_main = true").Where("name = ANY(?)", tags).Select(); err != nil {
-		return err
-	}
-	if len(mainTags) != 1 {
-		return errors.New("one and only one main tag should be specified")
-	}
-	if !isNew {
-		delTags := []ThreadsTag{}
-		if _, err := f.db(ctx).Model(&delTags).Where("thread_id = ?", id).Delete(); err != nil {
-			return err
-		}
-	}
-	for _, ut := range tags {
-		isMain := ut == *update.MainTag
-		if _, err := f.db(ctx).Model(&Tag{Name: ut, IsMain: isMain}).
-			OnConflict("(thread_id, tag_name) DO UPDATE").
-			Set("update_at = now()").Insert(); err != nil {
-			return err
-		}
-		if _, err := f.db(ctx).Model(&ThreadsTag{ThreadID: int64(id), TagName: ut}).
-			OnConflict("(thread_id, tag_name) DO UPDATE").
-			Set("update_at = now()").Insert(); err != nil {
-			return err
-		}
-		if !isMain {
-			if _, err := f.db(ctx).Model(&TagsMainTag{Name: ut, BelongsTo: *update.MainTag}).
-				OnConflict("(name, belongs_to) DO UPDATE").
-				Set("update_at = now()").Insert(); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	_, err := q.Update()
+	return err
 }
 
 func (f *Forum) toEntityPost(p *Post) *entity.Post {
@@ -246,14 +184,21 @@ func (f *Forum) toEntityPost(p *Post) *entity.Post {
 		Anonymous: p.Anonymous,
 		Content:   p.Content,
 
-		Repo:     f,
-		UserID:   p.UserID,
-		ThreadID: uid.UID(p.ThreadID),
-		AuthorObj: entity.Author{
-			AnonymousID: (*uid.UID)(p.AnonymousID),
-			UserName:    p.UserName,
+		Repo: f,
+		Data: entity.PostData{
+			ThreadID: uid.UID(p.ThreadID),
+			Author: entity.Author{
+				UserID:      p.UserID,
+				AnonymousID: (*uid.UID)(p.AnonymousID),
+				UserName:    p.UserName,
+			},
 		},
 	}
+	var qids []uid.UID
+	for _, pqid := range p.QuotedIDs {
+		qids = append(qids, uid.UID(pqid))
+	}
+	post.Data.QuoteIDs = qids
 	if p.Blocked != nil && *p.Blocked {
 		post.Blocked = true
 		post.Content = blockedContent // TODO: move to service layer
@@ -371,35 +316,27 @@ func (f *Forum) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error)
 func (f *Forum) InsertPost(ctx context.Context, post *entity.Post) error {
 	newPost := &Post{
 		ID:        int64(post.ID),
-		ThreadID:  int64(post.ThreadID),
+		ThreadID:  int64(post.Data.ThreadID),
 		Anonymous: post.Anonymous,
-		UserID:    post.UserID,
+		UserID:    post.Data.Author.UserID,
 		Content:   post.Content,
 	}
 	if post.Anonymous {
-		newPost.AnonymousID = (*int64)(post.AuthorObj.AnonymousID)
+		newPost.AnonymousID = (*int64)(post.Data.Author.AnonymousID)
 	} else {
-		newPost.UserName = post.AuthorObj.UserName
+		newPost.UserName = post.Data.Author.UserName
 	}
+	var qids []int64
+	for _, pqid := range post.Data.QuoteIDs {
+		qids = append(qids, int64(pqid))
+	}
+	newPost.QuotedIDs = qids
 	if _, err := f.db(ctx).Model(newPost).Insert(); err != nil {
 		return err
 	}
 	if _, err := f.db(ctx).Model((*Thread)(nil)).Set("last_post_id=?", post.ID).
-		Where("id = ?", post.ThreadID).Update(); err != nil {
+		Where("id = ?", post.Data.ThreadID).Update(); err != nil {
 		return err
-	}
-	quotes, err := post.Quotes(ctx)
-	if err != nil {
-		return err
-	}
-	for _, q := range quotes {
-		pq := PostsQuote{
-			QuoterID: int64(post.ID),
-			QuotedID: int64(q.ID),
-		}
-		if _, err := f.db(ctx).Model(&pq).Insert(); err != nil {
-			return err
-		}
 	}
 	return nil
 }
@@ -417,12 +354,12 @@ func (f *Forum) UpdatePost(ctx context.Context, id uid.UID, update *entity.PostU
 	return nil
 }
 
-func (f *Forum) getMainTags(ctx context.Context) ([]string, error) {
+func (f *Forum) GetMainTags(ctx context.Context) ([]string, error) {
 	if f.mainTags != nil {
 		return f.mainTags, nil
 	}
 	var tags []Tag
-	if err := f.db(ctx).Model(&tags).Query("tag_type = main").Select(); err != nil {
+	if err := f.db(ctx).Model(&tags).Where("tag_type = main").Select(); err != nil {
 		return nil, err
 	}
 	var mainTags []string
@@ -442,32 +379,19 @@ func (f *Forum) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entit
 	if search.UserID != nil {
 		q.Where("name IN (SELECT tag_name FROM users_tags WHERE user_id=?)", *search.UserID)
 	}
-	if search.MainOnly {
-		q.Where("is_main=true")
-	}
 	if err := q.Select(); err != nil {
+		return nil, err
+	}
+	mainTags, err := f.GetMainTags(ctx)
+	if err != nil {
 		return nil, err
 	}
 	var entities []*entity.Tag
 	for _, t := range tags {
 		entities = append(entities, &entity.Tag{
 			Name:   t.Name,
-			IsMain: t.IsMain,
+			IsMain: algo.InStrSlice(mainTags, t.Name),
 		})
 	}
 	return entities, nil
-}
-
-func (f *Forum) UpdateUserTags(ctx context.Context, userID int, update *entity.UserTagUpdate) error {
-	for _, t := range update.AddTags {
-		if _, err := f.db(ctx).Model(&UsersTag{UserID: userID, TagName: t}).Insert(); err != nil {
-			return err
-		}
-	}
-	for _, t := range update.DelTags {
-		if _, err := f.db(ctx).Model(&UsersTag{}).Where("user_id=?", userID).Where("tag_name=?", t).Delete(); err != nil {
-			return err
-		}
-	}
-	return nil
 }

@@ -50,7 +50,6 @@ type ForumRepo interface {
 	GetThread(ctx context.Context, search *ThreadSearch) (*Thread, error)
 	GetThreadSlice(ctx context.Context, search *ThreadsSearch, query SliceQuery) (*ThreadSlice, error)
 	GetThreadCatelog(ctx context.Context, id uid.UID) ([]*ThreadCatalogItem, error)
-	GetThreadTags(ctx context.Context, id uid.UID) (main string, subs []string, err error)
 	GetAnonyID(ctx context.Context, userID int, threadID uid.UID) (uid.UID, error)
 	InsertThread(ctx context.Context, thread *Thread) error
 	UpdateThread(ctx context.Context, id uid.UID, update *ThreadUpdate) error
@@ -66,5 +65,4 @@ type ForumRepo interface {
 
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)
 	GetMainTags(ctx context.Context) ([]string, error)
-	UpdateUserTags(ctx context.Context, userID int, update *UserTagUpdate) error
 }
