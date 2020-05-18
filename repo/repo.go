@@ -4,27 +4,22 @@ import (
 	"context"
 	"errors"
 
-	pg "github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
+
+	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 type Forum struct {
-	DB *pg.DB
-}
-
-func NewForum(uri string) (*Forum, error) {
-	option, err := pg.ParseURL(uri)
-	if err != nil {
-		return nil, err
-	}
-	return &Forum{
-		DB: pg.Connect(option),
-	}, nil
+	mainTags []string
 }
 
 const blockedContent = "[此内容已被管理员屏蔽]" // TODO: should be service layer
+
+func (f *Forum) db(ctx context.Context) postgres.Session {
+	return postgres.GetSessionFromContext(ctx)
+}
 
 func (f *Forum) toEntityThread(t *Thread) *entity.Thread {
 	thread := &entity.Thread{
@@ -52,7 +47,7 @@ func (f *Forum) toEntityThread(t *Thread) *entity.Thread {
 
 func (f *Forum) GetThread(ctx context.Context, search *entity.ThreadSearch) (*entity.Thread, error) {
 	thread := Thread{}
-	q := f.DB.Model(&thread).Where("id = ?", search.ID)
+	q := f.db(ctx).Model(&thread).Where("id = ?", search.ID)
 	if err := q.Select(); err != nil {
 		return nil, err
 	}
@@ -63,7 +58,7 @@ func (f *Forum) GetThreadSlice(
 	ctx context.Context, search *entity.ThreadsSearch, query entity.SliceQuery,
 ) (*entity.ThreadSlice, error) {
 	var threads []Thread
-	q := f.DB.Model(&threads)
+	q := f.db(ctx).Model(&threads)
 	if search.Tags != nil {
 		q.Where("id IN (SELECT thread_id FROM threads_tags as tt WHERE tt.tag_name=ANY(?))", search.Tags)
 	}
@@ -114,7 +109,7 @@ func (f *Forum) GetThreadSlice(
 
 func (f *Forum) GetThreadCatelog(ctx context.Context, id uid.UID) ([]*entity.ThreadCatalogItem, error) {
 	var posts []Post
-	q := f.DB.Model(&posts).Column("id", "created_at").Where("thread=?", id).Order("id")
+	q := f.db(ctx).Model(&posts).Column("id", "created_at").Where("thread=?", id).Order("id")
 	if err := q.Select(); err != nil {
 		return nil, err
 	}
@@ -130,7 +125,7 @@ func (f *Forum) GetThreadCatelog(ctx context.Context, id uid.UID) ([]*entity.Thr
 
 func (f *Forum) GetThreadTags(ctx context.Context, id uid.UID) (main string, subs []string, err error) {
 	var tags []Tag
-	if err := f.DB.Model(&tags).
+	if err := f.db(ctx).Model(&tags).
 		Join("INNER JOIN threads_tags ON threads_tags.tag_name = tag.name").
 		Where("threads_tags.threads_id = ?", id).Select(); err != nil {
 		return "", nil, err
@@ -151,7 +146,7 @@ func (f *Forum) GetAnonyID(ctx context.Context, userID int, threadID uid.UID) (u
 		UserID:      userID,
 		AnonymousID: int64(uid.NewUID()),
 	}
-	q := f.DB.Model(&aid).OnConflict("(thread_id, user_id) DO UPDATE").
+	q := f.db(ctx).Model(&aid).OnConflict("(thread_id, user_id) DO UPDATE").
 		Set("updated_at = now()").Returning("*")
 	if _, err := q.Insert(); err != nil {
 		return 0, err
@@ -173,13 +168,13 @@ func (f *Forum) InsertThread(ctx context.Context, thread *entity.Thread) error {
 	} else {
 		t.UserName = thread.AuthorObj.UserName
 	}
-	return f.DB.Insert(&t)
+	return f.db(ctx).Insert(&t)
 }
 
 func (f *Forum) UpdateThread(ctx context.Context, id uid.UID, update *entity.ThreadUpdate) error {
 	if update.Blocked != nil || update.Locked != nil {
 		thread := Thread{}
-		q := f.DB.Model(&thread).Where("id = ?", id)
+		q := f.db(ctx).Model(&thread).Where("id = ?", id)
 		if update.Blocked != nil {
 			q.Set("blocked = ?Blocked", update)
 		}
@@ -202,14 +197,14 @@ func (f *Forum) UpdateThread(ctx context.Context, id uid.UID, update *entity.Thr
 	return nil
 }
 
-func (f *Forum) setThreadTags(_ context.Context, id uid.UID, update *entity.ThreadUpdate, isNew bool) error {
+func (f *Forum) setThreadTags(ctx context.Context, id uid.UID, update *entity.ThreadUpdate, isNew bool) error {
 	tags := update.SubTags
 	if update.MainTag != nil {
 		tags = append(tags, *update.MainTag)
 	}
 	// validate params
 	var mainTags []Tag
-	if err := f.DB.Model(&mainTags).Where("is_main = true").Where("name = ANY(?)", tags).Select(); err != nil {
+	if err := f.db(ctx).Model(&mainTags).Where("is_main = true").Where("name = ANY(?)", tags).Select(); err != nil {
 		return err
 	}
 	if len(mainTags) != 1 {
@@ -217,24 +212,24 @@ func (f *Forum) setThreadTags(_ context.Context, id uid.UID, update *entity.Thre
 	}
 	if !isNew {
 		delTags := []ThreadsTag{}
-		if _, err := f.DB.Model(&delTags).Where("thread_id = ?", id).Delete(); err != nil {
+		if _, err := f.db(ctx).Model(&delTags).Where("thread_id = ?", id).Delete(); err != nil {
 			return err
 		}
 	}
 	for _, ut := range tags {
 		isMain := ut == *update.MainTag
-		if _, err := f.DB.Model(&Tag{Name: ut, IsMain: isMain}).
+		if _, err := f.db(ctx).Model(&Tag{Name: ut, IsMain: isMain}).
 			OnConflict("(thread_id, tag_name) DO UPDATE").
 			Set("update_at = now()").Insert(); err != nil {
 			return err
 		}
-		if _, err := f.DB.Model(&ThreadsTag{ThreadID: int64(id), TagName: ut}).
+		if _, err := f.db(ctx).Model(&ThreadsTag{ThreadID: int64(id), TagName: ut}).
 			OnConflict("(thread_id, tag_name) DO UPDATE").
 			Set("update_at = now()").Insert(); err != nil {
 			return err
 		}
 		if !isMain {
-			if _, err := f.DB.Model(&TagsMainTag{Name: ut, BelongsTo: *update.MainTag}).
+			if _, err := f.db(ctx).Model(&TagsMainTag{Name: ut, BelongsTo: *update.MainTag}).
 				OnConflict("(name, belongs_to) DO UPDATE").
 				Set("update_at = now()").Insert(); err != nil {
 				return err
@@ -269,14 +264,14 @@ func (f *Forum) toEntityPost(p *Post) *entity.Post {
 
 func (f *Forum) GetPost(ctx context.Context, search *entity.PostSearch) (*entity.Post, error) {
 	var post Post
-	if err := f.DB.Model(&post).Where("id = ?", search.ID).Select(); err != nil {
+	if err := f.db(ctx).Model(&post).Where("id = ?", search.ID).Select(); err != nil {
 		return nil, err
 	}
 	return f.toEntityPost(&post), nil
 }
 
-func (f *Forum) searchPostsQuery(search *entity.PostsSearch, posts *[]Post) *orm.Query {
-	q := f.DB.Model(posts)
+func (f *Forum) searchPostsQuery(ctx context.Context, search *entity.PostsSearch, posts *[]Post) *orm.Query {
+	q := f.db(ctx).Model(posts)
 	if search.IDs != nil {
 		q.Where("id = ANY(?)", search.IDs)
 	}
@@ -291,7 +286,7 @@ func (f *Forum) searchPostsQuery(search *entity.PostsSearch, posts *[]Post) *orm
 
 func (f *Forum) GetPosts(ctx context.Context, search *entity.PostsSearch) ([]*entity.Post, error) {
 	var posts []Post
-	q := f.searchPostsQuery(search, &posts)
+	q := f.searchPostsQuery(ctx, search, &posts)
 	if err := q.Select(); err != nil {
 		return nil, err
 	}
@@ -306,7 +301,7 @@ func (f *Forum) GetPostSlice(
 	ctx context.Context, search *entity.PostsSearch, query entity.SliceQuery,
 ) (*entity.PostSlice, error) {
 	var posts []Post
-	q := f.searchPostsQuery(search, &posts)
+	q := f.searchPostsQuery(ctx, search, &posts)
 	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
 		if cursor == "" {
 			return q, nil
@@ -349,13 +344,13 @@ func (f *Forum) GetPostSlice(
 
 func (f *Forum) GetPostCount(ctx context.Context, search *entity.PostsSearch) (int, error) {
 	var posts []Post
-	q := f.searchPostsQuery(search, &posts)
+	q := f.searchPostsQuery(ctx, search, &posts)
 	return q.Count()
 }
 
 func (f *Forum) GetPostQuotesPosts(ctx context.Context, id uid.UID) ([]*entity.Post, error) {
 	var posts []Post
-	q := f.DB.Model(&posts).Join("INNER JOIN posts_quotes ON post.id = posts_quotes.quoted_id").
+	q := f.db(ctx).Model(&posts).Join("INNER JOIN posts_quotes ON post.id = posts_quotes.quoted_id").
 		Where("posts_quotes.quoter_id = ?", id).Order("post.id")
 	if err := q.Select(); err != nil {
 		return nil, err
@@ -369,7 +364,7 @@ func (f *Forum) GetPostQuotesPosts(ctx context.Context, id uid.UID) ([]*entity.P
 
 func (f *Forum) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error) {
 	var count int
-	_, err := f.DB.Query(orm.Scan(&count), "SELECT count(*) FROM posts_quotes WHERE quoted_id=?", id)
+	_, err := f.db(ctx).Query(orm.Scan(&count), "SELECT count(*) FROM posts_quotes WHERE quoted_id=?", id)
 	return count, err
 }
 
@@ -386,10 +381,10 @@ func (f *Forum) InsertPost(ctx context.Context, post *entity.Post) error {
 	} else {
 		newPost.UserName = post.AuthorObj.UserName
 	}
-	if _, err := f.DB.Model(newPost).Insert(); err != nil {
+	if _, err := f.db(ctx).Model(newPost).Insert(); err != nil {
 		return err
 	}
-	if _, err := f.DB.Model((*Thread)(nil)).Set("last_post_id=?", post.ID).
+	if _, err := f.db(ctx).Model((*Thread)(nil)).Set("last_post_id=?", post.ID).
 		Where("id = ?", post.ThreadID).Update(); err != nil {
 		return err
 	}
@@ -402,7 +397,7 @@ func (f *Forum) InsertPost(ctx context.Context, post *entity.Post) error {
 			QuoterID: int64(post.ID),
 			QuotedID: int64(q.ID),
 		}
-		if _, err := f.DB.Model(&pq).Insert(); err != nil {
+		if _, err := f.db(ctx).Model(&pq).Insert(); err != nil {
 			return err
 		}
 	}
@@ -411,7 +406,7 @@ func (f *Forum) InsertPost(ctx context.Context, post *entity.Post) error {
 
 func (f *Forum) UpdatePost(ctx context.Context, id uid.UID, update *entity.PostUpdate) error {
 	post := Post{}
-	q := f.DB.Model(&post).Where("id = ?", id)
+	q := f.db(ctx).Model(&post).Where("id = ?", id)
 	if update.Blocked != nil {
 		q.Set("blocked = ?Blocked", update)
 	}
@@ -422,9 +417,25 @@ func (f *Forum) UpdatePost(ctx context.Context, id uid.UID, update *entity.PostU
 	return nil
 }
 
+func (f *Forum) getMainTags(ctx context.Context) ([]string, error) {
+	if f.mainTags != nil {
+		return f.mainTags, nil
+	}
+	var tags []Tag
+	if err := f.db(ctx).Model(&tags).Query("tag_type = main").Select(); err != nil {
+		return nil, err
+	}
+	var mainTags []string
+	for i := range tags {
+		mainTags = append(mainTags, tags[i].Name)
+	}
+	f.mainTags = mainTags
+	return mainTags, nil
+}
+
 func (f *Forum) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entity.Tag, error) {
 	var tags []Tag
-	q := f.DB.Model(&tags).Limit(search.Limit)
+	q := f.db(ctx).Model(&tags).Limit(search.Limit)
 	if search.Text != nil {
 		q.Where("name LIKE '%?%'", *search.Text)
 	}
@@ -449,12 +460,12 @@ func (f *Forum) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entit
 
 func (f *Forum) UpdateUserTags(ctx context.Context, userID int, update *entity.UserTagUpdate) error {
 	for _, t := range update.AddTags {
-		if _, err := f.DB.Model(&UsersTag{UserID: userID, TagName: t}).Insert(); err != nil {
+		if _, err := f.db(ctx).Model(&UsersTag{UserID: userID, TagName: t}).Insert(); err != nil {
 			return err
 		}
 	}
 	for _, t := range update.DelTags {
-		if _, err := f.DB.Model(&UsersTag{}).Where("user_id=?", userID).Where("tag_name=?", t).Delete(); err != nil {
+		if _, err := f.db(ctx).Model(&UsersTag{}).Where("user_id=?", userID).Where("tag_name=?", t).Delete(); err != nil {
 			return err
 		}
 	}

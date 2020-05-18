@@ -111,15 +111,16 @@ const (
 	userKey contextKey = 1 + iota
 )
 
-type Role string
-
-const (
-	RoleNormal = Role("")
-	RoleGuest  = Role("guest")
-	RoleMod    = Role("mod")
-	RoleBanned = Role("banned")
-	RoleAdmin  = Role("admin")
-)
+func ParseRole(s string) Role {
+	if s == "" {
+		return RoleNormal
+	}
+	r := Role(s)
+	if !r.IsValid() {
+		return RoleBanned
+	}
+	return r
+}
 
 func (r Role) Value() int {
 	switch r {
@@ -163,23 +164,19 @@ var ActionRole = map[Action]Role{
 }
 
 type User struct {
-	Email string  `json:"email"`
-	Name  *string `json:"name"`
-	Role  *string `json:"role"`
+	Email string   `json:"email"`
+	Name  *string  `json:"name"`
+	Role  Role     `json:"role"`
+	Tags  []string `json:"tags"`
 
+	Repo         UserRepo     `json:"-"`
 	ID           int          `json:"-"`
 	LastReadNoti LastReadNoti `json:"-"`
-	Repo         UserRepo     `json:"-"`
-	tags         []string
 }
 
 func (u *User) RequirePermission(action Action) error {
 	needRole := ActionRole[action]
-	userRole := Role("")
-	if u.Role != nil {
-		userRole = Role(*u.Role)
-	}
-	if userRole.Value() < needRole.Value() {
+	if u.Role.Value() < needRole.Value() {
 		return errors.New("permission denied")
 	}
 	return nil
@@ -193,11 +190,46 @@ func (u *User) SetName(ctx context.Context, name string) error {
 	return nil
 }
 
+func purifyTags(includes []string, exclude string) []string {
+	inMap := map[string]struct{}{}
+	var tags []string
+	for _, t := range includes {
+		if _, ok := inMap[t]; !ok && t != exclude {
+			tags = append(tags, t)
+			inMap[t] = struct{}{}
+		}
+	}
+	return tags
+}
+
+func (u *User) SyncTags(ctx context.Context, user *User, tags []string) error {
+	tagSet := purifyTags(tags, "")
+	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Tags: tagSet}); err != nil {
+		return err
+	}
+	u.Tags = tagSet
+	return nil
+}
+
+func (u *User) AddSubbedTag(ctx context.Context, user *User, tag string) error {
+	tags := append(u.Tags, tag)
+	return u.SyncTags(ctx, u, tags)
+}
+
+func (u *User) DelSubbedTag(ctx context.Context, user *User, tag string) error {
+	tagSet := purifyTags(u.Tags, tag)
+	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Tags: tagSet}); err != nil {
+		return err
+	}
+	u.Tags = tagSet
+	return nil
+}
+
 func (u *User) BanUser(ctx context.Context, id int) (bool, error) {
-	banned := string(RoleBanned)
+	banned := RoleBanned
 	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Role: &banned}); err != nil {
 		return false, err
 	}
-	u.Role = &banned
+	u.Role = RoleBanned
 	return true, nil
 }

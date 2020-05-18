@@ -42,6 +42,11 @@ type SliceQuery struct {
 	Limit  int     `json:"limit"`
 }
 
+type Tag struct {
+	Name   string `json:"name"`
+	IsMain bool   `json:"isMain"`
+}
+
 type ThreadCatalogItem struct {
 	PostID    string    `json:"postId"`
 	CreatedAt time.Time `json:"createdAt"`
@@ -106,5 +111,52 @@ func (e *NotiType) UnmarshalGQL(v interface{}) error {
 }
 
 func (e NotiType) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+type Role string
+
+const (
+	RoleAdmin  Role = "admin"
+	RoleMod    Role = "mod"
+	RoleNormal Role = "normal"
+	RoleGuest  Role = "guest"
+	RoleBanned Role = "banned"
+)
+
+var AllRole = []Role{
+	RoleAdmin,
+	RoleMod,
+	RoleNormal,
+	RoleGuest,
+	RoleBanned,
+}
+
+func (e Role) IsValid() bool {
+	switch e {
+	case RoleAdmin, RoleMod, RoleNormal, RoleGuest, RoleBanned:
+		return true
+	}
+	return false
+}
+
+func (e Role) String() string {
+	return string(e)
+}
+
+func (e *Role) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Role(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Role", str)
+	}
+	return nil
+}
+
+func (e Role) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }

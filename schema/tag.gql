@@ -9,7 +9,7 @@ extend type Query {
     query: String,
     # Amount of tags returned.
     limit: Int,
-  ): [Tag]!
+  ): [Tag!]!
 }
 
 type Tag {
@@ -17,6 +17,4 @@ type Tag {
   name: String!
   # The tag is a Main Tag if true, Sub Tag otherwise.
   isMain: Boolean!
-  # The tag which this tag belongs to.
-  belongsTo: [String!]!
 }

@@ -15,8 +15,16 @@ type ForumService struct {
 }
 
 type Author struct {
+	UserID      int
 	AnonymousID *uid.UID
 	UserName    *string
+}
+
+func (a Author) Name(anonymous bool) string {
+	if !anonymous {
+		return *a.UserName
+	}
+	return a.AnonymousID.ToBase64String()
 }
 
 type Thread struct {
@@ -25,15 +33,13 @@ type Thread struct {
 	Anonymous bool      `json:"anonymous"`
 	Title     *string   `json:"title"`
 	Content   string    `json:"content"`
+	MainTag   string    `json:"main_tag"`
+	SubTags   []string  `json:"sub_tags"`
 	Blocked   bool      `json:"blocked"`
 	Locked    bool      `json:"locked"`
 
 	Repo      ForumRepo `json:"-"`
-	UserID    int       `json:"-"`
-	AuthorObj Author    `json:"author"`
-
-	mainTag string
-	subTags []string
+	AuthorObj Author    `json:"-"`
 }
 
 func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadInput) (*Thread, error) {
@@ -43,12 +49,13 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		Anonymous: input.Anonymous,
 		Title:     input.Title,
 		Content:   input.Content,
+		MainTag:   input.MainTag,
+		SubTags:   input.SubTags,
 
-		Repo:   f.Repo,
-		UserID: user.ID,
-
-		mainTag: input.MainTag,
-		subTags: input.SubTags,
+		Repo: f.Repo,
+		AuthorObj: Author{
+			UserID: user.ID,
+		},
 	}
 	if input.Anonymous {
 		aid := uid.NewUID()
@@ -63,7 +70,6 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 	if err != nil {
 		return nil, err
 	}
-	err = thread.EditTags(ctx, thread.mainTag, thread.subTags)
 	return thread, err
 }
 
@@ -82,10 +88,7 @@ func (f *ForumService) SearchThreads(
 }
 
 func (n *Thread) Author() string {
-	if !n.Anonymous {
-		return *n.AuthorObj.UserName
-	}
-	return n.AuthorObj.AnonymousID.ToBase64String()
+	return n.AuthorObj.Name(n.Anonymous)
 }
 
 func (n *Thread) Replies(ctx context.Context, query SliceQuery) (*PostSlice, error) {
@@ -100,53 +103,14 @@ func (n *Thread) Catalog(ctx context.Context) ([]*ThreadCatalogItem, error) {
 	return n.Repo.GetThreadCatelog(ctx, n.ID)
 }
 
-func (n *Thread) getTags(ctx context.Context) error {
-	main, subs, err := n.Repo.GetThreadTags(ctx, n.ID)
-	if err != nil {
-		return err
-	}
-	n.mainTag = main
-	n.subTags = subs
-	return nil
-}
-
-func (n *Thread) MainTag(ctx context.Context) (string, error) {
-	if n.mainTag != "" {
-		return n.mainTag, nil
-	}
-	err := n.getTags(ctx)
-	if err != nil {
-		return "", err
-	}
-	return n.mainTag, nil
-}
-
-func (n *Thread) SubTags(ctx context.Context) ([]string, error) {
-	if n.subTags != nil {
-		return n.subTags, nil
-	}
-	err := n.getTags(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return n.subTags, nil
-}
-
 func (n *Thread) EditTags(ctx context.Context, mainTag string, subTags []string) error {
-	update := &ThreadUpdate{SubTags: subTags}
-	if mainTag != "" {
-		update.MainTag = &mainTag
-	}
+	update := &ThreadUpdate{MainTag: &mainTag, SubTags: subTags}
 	err := n.Repo.UpdateThread(ctx, n.ID, update)
 	if err != nil {
 		return err
 	}
-	if mainTag != "" {
-		n.mainTag = mainTag
-	}
-	if subTags != nil {
-		n.subTags = subTags
-	}
+	n.MainTag = mainTag
+	n.SubTags = subTags
 	return nil
 }
 
@@ -168,6 +132,13 @@ func (n *Thread) Block(ctx context.Context) error {
 	return nil
 }
 
+type PostData struct {
+	ThreadID    uid.UID
+	Author      Author
+	QuotedIDs   []uid.UID
+	QuotedPosts []*Post
+}
+
 type Post struct {
 	ID        uid.UID   `json:"id"`
 	CreatedAt time.Time `json:"createdAt"`
@@ -175,11 +146,8 @@ type Post struct {
 	Content   string    `json:"content"`
 	Blocked   bool      `json:"blocked"`
 
-	Repo        ForumRepo `json:"-"`
-	UserID      int       `json:"-"`
-	ThreadID    uid.UID   `json:"-"`
-	AuthorObj   Author    `json:"-"`
-	QuotedPosts []*Post   `json:"-"`
+	Repo ForumRepo `json:"-"`
+	Data PostData  `json:"-"`
 }
 
 type NewPostResponse struct {
@@ -195,18 +163,20 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 		Anonymous: input.Anonymous,
 		Content:   input.Content,
 
-		Repo:     f.Repo,
-		UserID:   user.ID,
-		ThreadID: input.ThreadID,
+		Repo: f.Repo,
+		Data: PostData{
+			Author:   Author{UserID: user.ID},
+			ThreadID: input.ThreadID,
+		},
 	}
 	if input.Anonymous {
 		aid := uid.NewUID()
-		post.AuthorObj.AnonymousID = &aid // TODO
+		post.Data.Author.AnonymousID = &aid // TODO: find aid
 	} else {
 		if user.Name == nil {
 			return nil, errors.New("user name must be set")
 		}
-		post.AuthorObj.UserName = user.Name
+		post.Data.Author.UserName = user.Name
 	}
 	err := f.Repo.InsertPost(ctx, post)
 	return &NewPostResponse{Post: post}, err
@@ -221,22 +191,19 @@ func (f *ForumService) GetUserPosts(ctx context.Context, user *User, query Slice
 }
 
 func (p *Post) Author() string {
-	if !p.Anonymous {
-		return *p.AuthorObj.UserName
-	}
-	return p.AuthorObj.AnonymousID.ToBase64String()
+	return p.Data.Author.Name(p.Anonymous)
 }
 
 func (p *Post) Quotes(ctx context.Context) ([]*Post, error) {
-	if p.QuotedPosts != nil {
-		return p.QuotedPosts, nil
+	if p.Data.QuotedPosts != nil {
+		return p.Data.QuotedPosts, nil
 	}
-	quotedPosts, err := p.Repo.GetPostQuotesPosts(ctx, p.ID)
+	quotedPosts, err := p.Repo.GetPosts(ctx, &PostsSearch{IDs: p.Data.QuotedIDs})
 	if err != nil {
 		return nil, err
 	}
-	p.QuotedPosts = quotedPosts
-	return p.QuotedPosts, nil
+	p.Data.QuotedPosts = quotedPosts
+	return p.Data.QuotedPosts, nil
 }
 
 func (p *Post) QuotedCount(ctx context.Context) (int, error) {
@@ -252,26 +219,8 @@ func (p *Post) Block(ctx context.Context) error {
 	return nil
 }
 
-type Tag struct {
-	Name      string   `json:"name"`
-	IsMain    bool     `json:"isMain"`
-	BelongsTo []string `json:"belongsTo"`
-}
-
-func (f *ForumService) tagsToNames(tags []*Tag) []string {
-	var names []string
-	for _, t := range tags {
-		names = append(names, t.Name)
-	}
-	return names
-}
-
 func (f *ForumService) GetMainTags(ctx context.Context) ([]string, error) {
-	tags, err := f.Repo.GetTags(ctx, &TagSearch{MainOnly: true})
-	if err != nil {
-		return nil, err
-	}
-	return f.tagsToNames(tags), nil
+	return f.Repo.GetMainTags(ctx)
 }
 
 func (f *ForumService) GetRecommendedTags(ctx context.Context) ([]string, error) {
@@ -286,79 +235,4 @@ func (f *ForumService) SearchTags(ctx context.Context, query *string, limit *int
 		search.Limit = *limit
 	}
 	return f.Repo.GetTags(ctx, search)
-}
-
-func (f *ForumService) GetUserTags(ctx context.Context, user *User) ([]string, error) {
-	if user.tags != nil {
-		return user.tags, nil
-	}
-	tags, err := f.Repo.GetTags(ctx, &TagSearch{UserID: &user.ID})
-	if err != nil {
-		return nil, err
-	}
-	if len(tags) == 0 {
-		user.tags = []string{}
-	} else {
-		user.tags = f.tagsToNames(tags)
-	}
-	return user.tags, nil
-}
-
-func (f *ForumService) SyncUserTags(ctx context.Context, user *User, tags []string) error {
-	userTags, err := f.GetUserTags(ctx, user)
-	if err != nil {
-		return err
-	}
-	curTags := map[string]bool{}
-	for _, t := range userTags {
-		curTags[t] = true
-	}
-	nextTags := map[string]bool{}
-	for _, t := range tags {
-		nextTags[t] = true
-	}
-
-	var toAdd []string
-	var toDel []string
-	for t := range curTags {
-		if !nextTags[t] {
-			toDel = append(toDel, t)
-		}
-	}
-	for t := range nextTags {
-		if !curTags[t] {
-			toAdd = append(toAdd, t)
-		}
-	}
-	if err := f.Repo.UpdateUserTags(ctx, user.ID, &UserTagUpdate{AddTags: toAdd, DelTags: toDel}); err != nil {
-		return err
-	}
-	user.tags = tags
-	return nil
-}
-
-func (f *ForumService) AddUserSubbedTag(ctx context.Context, user *User, tag string) error {
-	if err := f.Repo.UpdateUserTags(ctx, user.ID, &UserTagUpdate{AddTags: []string{tag}}); err != nil {
-		return err
-	}
-	if user.tags != nil {
-		user.tags = append(user.tags, tag)
-	}
-	return nil
-}
-
-func (f *ForumService) DelUserSubbedTag(ctx context.Context, user *User, tag string) error {
-	if err := f.Repo.UpdateUserTags(ctx, user.ID, &UserTagUpdate{AddTags: []string{tag}}); err != nil {
-		return err
-	}
-	if user.tags != nil {
-		var next []string
-		for _, t := range user.tags {
-			if t != tag {
-				next = append(next, t)
-			}
-		}
-		user.tags = next
-	}
-	return nil
 }

@@ -24,6 +24,14 @@ extend type Mutation {
   editTags(threadId: UID!, mainTag: String!, subTags: [String!]!): Thread!
 }
 
+enum Role {
+  admin
+  mod
+  normal
+  guest
+  banned
+}
+
 type User {
   email: String!
   # The Name of user. Required when not posting anonymously.
@@ -31,10 +39,7 @@ type User {
   # Tags saved by user.
   tags: [String!]
   # user roles:
-  # role: admin: modify config, manage mods.
-  #       mod:   lock/block thread, lock/block post, ban user.
-  #       null:  normal user.
-  role: String
+  role: Role!
 
   # Threads published by the user.
   threads(query: SliceQuery!): ThreadSlice!

@@ -72,10 +72,7 @@ func (s *Service) GetUserTags(ctx context.Context, obj *entity.User) ([]string, 
 	if err != nil {
 		return nil, err
 	}
-	if obj == nil || obj.Email != user.Email {
-		return nil, errors.New("permission denied")
-	}
-	return s.Forum.GetUserTags(ctx, user)
+	return user.Tags, nil
 }
 
 func (s *Service) SyncUserTags(ctx context.Context, tags []string) (*entity.User, error) {
@@ -83,7 +80,7 @@ func (s *Service) SyncUserTags(ctx context.Context, tags []string) (*entity.User
 	if err != nil {
 		return nil, err
 	}
-	return user, s.Forum.SyncUserTags(ctx, user, tags)
+	return user, user.SyncTags(ctx, user, tags)
 }
 
 func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
@@ -91,7 +88,7 @@ func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 	if err != nil {
 		return nil, err
 	}
-	return user, s.Forum.AddUserSubbedTag(ctx, user, tag)
+	return user, user.AddSubbedTag(ctx, user, tag)
 }
 
 func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
@@ -99,7 +96,7 @@ func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 	if err != nil {
 		return nil, err
 	}
-	return user, s.Forum.DelUserSubbedTag(ctx, user, tag)
+	return user, user.DelSubbedTag(ctx, user, tag)
 }
 
 func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error) {
@@ -112,13 +109,13 @@ func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UI
 		if err != nil {
 			return false, err
 		}
-		return user.BanUser(ctx, post.UserID)
+		return user.BanUser(ctx, post.Data.Author.UserID)
 	} else if threadID != nil {
 		thread, err := s.Forum.GetThreadByID(ctx, *threadID)
 		if err != nil {
 			return false, err
 		}
-		return user.BanUser(ctx, thread.UserID)
+		return user.BanUser(ctx, thread.AuthorObj.UserID)
 	}
 	return false, errors.New("must specified post id or thread id")
 }

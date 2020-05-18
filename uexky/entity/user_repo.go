@@ -4,7 +4,8 @@ import "context"
 
 type UserUpdate struct {
 	Name *string
-	Role *string
+	Role *Role
+	Tags []string
 }
 
 type UserRepo interface {

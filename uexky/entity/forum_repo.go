@@ -36,10 +36,9 @@ type PostUpdate struct {
 }
 
 type TagSearch struct {
-	Text     *string
-	UserID   *int
-	MainOnly bool
-	Limit    int
+	Text   *string
+	UserID *int
+	Limit  int
 }
 
 type UserTagUpdate struct {
@@ -66,5 +65,6 @@ type ForumRepo interface {
 	UpdatePost(ctx context.Context, id uid.UID, update *PostUpdate) error
 
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)
+	GetMainTags(ctx context.Context) ([]string, error)
 	UpdateUserTags(ctx context.Context, userID int, update *UserTagUpdate) error
 }

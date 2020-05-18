@@ -134,9 +134,8 @@ type ComplexityRoot struct {
 	}
 
 	Tag struct {
-		BelongsTo func(childComplexity int) int
-		IsMain    func(childComplexity int) int
-		Name      func(childComplexity int) int
+		IsMain func(childComplexity int) int
+		Name   func(childComplexity int) int
 	}
 
 	Thread struct {
@@ -223,8 +222,6 @@ type SystemNotiResolver interface {
 	Content(ctx context.Context, obj *entity.SystemNoti) (string, error)
 }
 type UserResolver interface {
-	Tags(ctx context.Context, obj *entity.User) ([]string, error)
-
 	Threads(ctx context.Context, obj *entity.User, query entity.SliceQuery) (*entity.ThreadSlice, error)
 	Posts(ctx context.Context, obj *entity.User, query entity.SliceQuery) (*entity.PostSlice, error)
 }
@@ -728,13 +725,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SystemNoti.Type(childComplexity), true
 
-	case "Tag.belongsTo":
-		if e.complexity.Tag.BelongsTo == nil {
-			break
-		}
-
-		return e.complexity.Tag.BelongsTo(childComplexity), true
-
 	case "Tag.isMain":
 		if e.complexity.Tag.IsMain == nil {
 			break
@@ -1185,7 +1175,7 @@ type PostSlice {
     query: String,
     # Amount of tags returned.
     limit: Int,
-  ): [Tag]!
+  ): [Tag!]!
 }
 
 type Tag {
@@ -1193,8 +1183,6 @@ type Tag {
   name: String!
   # The tag is a Main Tag if true, Sub Tag otherwise.
   isMain: Boolean!
-  # The tag which this tag belongs to.
-  belongsTo: [String!]!
 }
 `, BuiltIn: false},
 	&ast.Source{Name: "schema/thread.gql", Input: `extend type Query {
@@ -1288,6 +1276,14 @@ extend type Mutation {
   editTags(threadId: UID!, mainTag: String!, subTags: [String!]!): Thread!
 }
 
+enum Role {
+  admin
+  mod
+  normal
+  guest
+  banned
+}
+
 type User {
   email: String!
   # The Name of user. Required when not posting anonymously.
@@ -1295,10 +1291,7 @@ type User {
   # Tags saved by user.
   tags: [String!]
   # user roles:
-  # role: admin: modify config, manage mods.
-  #       mod:   lock/block thread, lock/block post, ban user.
-  #       null:  normal user.
-  role: String
+  role: Role!
 
   # Threads published by the user.
   threads(query: SliceQuery!): ThreadSlice!
@@ -2423,13 +2416,13 @@ func (ec *executionContext) _Post_author(ctx context.Context, field graphql.Coll
 		Object:   "Post",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Author, nil
+		return obj.Author(), nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2869,7 +2862,7 @@ func (ec *executionContext) _Query_tags(ctx context.Context, field graphql.Colle
 	}
 	res := resTmp.([]*entity.Tag)
 	fc.Result = res
-	return ec.marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx, field.Selections, res)
+	return ec.marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTagᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_threadSlice(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3873,40 +3866,6 @@ func (ec *executionContext) _Tag_isMain(ctx context.Context, field graphql.Colle
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Tag_belongsTo(ctx context.Context, field graphql.CollectedField, obj *entity.Tag) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Tag",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.BelongsTo, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]string)
-	fc.Result = res
-	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _Thread_id(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -4119,13 +4078,13 @@ func (ec *executionContext) _Thread_mainTag(ctx context.Context, field graphql.C
 		Object:   "Thread",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.MainTag(ctx)
+		return obj.MainTag, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4153,13 +4112,13 @@ func (ec *executionContext) _Thread_subTags(ctx context.Context, field graphql.C
 		Object:   "Thread",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.SubTags(ctx)
+		return obj.SubTags, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4661,13 +4620,13 @@ func (ec *executionContext) _User_tags(ctx context.Context, field graphql.Collec
 		Object:   "User",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.User().Tags(rctx, obj)
+		return obj.Tags, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4705,11 +4664,14 @@ func (ec *executionContext) _User_role(ctx context.Context, field graphql.Collec
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(entity.Role)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNRole2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐRole(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _User_threads(ctx context.Context, field graphql.CollectedField, obj *entity.User) (ret graphql.Marshaler) {
@@ -6649,11 +6611,6 @@ func (ec *executionContext) _Tag(ctx context.Context, sel ast.SelectionSet, obj 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "belongsTo":
-			out.Values[i] = ec._Tag_belongsTo(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6704,30 +6661,12 @@ func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, o
 				atomic.AddUint32(&invalids, 1)
 			}
 		case "mainTag":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Thread_mainTag(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
+			out.Values[i] = ec._Thread_mainTag(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "subTags":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Thread_subTags(ctx, field, obj)
-				return res
-			})
+			out.Values[i] = ec._Thread_subTags(ctx, field, obj)
 		case "replies":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -6908,18 +6847,12 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "name":
 			out.Values[i] = ec._User_name(ctx, field, obj)
 		case "tags":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._User_tags(ctx, field, obj)
-				return res
-			})
+			out.Values[i] = ec._User_tags(ctx, field, obj)
 		case "role":
 			out.Values[i] = ec._User_role(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "threads":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -7352,6 +7285,15 @@ func (ec *executionContext) marshalNRepliedNoti2ᚖgitlabᚗcomᚋabyssᚗclub�
 	return ec._RepliedNoti(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNRole2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐRole(ctx context.Context, v interface{}) (entity.Role, error) {
+	var res entity.Role
+	return res, res.UnmarshalGQL(v)
+}
+
+func (ec *executionContext) marshalNRole2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐRole(ctx context.Context, sel ast.SelectionSet, v entity.Role) graphql.Marshaler {
+	return v
+}
+
 func (ec *executionContext) marshalNSliceInfo2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐSliceInfo(ctx context.Context, sel ast.SelectionSet, v entity.SliceInfo) graphql.Marshaler {
 	return ec._SliceInfo(ctx, sel, &v)
 }
@@ -7427,7 +7369,11 @@ func (ec *executionContext) marshalNSystemNoti2ᚖgitlabᚗcomᚋabyssᚗclubᚋ
 	return ec._SystemNoti(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx context.Context, sel ast.SelectionSet, v []*entity.Tag) graphql.Marshaler {
+func (ec *executionContext) marshalNTag2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx context.Context, sel ast.SelectionSet, v entity.Tag) graphql.Marshaler {
+	return ec._Tag(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTagᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.Tag) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -7451,7 +7397,7 @@ func (ec *executionContext) marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexk
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalOTag2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx, sel, v[i])
+			ret[i] = ec.marshalNTag2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7462,6 +7408,16 @@ func (ec *executionContext) marshalNTag2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexk
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalNTag2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx context.Context, sel ast.SelectionSet, v *entity.Tag) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Tag(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNThread2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx context.Context, sel ast.SelectionSet, v entity.Thread) graphql.Marshaler {
@@ -8083,17 +8039,6 @@ func (ec *executionContext) marshalOSystemNoti2ᚕᚖgitlabᚗcomᚋabyssᚗclub
 	}
 	wg.Wait()
 	return ret
-}
-
-func (ec *executionContext) marshalOTag2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx context.Context, sel ast.SelectionSet, v entity.Tag) graphql.Marshaler {
-	return ec._Tag(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalOTag2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐTag(ctx context.Context, sel ast.SelectionSet, v *entity.Tag) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Tag(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOThreadCatalogItem2ᚕᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThreadCatalogItemᚄ(ctx context.Context, sel ast.SelectionSet, v []*entity.ThreadCatalogItem) graphql.Marshaler {
