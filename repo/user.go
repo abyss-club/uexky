@@ -11,7 +11,7 @@ import (
 
 type UserRepo struct {
 	redisClient *redis.Client
-	forum       *Forum
+	forum       *ForumRepo
 }
 
 func (u *UserRepo) SetCode(ctx context.Context, email string, code string, ex time.Duration) error {

@@ -11,17 +11,17 @@ import (
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
-type Forum struct {
+type ForumRepo struct {
 	mainTags []string
 }
 
 const blockedContent = "[此内容已被管理员屏蔽]" // TODO: should be service layer
 
-func (f *Forum) db(ctx context.Context) postgres.Session {
+func (f *ForumRepo) db(ctx context.Context) postgres.Session {
 	return postgres.GetSessionFromContext(ctx)
 }
 
-func (f *Forum) toEntityThread(t *Thread) *entity.Thread {
+func (f *ForumRepo) toEntityThread(t *Thread) *entity.Thread {
 	thread := &entity.Thread{
 		ID:        uid.UID(t.ID),
 		CreatedAt: t.CreatedAt,
@@ -49,7 +49,7 @@ func (f *Forum) toEntityThread(t *Thread) *entity.Thread {
 	return thread
 }
 
-func (f *Forum) GetThread(ctx context.Context, search *entity.ThreadSearch) (*entity.Thread, error) {
+func (f *ForumRepo) GetThread(ctx context.Context, search *entity.ThreadSearch) (*entity.Thread, error) {
 	thread := Thread{}
 	q := f.db(ctx).Model(&thread).Where("id = ?", search.ID)
 	if err := q.Select(); err != nil {
@@ -58,7 +58,7 @@ func (f *Forum) GetThread(ctx context.Context, search *entity.ThreadSearch) (*en
 	return f.toEntityThread(&thread), nil
 }
 
-func (f *Forum) GetThreadSlice(
+func (f *ForumRepo) GetThreadSlice(
 	ctx context.Context, search *entity.ThreadsSearch, query entity.SliceQuery,
 ) (*entity.ThreadSlice, error) {
 	var threads []Thread
@@ -93,9 +93,9 @@ func (f *Forum) GetThreadSlice(
 	}
 
 	sliceInfo := &entity.SliceInfo{HasNext: len(threads) > query.Limit}
-	var eThreads []*entity.Thread
+	var entities []*entity.Thread
 	dealSlice := func(i int, isFirst bool, isLast bool) {
-		eThreads = append(eThreads, f.toEntityThread(&threads[i]))
+		entities = append(entities, f.toEntityThread(&threads[i]))
 		if isFirst {
 			sliceInfo.FirstCursor = uid.UID(threads[i].LastPostID).ToBase64String()
 		}
@@ -106,12 +106,12 @@ func (f *Forum) GetThreadSlice(
 	dealSliceResult(dealSlice, &query, len(threads), query.Before != nil)
 
 	return &entity.ThreadSlice{
-		Threads:   eThreads,
+		Threads:   entities,
 		SliceInfo: sliceInfo,
 	}, nil
 }
 
-func (f *Forum) GetThreadCatelog(ctx context.Context, id uid.UID) ([]*entity.ThreadCatalogItem, error) {
+func (f *ForumRepo) GetThreadCatelog(ctx context.Context, id uid.UID) ([]*entity.ThreadCatalogItem, error) {
 	var posts []Post
 	q := f.db(ctx).Model(&posts).Column("id", "created_at").Where("thread=?", id).Order("id")
 	if err := q.Select(); err != nil {
@@ -127,7 +127,7 @@ func (f *Forum) GetThreadCatelog(ctx context.Context, id uid.UID) ([]*entity.Thr
 	return cats, nil
 }
 
-func (f *Forum) GetAnonyID(ctx context.Context, userID int, threadID uid.UID) (uid.UID, error) {
+func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int, threadID uid.UID) (uid.UID, error) {
 	var posts []Post
 	q := f.db(ctx).Model(&posts).Column(Columns.Post.AnonymousID).
 		Where("thread_id = ?", threadID).Where("anonymous = true").Order("id DESC").Limit(1)
@@ -140,7 +140,7 @@ func (f *Forum) GetAnonyID(ctx context.Context, userID int, threadID uid.UID) (u
 	return uid.NewUID(), nil
 }
 
-func (f *Forum) InsertThread(ctx context.Context, thread *entity.Thread) error {
+func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) error {
 	t := Thread{
 		ID:         int64(thread.ID),
 		Anonymous:  thread.Anonymous,
@@ -159,7 +159,7 @@ func (f *Forum) InsertThread(ctx context.Context, thread *entity.Thread) error {
 	return f.db(ctx).Insert(&t)
 }
 
-func (f *Forum) UpdateThread(ctx context.Context, id uid.UID, update *entity.ThreadUpdate) error {
+func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity.ThreadUpdate) error {
 	thread := Thread{}
 	q := f.db(ctx).Model(&thread).Where("id = ?", id)
 	if update.Blocked != nil {
@@ -177,7 +177,7 @@ func (f *Forum) UpdateThread(ctx context.Context, id uid.UID, update *entity.Thr
 	return err
 }
 
-func (f *Forum) toEntityPost(p *Post) *entity.Post {
+func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 	post := &entity.Post{
 		ID:        uid.UID(p.ID),
 		CreatedAt: p.CreatedAt,
@@ -207,7 +207,7 @@ func (f *Forum) toEntityPost(p *Post) *entity.Post {
 	return post
 }
 
-func (f *Forum) GetPost(ctx context.Context, search *entity.PostSearch) (*entity.Post, error) {
+func (f *ForumRepo) GetPost(ctx context.Context, search *entity.PostSearch) (*entity.Post, error) {
 	var post Post
 	if err := f.db(ctx).Model(&post).Where("id = ?", search.ID).Select(); err != nil {
 		return nil, err
@@ -215,7 +215,7 @@ func (f *Forum) GetPost(ctx context.Context, search *entity.PostSearch) (*entity
 	return f.toEntityPost(&post), nil
 }
 
-func (f *Forum) searchPostsQuery(ctx context.Context, search *entity.PostsSearch, posts *[]Post) *orm.Query {
+func (f *ForumRepo) searchPostsQuery(ctx context.Context, search *entity.PostsSearch, posts *[]Post) *orm.Query {
 	q := f.db(ctx).Model(posts)
 	if search.IDs != nil {
 		q.Where("id = ANY(?)", search.IDs)
@@ -229,7 +229,7 @@ func (f *Forum) searchPostsQuery(ctx context.Context, search *entity.PostsSearch
 	return q
 }
 
-func (f *Forum) GetPosts(ctx context.Context, search *entity.PostsSearch) ([]*entity.Post, error) {
+func (f *ForumRepo) GetPosts(ctx context.Context, search *entity.PostsSearch) ([]*entity.Post, error) {
 	var posts []Post
 	q := f.searchPostsQuery(ctx, search, &posts)
 	if err := q.Select(); err != nil {
@@ -242,7 +242,7 @@ func (f *Forum) GetPosts(ctx context.Context, search *entity.PostsSearch) ([]*en
 	return ePosts, nil
 }
 
-func (f *Forum) GetPostSlice(
+func (f *ForumRepo) GetPostSlice(
 	ctx context.Context, search *entity.PostsSearch, query entity.SliceQuery,
 ) (*entity.PostSlice, error) {
 	var posts []Post
@@ -287,13 +287,13 @@ func (f *Forum) GetPostSlice(
 	}, nil
 }
 
-func (f *Forum) GetPostCount(ctx context.Context, search *entity.PostsSearch) (int, error) {
+func (f *ForumRepo) GetPostCount(ctx context.Context, search *entity.PostsSearch) (int, error) {
 	var posts []Post
 	q := f.searchPostsQuery(ctx, search, &posts)
 	return q.Count()
 }
 
-func (f *Forum) GetPostQuotesPosts(ctx context.Context, id uid.UID) ([]*entity.Post, error) {
+func (f *ForumRepo) GetPostQuotesPosts(ctx context.Context, id uid.UID) ([]*entity.Post, error) {
 	var posts []Post
 	q := f.db(ctx).Model(&posts).Join("INNER JOIN posts_quotes ON post.id = posts_quotes.quoted_id").
 		Where("posts_quotes.quoter_id = ?", id).Order("post.id")
@@ -307,13 +307,13 @@ func (f *Forum) GetPostQuotesPosts(ctx context.Context, id uid.UID) ([]*entity.P
 	return ePosts, nil
 }
 
-func (f *Forum) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error) {
+func (f *ForumRepo) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error) {
 	var count int
 	_, err := f.db(ctx).Query(orm.Scan(&count), "SELECT count(*) FROM posts_quotes WHERE quoted_id=?", id)
 	return count, err
 }
 
-func (f *Forum) InsertPost(ctx context.Context, post *entity.Post) error {
+func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) error {
 	newPost := &Post{
 		ID:        int64(post.ID),
 		ThreadID:  int64(post.Data.ThreadID),
@@ -341,7 +341,7 @@ func (f *Forum) InsertPost(ctx context.Context, post *entity.Post) error {
 	return nil
 }
 
-func (f *Forum) UpdatePost(ctx context.Context, id uid.UID, update *entity.PostUpdate) error {
+func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.PostUpdate) error {
 	post := Post{}
 	q := f.db(ctx).Model(&post).Where("id = ?", id)
 	if update.Blocked != nil {
@@ -354,7 +354,7 @@ func (f *Forum) UpdatePost(ctx context.Context, id uid.UID, update *entity.PostU
 	return nil
 }
 
-func (f *Forum) GetMainTags(ctx context.Context) ([]string, error) {
+func (f *ForumRepo) GetMainTags(ctx context.Context) ([]string, error) {
 	if f.mainTags != nil {
 		return f.mainTags, nil
 	}
@@ -370,7 +370,7 @@ func (f *Forum) GetMainTags(ctx context.Context) ([]string, error) {
 	return mainTags, nil
 }
 
-func (f *Forum) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entity.Tag, error) {
+func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entity.Tag, error) {
 	var tags []Tag
 	q := f.db(ctx).Model(&tags).Limit(search.Limit)
 	if search.Text != nil {

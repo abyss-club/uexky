@@ -15,7 +15,7 @@ type NotiService struct {
 }
 
 func (n *NotiService) GetUnreadNotiCount(ctx context.Context, user *User) (*UnreadNotiCount, error) {
-	return n.Repo.GetUserUnreadCount(ctx, user.ID)
+	return n.Repo.GetUserUnreadCount(ctx, user)
 }
 
 func (n *NotiService) GetNotification(
@@ -99,6 +99,23 @@ func (ns *NotiSlice) GetMaxID(t NotiType) int {
 	return max
 }
 
+type SendGroup string
+
+const AllUser SendGroup = "all_user"
+
+type SendTo struct {
+	UserID    *int       `json:"send_to"`
+	SendGroup *SendGroup `json:"send_to_group"`
+}
+
+func SendToUser(userID int) SendTo {
+	return SendTo{UserID: &userID}
+}
+
+func SendToGourp(group SendGroup) SendTo {
+	return SendTo{SendGroup: &group}
+}
+
 type SystemNotiContent struct {
 	Title       string `json:"title"`
 	ContentText string `json:"content"`
@@ -109,9 +126,11 @@ type SystemNoti struct {
 	Type      NotiType          `json:"type"`
 	EventTime time.Time         `json:"eventTime"`
 	Content   SystemNotiContent `json:"content"`
+
+	SendTo SendTo `json:"-"`
 }
 
-func (n *NotiService) NewSystemNoti(ctx context.Context, title, content string) error {
+func (n *NotiService) NewSystemNoti(ctx context.Context, title, content string, sendTo SendTo) error {
 	noti := &SystemNoti{
 		Type:      NotiTypeSystem,
 		EventTime: time.Now(),
@@ -119,6 +138,7 @@ func (n *NotiService) NewSystemNoti(ctx context.Context, title, content string) 
 			Title:       title,
 			ContentText: content,
 		},
+		SendTo: sendTo,
 	}
 	return n.Repo.InsertNoti(ctx, NotiInsert{System: noti})
 }
@@ -146,6 +166,8 @@ type RepliedNoti struct {
 	Type      NotiType           `json:"type"`
 	EventTime time.Time          `json:"eventTime"`
 	Content   RepliedNotiContent `json:"content"`
+
+	SendTo SendTo `json:"-"`
 }
 
 func (n *NotiService) NewRepliedNoti(ctx context.Context, thread *Thread, reply *Post) error {
@@ -155,6 +177,7 @@ func (n *NotiService) NewRepliedNoti(ctx context.Context, thread *Thread, reply 
 		Content: RepliedNotiContent{
 			ThreadID: thread.ID.ToBase64String(),
 		},
+		SendTo: SendToUser(thread.AuthorObj.UserID),
 	}
 	return n.Repo.InsertNoti(ctx, NotiInsert{Replied: noti})
 }
@@ -178,6 +201,8 @@ type QuotedNoti struct {
 	Type      NotiType          `json:"type"`
 	EventTime time.Time         `json:"eventTime"`
 	Content   QuotedNotiContent `json:"content"`
+
+	SendTo SendTo `json:"-"`
 }
 
 func (n *NotiService) NewQuotedNoti(
@@ -191,6 +216,7 @@ func (n *NotiService) NewQuotedNoti(
 			QuotedID: quotedPost.ID.ToBase64String(),
 			PostID:   post.ID.ToBase64String(),
 		},
+		SendTo: SendToUser(quotedPost.Data.Author.UserID),
 	}
 	return n.Repo.InsertNoti(ctx, NotiInsert{Quoted: noti})
 }

@@ -3,6 +3,7 @@
 package repo
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -176,14 +177,14 @@ var Tables = struct {
 type Notification struct {
 	tableName struct{} `pg:"notification,,discard_unknown_columns"`
 
-	ID          int                    `pg:"id,pk"`
-	Key         *string                `pg:"key"`
-	CreatedAt   time.Time              `pg:"created_at,use_zero"`
-	UpdatedAt   time.Time              `pg:"updated_at,use_zero"`
-	Type        string                 `pg:"type,use_zero"`
-	SendTo      *int                   `pg:"send_to"`
-	SendToGroup *string                `pg:"send_to_group"`
-	Content     map[string]interface{} `pg:"content"`
+	ID          int             `pg:"id,pk"`
+	Key         *string         `pg:"key"`
+	CreatedAt   time.Time       `pg:"created_at,use_zero"`
+	UpdatedAt   time.Time       `pg:"updated_at,use_zero"`
+	Type        string          `pg:"type,use_zero"`
+	SendTo      *int            `pg:"send_to"`
+	SendToGroup *string         `pg:"send_to_group"`
+	Content     json.RawMessage `pg:"content"`
 
 	SendToRel *User `pg:"fk:send_to"`
 }
