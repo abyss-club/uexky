@@ -1,6 +1,9 @@
 package entity
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type UserUpdate struct {
 	Name *string
@@ -9,9 +12,9 @@ type UserUpdate struct {
 }
 
 type UserRepo interface {
-	SetCode(ctx context.Context, email string, code string, ex int) error
+	SetCode(ctx context.Context, email string, code string, ex time.Duration) error
 	GetCodeEmail(ctx context.Context, code string) (string, error)
-	SetToken(ctx context.Context, email string, tok string, ex int) error
+	SetToken(ctx context.Context, email string, tok string, ex time.Duration) error
 	GetTokenEmail(ctx context.Context, tok string) (string, error)
 
 	GetOrInsertUser(ctx context.Context, email string) (*User, error)

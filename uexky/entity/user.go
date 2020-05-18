@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/lib/uid"
@@ -29,9 +30,9 @@ func (s *UserService) RequirePermission(ctx context.Context, action Action) (*Us
 
 const (
 	codeLength  = 36
-	codeExpire  = 1200 // 20 minutes
+	codeExpire  = 20 * time.Minute
 	tokenLength = 24
-	tokenExpire = 86400 * 30 // 30 days
+	tokenExpire = 30 * time.Hour * 24
 )
 
 const authEmailHTML = `<html>
@@ -71,8 +72,8 @@ func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (bool,
 }
 
 type Token struct {
-	Tok          string
-	ExpireSecond int
+	Tok    string
+	Expire time.Duration
 }
 
 func (s *UserService) SignInByCode(ctx context.Context, code string) (Token, error) {
@@ -84,7 +85,7 @@ func (s *UserService) SignInByCode(ctx context.Context, code string) (Token, err
 	if err := s.Repo.SetToken(ctx, email, tok, tokenExpire); err != nil {
 		return Token{}, err
 	}
-	return Token{Tok: tok, ExpireSecond: tokenExpire}, nil
+	return Token{Tok: tok, Expire: tokenExpire}, nil
 }
 
 func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, error) {
@@ -94,7 +95,7 @@ func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (conte
 	}
 	if email == "" {
 		user := &User{
-			// Role: &RoleGuest,
+			Role: RoleGuest,
 		}
 		return context.WithValue(ctx, userKey, user), nil
 	}
