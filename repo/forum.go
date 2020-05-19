@@ -12,7 +12,7 @@ import (
 )
 
 type ForumRepo struct {
-	mainTags []string
+	mainTags []string `wire:"-"`
 }
 
 const blockedContent = "[此内容已被管理员屏蔽]" // TODO: should be service layer

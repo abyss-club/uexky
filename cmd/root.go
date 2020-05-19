@@ -28,7 +28,10 @@ var rootCmd = &cobra.Command{
 
 func runService() {
 	fmt.Println("hello, world")
-	server := wire.InitServer()
+	server, err := wire.InitServer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.Fatal(server.Run())
 }
 

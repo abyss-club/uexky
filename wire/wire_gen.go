@@ -6,7 +6,11 @@
 package wire
 
 import (
+	"github.com/google/wire"
 	"gitlab.com/abyss.club/uexky/graph"
+	"gitlab.com/abyss.club/uexky/lib/mail"
+	"gitlab.com/abyss.club/uexky/lib/redis"
+	"gitlab.com/abyss.club/uexky/repo"
 	"gitlab.com/abyss.club/uexky/server"
 	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
@@ -14,10 +18,28 @@ import (
 
 // Injectors from wire.go:
 
-func InitServer() *server.Server {
-	userService := &entity.UserService{}
-	forumService := &entity.ForumService{}
-	notiService := &entity.NotiService{}
+func InitServer() (*server.Server, error) {
+	client, err := redis.NewClient()
+	if err != nil {
+		return nil, err
+	}
+	forumRepo := &repo.ForumRepo{}
+	userRepo := &repo.UserRepo{
+		Redis: client,
+		Forum: forumRepo,
+	}
+	adapter := mail.NewAdapter()
+	userService := &entity.UserService{
+		Repo: userRepo,
+		Mail: adapter,
+	}
+	forumService := &entity.ForumService{
+		Repo: forumRepo,
+	}
+	notiRepo := &repo.NotiRepo{}
+	notiService := &entity.NotiService{
+		Repo: notiRepo,
+	}
 	service := &uexky.Service{
 		User:  userService,
 		Forum: forumService,
@@ -29,5 +51,9 @@ func InitServer() *server.Server {
 	serverServer := &server.Server{
 		Resolver: resolver,
 	}
-	return serverServer
+	return serverServer, nil
 }
+
+// wire.go:
+
+var prodRepoSet = wire.NewSet(wire.Struct(new(repo.ForumRepo), "*"), wire.Struct(new(repo.UserRepo), "*"), wire.Struct(new(repo.NotiRepo), "*"), wire.Bind(new(entity.ForumRepo), new(*repo.ForumRepo)), wire.Bind(new(entity.UserRepo), new(*repo.UserRepo)), wire.Bind(new(entity.NotiRepo), new(*repo.NotiRepo)), redis.NewClient)

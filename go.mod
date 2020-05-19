@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/99designs/gqlgen v0.11.3
 	github.com/go-pg/pg/v9 v9.1.6
-	github.com/go-redis/redis v6.15.7+incompatible
 	github.com/go-redis/redis/v7 v7.2.0
 	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/google/wire v0.4.0
@@ -13,6 +12,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
+	github.com/mailgun/mailgun-go/v4 v4.1.0
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/onsi/ginkgo v1.10.2 // indirect
 	github.com/pkg/errors v0.9.1

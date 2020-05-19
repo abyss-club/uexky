@@ -24,7 +24,7 @@ func applySliceQuery(fn AppleWhereAndOrderFunc, q *orm.Query, sq *entity.SliceQu
 	return fn(nq, true, *sq.Before)
 }
 
-func dealSliceResult(fn DealSliceResultFunc, sq *entity.SliceQuery, length int, reverse bool) bool {
+func dealSliceResult(fn DealSliceResultFunc, sq *entity.SliceQuery, length int, reverse bool) {
 	first := 0
 	end := sq.Limit
 	step := 1
@@ -36,5 +36,4 @@ func dealSliceResult(fn DealSliceResultFunc, sq *entity.SliceQuery, length int, 
 	for i := first; i != end; i += step {
 		fn(i, i == first, i == end-step)
 	}
-	return length > sq.Limit
 }

@@ -9,10 +9,7 @@ import (
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
-type Repo interface{}
-
 type Service struct {
-	Repo  Repo
 	User  *entity.UserService
 	Forum *entity.ForumService
 	Noti  *entity.NotiService

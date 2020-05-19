@@ -10,26 +10,26 @@ import (
 )
 
 type UserRepo struct {
-	redisClient *redis.Client
-	forum       *ForumRepo
+	Redis *redis.Client
+	Forum *ForumRepo
 }
 
 func (u *UserRepo) SetCode(ctx context.Context, email string, code string, ex time.Duration) error {
-	_, err := u.redisClient.Set(code, email, ex).Result()
+	_, err := u.Redis.Set(code, email, ex).Result()
 	return err
 }
 
 func (u *UserRepo) GetCodeEmail(ctx context.Context, code string) (string, error) {
-	return u.redisClient.Get(code).Result()
+	return u.Redis.Get(code).Result()
 }
 
 func (u *UserRepo) SetToken(ctx context.Context, email string, tok string, ex time.Duration) error {
-	_, err := u.redisClient.Set(tok, email, ex).Result()
+	_, err := u.Redis.Set(tok, email, ex).Result()
 	return err
 }
 
 func (u *UserRepo) GetTokenEmail(ctx context.Context, tok string) (string, error) {
-	return u.redisClient.Get(tok).Result()
+	return u.Redis.Get(tok).Result()
 }
 
 func (u *UserRepo) db(ctx context.Context) postgres.Session {
@@ -61,7 +61,7 @@ func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.U
 	if len(users) > 0 {
 		return u.toEntityUser(&users[0]), nil
 	}
-	mainTags, err := u.forum.GetMainTags(ctx)
+	mainTags, err := u.Forum.GetMainTags(ctx)
 	if err != nil {
 		return nil, err
 	}
