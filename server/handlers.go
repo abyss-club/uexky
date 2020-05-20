@@ -1,11 +1,15 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky/graph/generated"
 )
 
 func (s *Server) AuthHandler(w http.ResponseWriter, req *http.Request) {
@@ -16,7 +20,7 @@ func (s *Server) AuthHandler(w http.ResponseWriter, req *http.Request) {
 	code := req.URL.Query().Get("code")
 	token, err := s.service().SignInByCode(req.Context(), code)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest) //TODO: error type
+		writeError(w, err)
 		return
 	}
 	cookie := &http.Cookie{
@@ -35,4 +39,14 @@ func (s *Server) AuthHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Location", location)
 	w.Header().Set("Cache-Control", "no-cache, no-store")
 	w.WriteHeader(http.StatusFound)
+}
+
+func (s *Server) GraphQLHandler() http.Handler {
+	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
+		Resolvers: s.Resolver,
+	}))
+	srv.SetErrorPresenter(func(ctx context.Context, err error) *gqlerror.Error {
+		return nil
+	})
+	return srv
 }
