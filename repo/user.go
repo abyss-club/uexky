@@ -23,6 +23,11 @@ func (u *UserRepo) GetCodeEmail(ctx context.Context, code string) (string, error
 	return u.Redis.Get(code).Result()
 }
 
+func (u *UserRepo) DelCode(ctx context.Context, code string) error {
+	_, err := u.Redis.Del(code).Result()
+	return err
+}
+
 func (u *UserRepo) SetToken(ctx context.Context, email string, tok string, ex time.Duration) error {
 	_, err := u.Redis.Set(tok, email, ex).Result()
 	return err

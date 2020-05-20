@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
@@ -84,6 +85,9 @@ func (s *UserService) SignInByCode(ctx context.Context, code string) (Token, err
 	tok := uid.RandomBase64Str(tokenLength)
 	if err := s.Repo.SetToken(ctx, email, tok, tokenExpire); err != nil {
 		return Token{}, err
+	}
+	if err := s.Repo.DelCode(ctx, code); err != nil {
+		log.Error(err)
 	}
 	return Token{Tok: tok, Expire: tokenExpire}, nil
 }
