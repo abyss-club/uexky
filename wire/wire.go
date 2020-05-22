@@ -4,7 +4,6 @@ package wire
 
 import (
 	"github.com/google/wire"
-
 	"gitlab.com/abyss.club/uexky/graph"
 	"gitlab.com/abyss.club/uexky/lib/mail"
 	"gitlab.com/abyss.club/uexky/lib/redis"
