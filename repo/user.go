@@ -34,7 +34,11 @@ func (u *UserRepo) SetToken(ctx context.Context, email string, tok string, ex ti
 }
 
 func (u *UserRepo) GetTokenEmail(ctx context.Context, tok string) (string, error) {
-	return u.Redis.Get(tok).Result()
+	tok, err := u.Redis.Get(tok).Result()
+	if err == redis.Nil {
+		return "", nil
+	}
+	return tok, err
 }
 
 func (u *UserRepo) db(ctx context.Context) postgres.Session {
