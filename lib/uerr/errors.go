@@ -1,3 +1,4 @@
+// Package err define error type of uexky
 package uerr
 
 import (

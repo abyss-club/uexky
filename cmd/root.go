@@ -6,14 +6,29 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/abyss.club/uexky/config"
 	"gitlab.com/abyss.club/uexky/wire"
 )
 
 func init() {
+	cobra.OnInitialize(initLog, initConfig)
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file")
+	rootCmd.AddCommand(migrateCmd)
+}
+
+func initLog() {
 	log.SetFormatter(&log.TextFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.DebugLevel)
 }
+
+func initConfig() {
+	if err := config.Load(cfgFile); err != nil {
+		log.Fatal(err)
+	}
+}
+
+var cfgFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "uexky",
@@ -21,13 +36,11 @@ var rootCmd = &cobra.Command{
 	Long: `Abyss is an anoymouse-able and tagged-thread forum.
                 uexky is backend program of abyss.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Info("hello, world")
 		runService()
 	},
 }
 
 func runService() {
-	fmt.Println("hello, world")
 	server, err := wire.InitServer()
 	if err != nil {
 		log.Fatal(err)
