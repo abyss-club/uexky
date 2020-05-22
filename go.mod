@@ -7,7 +7,6 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/go-pg/pg/v9 v9.1.6
 	github.com/go-redis/redis/v7 v7.2.0
-	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/golang-migrate/migrate/v4 v4.11.0
 	github.com/golang/protobuf v1.4.0 // indirect
 	github.com/google/wire v0.4.0

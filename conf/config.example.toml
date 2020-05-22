@@ -1,0 +1,11 @@
+postgres_uri = "postgres://postgres:postgres@localhost:5432/uexky2?sslmode=disable"
+redis_uri = "redis://localhost:6379/0"
+
+[server]
+proto = "http"
+domain = "uexky.com"
+api_domain = "api.uexky.com"
+port = 8000
+
+[mail]
+domain = "mail.abyss.club"

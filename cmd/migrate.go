@@ -2,16 +2,16 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"path/filepath"
-	"strconv"
 
-	"github.com/spf13/cobra"
-	"gitlab.com/abyss.club/uexky/config"
-
-	"github.com/golang-migrate/migrate"
+	_ "github.com/go-pg/pg/v9" // postgres driver
+	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres" // postgres migrate
-	_ "github.com/golang-migrate/migrate/v4/source/github"     // migrate file source
+	_ "github.com/golang-migrate/migrate/v4/source/file"       // migrate file source
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
+	"gitlab.com/abyss.club/uexky/config"
 )
 
 var migrateFilesPath string
@@ -25,10 +25,10 @@ var (
 func init() {
 	migrateCmd.PersistentFlags().StringVarP(&migrateFilesPath, "source", "s", "", "migration files path")
 	migrateCmd.AddCommand(gotoCmd, upCmd, downCmd, forceCmd, versionCmd)
-	gotoCmd.LocalFlags().UintVarP(&version, "version", "v", 0, "version")
-	upCmd.LocalFlags().IntVarP(&nsteps, "nsteps", "n", 0, "nsteps")
-	downCmd.LocalFlags().IntVarP(&nsteps, "nsteps", "n", 0, "nsteps")
-	forceCmd.LocalFlags().UintVarP(&version, "version", "v", 0, "version")
+	gotoCmd.PersistentFlags().UintVarP(&version, "version", "v", 0, "version")
+	upCmd.PersistentFlags().IntVarP(&nsteps, "nsteps", "n", 0, "nsteps")
+	downCmd.PersistentFlags().IntVarP(&nsteps, "nsteps", "n", 0, "nsteps")
+	forceCmd.PersistentFlags().UintVarP(&version, "version", "v", 0, "version")
 }
 
 var migrateCmd = &cobra.Command{
@@ -44,6 +44,7 @@ var migrateCmd = &cobra.Command{
 			log.Fatal(fmt.Errorf("parse migration file path: %w", err))
 		}
 		source := fmt.Sprintf("file://%s", path)
+		log.Infof("migrates source is: %s", source)
 		m, err := migrate.New(source, config.Get().PostgresURI)
 		if err != nil {
 			log.Fatal(err)
@@ -100,7 +101,6 @@ var downCmd = &cobra.Command{
 var forceCmd = &cobra.Command{
 	Use:   "force -v version",
 	Short: "set version but don't run migration (ignores dirty state)",
-	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if version == 0 {
 			log.Fatal(fmt.Errorf("invalid version %v", args[0]))
@@ -115,18 +115,10 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "print current migration version",
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) == 0 {
-			if err := mgr.Down(); err != nil {
-				log.Fatal(fmt.Errorf("migrate up failed: %w", err))
-			}
-		} else {
-			version, err := strconv.Atoi(args[0])
-			if err != nil {
-				log.Fatal(fmt.Errorf("invalid version %v: %w", args[0], err))
-			}
-			if err := mgr.Steps(-version); err != nil {
-				log.Fatal(fmt.Errorf("migrate up failed: %w", err))
-			}
+		ver, dirty, err := mgr.Version()
+		if err != nil {
+			log.Fatal(fmt.Errorf("migrate display version failed: %w", err))
 		}
+		fmt.Printf("version: %v\nis dirty: %v\n", ver, dirty)
 	},
 }

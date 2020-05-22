@@ -6,7 +6,7 @@ import (
 )
 
 func NewClient() (*red.Client, error) {
-	opt, err := red.ParseURL(config.Get().RedisURL)
+	opt, err := red.ParseURL(config.Get().RedisURI)
 	if err != nil {
 		return nil, err
 	}

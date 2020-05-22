@@ -23,3 +23,7 @@ config.json
 # python
 *.pyc
 __pycache__/
+
+# configs
+conf/*
+!conf/config.example.toml

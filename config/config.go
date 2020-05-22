@@ -10,7 +10,7 @@ import (
 
 type Config struct {
 	PostgresURI string `toml:"postgres_uri"`
-	RedisURL    string `toml:"redis_url"`
+	RedisURI    string `toml:"redis_uri"`
 	Server      struct {
 		Proto     string `toml:"proto"`
 		Domain    string `toml:"domain"`
@@ -48,7 +48,7 @@ func setDefault() {
 
 func patchEnv() {
 	c.PostgresURI = getenv("PG_URI", c.PostgresURI)
-	c.RedisURL = getenv("REDIS_URI", c.PostgresURI)
+	c.RedisURI = getenv("REDIS_URI", c.RedisURI)
 	c.Server.Domain = getenv("DOMAIN", c.Server.Domain)
 	c.Server.APIDomain = getenv("API_DOMAIN", c.Server.APIDomain)
 	c.Server.Proto = getenv("PROTO", c.Server.Proto)
