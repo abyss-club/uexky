@@ -32,8 +32,9 @@ genwire:
 genpg:
 	@genna model -c $(pguri) -o repo/generated.go -fkw --pkg repo --gopg 9
 
-build: dep ## Build the binary file
-	@go build -i -v $(PKG)
+build: mod ## Build the binary file
+	@mkdir -p dist
+	@go build -i -v -o dist/$(PROJECT_NAME) $(PKG) 
 
 clean: ## Remove previous build
-	@rm -f $(PROJECT_NAME)
+	@rm -f dist/$(PROJECT_NAME)

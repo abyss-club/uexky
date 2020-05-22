@@ -27,3 +27,6 @@ __pycache__/
 # configs
 *.toml
 !config.example.toml
+
+# build
+dist/*
