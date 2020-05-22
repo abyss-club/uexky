@@ -10,8 +10,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"       // migrate file source
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-
-	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky/lib/config"
 )
 
 var migrateFilesPath string

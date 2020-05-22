@@ -5,7 +5,7 @@ import (
 
 	"github.com/mailgun/mailgun-go/v4"
 	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/config"
+	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 

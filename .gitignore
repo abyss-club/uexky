@@ -25,5 +25,5 @@ config.json
 __pycache__/
 
 # configs
-conf/*
-!conf/config.example.toml
+*.toml
+!config.example.toml
