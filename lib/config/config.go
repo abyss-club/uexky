@@ -62,11 +62,10 @@ func patchEnv() {
 
 func Load(filename string) error {
 	setDefault()
-	if filename == "" {
-		return nil
-	}
-	if _, err := toml.DecodeFile(filename, &c); err != nil {
-		return fmt.Errorf("read config file: %w", err)
+	if filename != "" {
+		if _, err := toml.DecodeFile(filename, &c); err != nil {
+			return fmt.Errorf("read config file: %w", err)
+		}
 	}
 	patchEnv()
 	return nil

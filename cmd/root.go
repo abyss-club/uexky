@@ -26,7 +26,7 @@ func initConfig() {
 	if err := config.Load(cfgFile); err != nil {
 		log.Fatal(err)
 	}
-	log.Infof("run with config:\n%+v", config.Get())
+	log.Infof("run with config:\n%#v", config.Get())
 }
 
 var cfgFile string

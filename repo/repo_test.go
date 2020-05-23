@@ -22,6 +22,7 @@ func TestMain(m *testing.M) {
 	if err := config.Load(""); err != nil {
 		log.Fatalf("load config: %v", err)
 	}
+	fmt.Printf("run test in config: %#v\n", config.Get())
 	os.Exit(m.Run())
 }
 

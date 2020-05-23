@@ -1,0 +1,56 @@
+variables:
+  REGISTRY: "registry.gitlab.com"
+  IMAGE_NAME: "${REGISTRY}/${CI_PROJECT_PATH}:${CI_COMMIT_REF_NAME}"
+
+stages:
+  - test
+  - build
+
+test:
+  image: golang:latest
+  cache:
+    paths:
+      - .cache
+  tags:
+    - docker
+  services:
+    - postgres:latest
+    - redis:latest
+  variables:
+    POSTGRES_PASSWORD: postgres
+    POSTGRES_DB: uexky-test
+    PG_URI: postgres://postgres:postgres@postgres:5432/uexky-test?sslmode=disable
+    REDIS_URI: redis://redis:6379
+  stage: test
+  only:
+    - merge_requests
+    - web
+    - master
+  before_script:
+    - mkdir -p .cache
+    - export GOPATH="$CI_PROJECT_DIR/.cache"
+    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /go/bin v1.27.0
+  script:
+    - make build
+    - make lint
+    - make test
+
+build:
+  image: docker:stable
+  services:
+    - docker:dind
+  tags:
+    - docker
+  stage: build
+  dependencies:
+    - test
+  artifacts:
+    paths:
+      - ./build/uexky
+  only:
+    - master
+    - tags
+  script:
+    - docker login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${REGISTRY_NAME}
+    - docker build . -t ${IMAGE_NAME}
+    - docker push ${IMAGE_NAME}
