@@ -3,6 +3,7 @@ package repo
 import (
 	"context"
 
+	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
@@ -63,7 +64,7 @@ func (f *ForumRepo) GetThreadSlice(
 	var threads []Thread
 	q := f.db(ctx).Model(&threads)
 	if search.Tags != nil {
-		q.Where("id IN (SELECT thread_id FROM threads_tags as tt WHERE tt.tag_name=ANY(?))", search.Tags)
+		q.Where("id IN (SELECT thread_id FROM threads_tags as tt WHERE tt.tag_name=ANY(?))", pg.Array(search.Tags))
 	}
 	if search.UserID != nil {
 		q.Where("user_id = ?", search.UserID)
@@ -170,7 +171,7 @@ func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity
 	if update.MainTag != nil {
 		tags := []string{*update.MainTag}
 		tags = append(tags, update.SubTags...)
-		q.Set("tags = ?", tags)
+		q.Set("tags = ?", pg.Array(tags))
 	}
 	_, err := q.Update()
 	return err
@@ -217,7 +218,7 @@ func (f *ForumRepo) GetPost(ctx context.Context, search *entity.PostSearch) (*en
 func (f *ForumRepo) searchPostsQuery(ctx context.Context, search *entity.PostsSearch, posts *[]Post) *orm.Query {
 	q := f.db(ctx).Model(posts)
 	if search.IDs != nil {
-		q.Where("id = ANY(?)", search.IDs)
+		q.Where("id = ANY(?)", pg.Array(search.IDs))
 	}
 	if search.UserID != nil {
 		q.Where("user_id = ?", search.UserID)

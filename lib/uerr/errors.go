@@ -13,6 +13,7 @@ const (
 	AuthError       ErrorType = "AuthError"
 	PermissionError ErrorType = "PermissionError"
 	NotFoundError   ErrorType = "NotFoundError"
+	DBError         ErrorType = "DBError"
 	InternalError   ErrorType = "InternalError"
 )
 

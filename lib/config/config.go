@@ -40,6 +40,8 @@ var c = Config{}
 
 func setDefault() {
 	c = Config{}
+	c.PostgresURI = "postgres://postgres:postgres@localhost:5432/uexky2?sslmode=disable"
+	c.RedisURI = "redis://localhost:6379/0"
 	c.Server.Domain = "abyss.club"
 	c.Server.Domain = "api.abyss.club"
 	c.Server.Proto = "http"

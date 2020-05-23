@@ -10,12 +10,14 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/config"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
+	"gitlab.com/abyss.club/uexky/uexky/adapter"
 )
 
 type UserService struct {
 	Repo UserRepo
-	Mail MailService
+	Mail adapter.MailAdapter
 }
 
 func (s *UserService) RequirePermission(ctx context.Context, action Action) (*User, error) {
@@ -47,10 +49,10 @@ const authEmailHTML = `<html>
 </html>
 `
 
-func newAuthMail(email, code string) *Mail {
+func newAuthMail(email, code string) *adapter.Mail {
 	srvCfg := &(config.Get().Server)
 	authURL := fmt.Sprintf("%s://%s/auth/?code=%s", srvCfg.Proto, srvCfg.APIDomain, code)
-	return &Mail{
+	return &adapter.Mail{
 		From:    fmt.Sprintf("auth@%s", srvCfg.Domain),
 		To:      email,
 		Subject: "点击登入 Abyss!",
@@ -188,6 +190,9 @@ func (u *User) RequirePermission(action Action) error {
 }
 
 func (u *User) SetName(ctx context.Context, name string) error {
+	if u.Name != nil {
+		return uerr.New(uerr.ParamsError, "already have a name")
+	}
 	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Name: &name}); err != nil {
 		return err
 	}

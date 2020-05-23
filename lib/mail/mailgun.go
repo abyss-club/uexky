@@ -6,7 +6,7 @@ import (
 	"github.com/mailgun/mailgun-go/v4"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/uexky/entity"
+	"gitlab.com/abyss.club/uexky/uexky/adapter"
 )
 
 type Adapter struct {
@@ -18,7 +18,7 @@ func NewAdapter() *Adapter {
 	return &Adapter{mg: mg}
 }
 
-func (a *Adapter) SendEmail(ctx context.Context, mail *entity.Mail) error {
+func (a *Adapter) SendEmail(ctx context.Context, mail *adapter.Mail) error {
 	msg := a.mg.NewMessage(mail.From, mail.Subject, mail.Text, mail.To)
 	msg.SetHtml(mail.HTML)
 	resp, id, err := a.mg.Send(ctx, msg)

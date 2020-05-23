@@ -11,7 +11,11 @@ import (
 )
 
 func (r *mutationResolver) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {
-	return r.Service.PubThread(ctx, thread)
+	if err := r.TxAdapter.Begin(ctx); err != nil {
+		return nil, err
+	}
+	newThread, err := r.Service.PubThread(ctx, thread)
+	return newThread, r.TxAdapter.Rollback(ctx, err)
 }
 
 func (r *queryResolver) ThreadSlice(ctx context.Context, tags []string, query entity.SliceQuery) (*entity.ThreadSlice, error) {

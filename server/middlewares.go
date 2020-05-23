@@ -37,13 +37,21 @@ func (s *Server) withUser(next http.Handler) http.Handler {
 		if tokenCookie != nil {
 			tok = tokenCookie.Value
 		}
-		ctx, err := s.service().CtxWithUserByToken(r.Context(), tok)
+		ctx, err := s.Service.CtxWithUserByToken(r.Context(), tok)
 		if err != nil {
 			writeError(w, err)
 			return
 		}
 		r = r.WithContext(ctx)
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) withDB(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := s.TxAdapter.AttachDB(r.Context())
+		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
 }

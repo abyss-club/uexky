@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-pg/pg/v9"
 	"github.com/go-redis/redis/v7"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
@@ -86,13 +87,13 @@ func (u *UserRepo) UpdateUser(ctx context.Context, id int, update *entity.UserUp
 	user := User{}
 	q := u.db(ctx).Model(&user).Where("id = ?", id)
 	if update.Name != nil {
-		q.Set("name = ?Name", update)
+		q.Set("name = ?", update.Name)
 	}
 	if update.Role != nil {
-		q.Set("role = ?Role", update)
+		q.Set("role = ?", update.Role)
 	}
 	if update.Tags != nil {
-		q.Set("tags = ?Tags", update)
+		q.Set("tags = ?", pg.Array(update.Tags))
 	}
 	_, err := q.Update()
 	return err

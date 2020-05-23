@@ -21,15 +21,3 @@ type UserRepo interface {
 	GetOrInsertUser(ctx context.Context, email string) (*User, error)
 	UpdateUser(ctx context.Context, id int, update *UserUpdate) error
 }
-
-type Mail struct {
-	From    string
-	To      string
-	Subject string
-	Text    string
-	HTML    string
-}
-
-type MailService interface {
-	SendEmail(ctx context.Context, mail *Mail) error
-}

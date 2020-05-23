@@ -12,7 +12,11 @@ import (
 )
 
 func (r *mutationResolver) PubPost(ctx context.Context, post entity.PostInput) (*entity.Post, error) {
-	return r.Service.PubPost(ctx, post)
+	if err := r.TxAdapter.Begin(ctx); err != nil {
+		return nil, err
+	}
+	newPost, err := r.Service.PubPost(ctx, post)
+	return newPost, r.TxAdapter.Rollback(ctx, err)
 }
 
 func (r *queryResolver) Post(ctx context.Context, id uid.UID) (*entity.Post, error) {

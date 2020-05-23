@@ -18,7 +18,7 @@ func (s *Server) AuthHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	code := req.URL.Query().Get("code")
-	token, err := s.service().SignInByCode(req.Context(), code)
+	token, err := s.Service.SignInByCode(req.Context(), code)
 	if err != nil {
 		writeError(w, err)
 		return
