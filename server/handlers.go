@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/vektah/gqlparser/v2/gqlerror"
@@ -23,19 +22,8 @@ func (s *Server) AuthHandler(w http.ResponseWriter, req *http.Request) {
 		writeError(w, err)
 		return
 	}
-	cookie := &http.Cookie{
-		Name:     "token",
-		Value:    token.Tok,
-		Path:     "/",
-		MaxAge:   int(token.Expire / time.Second),
-		Domain:   config.Get().Server.Domain,
-		HttpOnly: true,
-	}
-	if config.Get().Server.Proto == "https" {
-		cookie.Secure = true
-	}
 	location := fmt.Sprintf("%s://%s", config.Get().Server.Proto, config.Get().Server.Domain)
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, token.Cookie())
 	w.Header().Set("Location", location)
 	w.Header().Set("Cache-Control", "no-cache, no-store")
 	w.WriteHeader(http.StatusFound)

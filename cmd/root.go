@@ -13,7 +13,7 @@ import (
 func init() {
 	cobra.OnInitialize(initLog, initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file")
-	rootCmd.AddCommand(migrateCmd)
+	rootCmd.AddCommand(migrateCmd, devCmd)
 }
 
 func initLog() {
@@ -42,7 +42,7 @@ var rootCmd = &cobra.Command{
 }
 
 func runService() {
-	server, err := wire.InitServer()
+	server, err := wire.InitProdServer()
 	if err != nil {
 		log.Fatal(err)
 	}

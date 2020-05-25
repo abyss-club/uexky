@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -49,9 +50,16 @@ const authEmailHTML = `<html>
 </html>
 `
 
-func newAuthMail(email, code string) *adapter.Mail {
+type Code string
+
+func (c Code) SignInURL() string {
 	srvCfg := &(config.Get().Server)
-	authURL := fmt.Sprintf("%s://%s/auth/?code=%s", srvCfg.Proto, srvCfg.APIDomain, code)
+	return fmt.Sprintf("%s://%s/auth/?code=%s", srvCfg.Proto, srvCfg.APIDomain, c)
+}
+
+func newAuthMail(email string, code Code) *adapter.Mail {
+	srvCfg := &(config.Get().Server)
+	authURL := code.SignInURL()
 	return &adapter.Mail{
 		From:    fmt.Sprintf("auth@%s", srvCfg.Domain),
 		To:      email,
@@ -61,12 +69,14 @@ func newAuthMail(email, code string) *adapter.Mail {
 	}
 }
 
-func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (bool, error) {
+func (s *UserService) GenSignInCodeByEmail(ctx context.Context, email string) (Code, error) {
 	// TODO: validate email
 	code := uid.RandomBase64Str(codeLength)
-	if err := s.Repo.SetCode(ctx, email, code, codeExpire); err != nil {
-		return false, err
-	}
+	err := s.Repo.SetCode(ctx, email, code, codeExpire)
+	return Code(code), err
+}
+
+func (s *UserService) SendSignInEmail(ctx context.Context, email string, code Code) (bool, error) {
 	mail := newAuthMail(email, code)
 	if err := s.Mail.SendEmail(ctx, mail); err != nil {
 		return false, err
@@ -77,6 +87,21 @@ func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (bool,
 type Token struct {
 	Tok    string
 	Expire time.Duration
+}
+
+func (t Token) Cookie() *http.Cookie {
+	cookie := &http.Cookie{
+		Name:     "token",
+		Value:    t.Tok,
+		Path:     "/",
+		MaxAge:   int(t.Expire / time.Second),
+		Domain:   config.Get().Server.Domain,
+		HttpOnly: true,
+	}
+	if config.Get().Server.Proto == "https" {
+		cookie.Secure = true
+	}
+	return cookie
 }
 
 func (s *UserService) SignInByCode(ctx context.Context, code string) (Token, error) {

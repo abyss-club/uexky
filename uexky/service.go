@@ -6,17 +6,27 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/uid"
+	"gitlab.com/abyss.club/uexky/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 type Service struct {
-	User  *entity.UserService
-	Forum *entity.ForumService
-	Noti  *entity.NotiService
+	User      *entity.UserService
+	Forum     *entity.ForumService
+	Noti      *entity.NotiService
+	TxAdapter adapter.Tx
+}
+
+func (s *Service) GenSignInCodeByEmail(ctx context.Context, email string) (entity.Code, error) {
+	return s.User.GenSignInCodeByEmail(ctx, email)
 }
 
 func (s *Service) TrySignInByEmail(ctx context.Context, email string) (bool, error) {
-	return s.User.TrySignInByEmail(ctx, email)
+	code, err := s.User.GenSignInCodeByEmail(ctx, email)
+	if err != nil {
+		return false, err
+	}
+	return s.User.SendSignInEmail(ctx, email, code)
 }
 
 func (s *Service) SignInByCode(ctx context.Context, code string) (entity.Token, error) {
@@ -168,11 +178,18 @@ func (s *Service) EditTags(
 }
 
 func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {
-	user, err := s.User.RequirePermission(ctx, entity.ActionPubThread)
-	if err != nil {
+	if err := s.TxAdapter.Begin(ctx); err != nil {
 		return nil, err
 	}
-	return s.Forum.NewThread(ctx, user, thread)
+	user, err := s.User.RequirePermission(ctx, entity.ActionPubThread)
+	if err != nil {
+		return nil, s.TxAdapter.Rollback(ctx, err)
+	}
+	newThread, err := s.Forum.NewThread(ctx, user, thread)
+	if err != nil {
+		return nil, s.TxAdapter.Rollback(ctx, err)
+	}
+	return newThread, s.TxAdapter.Commit(ctx)
 }
 
 func (s *Service) SearchThreads(
@@ -186,17 +203,20 @@ func (s *Service) GetThreadByID(ctx context.Context, id uid.UID) (*entity.Thread
 }
 
 func (s *Service) PubPost(ctx context.Context, post entity.PostInput) (*entity.Post, error) {
+	if err := s.TxAdapter.Begin(ctx); err != nil {
+		return nil, err
+	}
 	user, err := s.User.RequirePermission(ctx, entity.ActionPubPost)
 	if err != nil {
-		return nil, err
+		return nil, s.TxAdapter.Rollback(ctx, err)
 	}
 	res, err := s.Forum.NewPost(ctx, user, post)
 	if err != nil {
-		return nil, err
+		return nil, s.TxAdapter.Rollback(ctx, err)
 	}
 	go func() {
 		ctx := context.Background()
-		// TODO: new db session
+		ctx = s.TxAdapter.AttachDB(ctx)
 		if err := s.Noti.NewRepliedNoti(ctx, res.Thread, res.Post); err != nil {
 			log.Error(err)
 			return
@@ -212,7 +232,7 @@ func (s *Service) PubPost(ctx context.Context, post entity.PostInput) (*entity.P
 			}
 		}
 	}()
-	return res.Post, nil
+	return res.Post, s.TxAdapter.Commit(ctx)
 }
 
 func (s *Service) GetPostByID(ctx context.Context, id uid.UID) (*entity.Post, error) {
