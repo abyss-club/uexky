@@ -1,11 +1,13 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/99designs/gqlgen/graphql/playground"
 	"gitlab.com/abyss.club/uexky/graph"
+	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uexky/adapter"
 )
@@ -17,10 +19,11 @@ type Server struct {
 }
 
 func (s *Server) Run() error {
-	port := "8000"
-	http.Handle("/", s.withDB(s.withUser(playground.Handler("GraphQL playground", "/query"))))
-	http.Handle("/query", s.withDB(s.withUser(s.GraphQLHandler())))
+	srvCfg := config.Get().Server
+	addr := fmt.Sprintf("%s:%v", srvCfg.Host, srvCfg.Port)
+	http.Handle("/", s.withDB(s.withUser(playground.Handler("GraphQL playground", "/graphql"))))
+	http.Handle("/graphql", s.withDB(s.withUser(s.GraphQLHandler())))
 	http.Handle("/auth", http.HandlerFunc(s.AuthHandler))
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	return http.ListenAndServe(":"+port, nil)
+	log.Printf("connect to http://%s/ for GraphQL playground", addr)
+	return http.ListenAndServe(addr, nil)
 }
