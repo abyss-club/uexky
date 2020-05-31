@@ -19,6 +19,7 @@ type Config struct {
 		Domain    string `toml:"domain"`
 		APIDomain string `toml:"api_domain"`
 		Port      int    `toml:"port"`
+		Host      string `toml:"host"`
 	} `toml:"server"`
 	Mail struct {
 		PrivateKey string `toml:"private_key"`
@@ -52,6 +53,7 @@ func setDefault() {
 	c.Server.Domain = "api.abyss.club"
 	c.Server.Proto = "http"
 	c.Server.Port = 8000
+	c.Server.Host = "localhost"
 }
 
 func patchEnv() {
@@ -63,6 +65,7 @@ func patchEnv() {
 	c.Server.APIDomain = getenv("API_DOMAIN", c.Server.APIDomain)
 	c.Server.Proto = getenv("PROTO", c.Server.Proto)
 	c.Server.Port = getenvInt("PORT", c.Server.Port)
+	c.Server.Host = getenv("HOST", c.Server.Host)
 	c.Mail.PrivateKey = getenv("MAILGUN_PRIVATE_KEY", c.Mail.PrivateKey)
 	c.Mail.PublicKey = getenv("MAILGUN_PUBLIC_KEY", c.Mail.PublicKey)
 	c.Mail.Domain = getenv("MAILGUN_DOMAIN", c.Mail.Domain)
