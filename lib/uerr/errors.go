@@ -2,8 +2,9 @@
 package uerr
 
 import (
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
 )
 
 type ErrorType string

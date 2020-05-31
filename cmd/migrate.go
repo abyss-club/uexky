@@ -2,15 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"path/filepath"
 
-	_ "github.com/go-pg/pg/v9" // postgres driver
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres" // postgres migrate
-	_ "github.com/golang-migrate/migrate/v4/source/file"       // migrate file source
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"gitlab.com/abyss.club/uexky/lib/config"
+	"gitlab.com/abyss.club/uexky/lib/postgres"
 )
 
 var migrateFilesPath string
@@ -35,16 +31,7 @@ var migrateCmd = &cobra.Command{
 	Short: "migrate tools",
 	Long:  "migrate tools for uexky postgres",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		if migrateFilesPath == "" {
-			migrateFilesPath = "./migrates"
-		}
-		path, err := filepath.Abs(migrateFilesPath)
-		if err != nil {
-			log.Fatal(fmt.Errorf("parse migration file path: %w", err))
-		}
-		source := fmt.Sprintf("file://%s", path)
-		log.Infof("migrates source is: %s", source)
-		m, err := migrate.New(source, config.Get().PostgresURI)
+		m, err := postgres.GetMigrate()
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -12,6 +12,7 @@ import (
 
 func NewDB() (*pg.DB, error) {
 	opt, err := pg.ParseURL(config.Get().PostgresURI)
+	opt.PoolSize = 20
 	if err != nil {
 		return nil, err
 	}

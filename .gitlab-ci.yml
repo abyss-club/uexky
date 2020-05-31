@@ -21,6 +21,8 @@ test:
     POSTGRES_DB: uexky-test
     PG_URI: postgres://postgres:postgres@postgres:5432/uexky-test?sslmode=disable
     REDIS_URI: redis://redis:6379
+    UEXKY_ENV: test
+    MIGRATE_FILES: "$CI_PROJECT_DIR/migrates"
   stage: test
   only:
     - merge_requests

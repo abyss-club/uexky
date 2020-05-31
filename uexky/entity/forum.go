@@ -8,6 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/algo"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
@@ -192,14 +193,6 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 	if err != nil {
 		return nil, err
 	}
-	var quoteIDs []uid.UID
-	for _, qid := range input.QuoteIds {
-		id, err := uid.ParseUID(qid)
-		if err != nil {
-			return nil, err
-		}
-		quoteIDs = append(quoteIDs, id)
-	}
 	post := &Post{
 		ID:        uid.NewUID(),
 		CreatedAt: time.Now(),
@@ -210,11 +203,11 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 		Data: PostData{
 			Author:   Author{UserID: user.ID},
 			ThreadID: input.ThreadID,
-			QuoteIDs: quoteIDs,
+			QuoteIDs: input.QuoteIds,
 		},
 	}
 	if input.Anonymous {
-		if user.ID == thread.AuthorObj.UserID {
+		if user.ID == thread.AuthorObj.UserID && thread.Anonymous {
 			post.Data.Author.AnonymousID = thread.AuthorObj.AnonymousID
 		} else {
 			aid, err := f.Repo.GetAnonyID(ctx, user.ID, thread.ID)
@@ -276,6 +269,17 @@ func (f *ForumService) GetMainTags(ctx context.Context) ([]string, error) {
 
 func (f *ForumService) GetRecommendedTags(ctx context.Context) ([]string, error) {
 	return f.GetMainTags(ctx)
+}
+
+func (f *ForumService) SetMainTags(ctx context.Context, tags []string) error {
+	mainTags, err := f.GetMainTags(ctx)
+	if err != nil {
+		return err
+	}
+	if len(mainTags) != 0 {
+		return uerr.Errorf(uerr.ParamsError, "already have main tags, can't modify it")
+	}
+	return f.Repo.SetMainTags(ctx, tags)
 }
 
 func (f *ForumService) SearchTags(ctx context.Context, query *string, limit *int) ([]*Tag, error) {

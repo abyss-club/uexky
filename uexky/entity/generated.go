@@ -19,10 +19,10 @@ type NotiSlice struct {
 }
 
 type PostInput struct {
-	ThreadID  uid.UID  `json:"threadId"`
-	Anonymous bool     `json:"anonymous"`
-	Content   string   `json:"content"`
-	QuoteIds  []string `json:"quoteIds"`
+	ThreadID  uid.UID   `json:"threadId"`
+	Anonymous bool      `json:"anonymous"`
+	Content   string    `json:"content"`
+	QuoteIds  []uid.UID `json:"quoteIds"`
 }
 
 type PostSlice struct {

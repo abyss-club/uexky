@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
@@ -29,7 +30,7 @@ func (f *ForumRepo) toEntityThread(t *Thread) *entity.Thread {
 		Title:     t.Title,
 		Content:   t.Content,
 		MainTag:   t.Tags[0],
-		SubTags:   t.Tags,
+		SubTags:   t.Tags[1:],
 		Blocked:   t.Blocked,
 		Locked:    t.Locked,
 
@@ -77,11 +78,11 @@ func (f *ForumRepo) GetThreadSlice(
 		if err != nil {
 			return nil, err
 		}
-		lastPostID := Columns.Thread.LastPostID
+		fmt.Println("searching lastPostID: ", c)
 		if !isAfter {
-			return q.Where("? > ?", lastPostID, c).Order(lastPostID), nil
+			return q.Where("last_post_id > ?", c).Order("last_post_id"), nil
 		}
-		return q.Where("? < ?", lastPostID, c).Order("? DESC", lastPostID), nil
+		return q.Where("last_post_id < ?", c).Order("last_post_id DESC"), nil
 	}
 	var err error
 	q, err = applySliceQuery(applySlice, q, &query)
@@ -354,22 +355,6 @@ func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.P
 	return nil
 }
 
-func (f *ForumRepo) GetMainTags(ctx context.Context) ([]string, error) {
-	if f.mainTags != nil {
-		return f.mainTags, nil
-	}
-	var tags []Tag
-	if err := f.db(ctx).Model(&tags).Where("tag_type = main").Select(); err != nil {
-		return nil, err
-	}
-	var mainTags []string
-	for i := range tags {
-		mainTags = append(mainTags, tags[i].Name)
-	}
-	f.mainTags = mainTags
-	return mainTags, nil
-}
-
 func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entity.Tag, error) {
 	var tags []Tag
 	q := f.db(ctx).Model(&tags).Limit(search.Limit)
@@ -394,4 +379,33 @@ func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*e
 		})
 	}
 	return entities, nil
+}
+
+func (f *ForumRepo) GetMainTags(ctx context.Context) ([]string, error) {
+	if f.mainTags != nil {
+		return f.mainTags, nil
+	}
+	var tags []Tag
+	if err := f.db(ctx).Model(&tags).Where("tag_type = ?", "main").Select(); err != nil {
+		return nil, dbErrWrap(err, "get main tags")
+	}
+	var mainTags []string
+	for i := range tags {
+		mainTags = append(mainTags, tags[i].Name)
+	}
+	f.mainTags = mainTags
+	return mainTags, nil
+}
+
+func (f *ForumRepo) SetMainTags(ctx context.Context, tags []string) error {
+	var mainTags []Tag
+	tagType := "main"
+	for _, t := range tags {
+		mainTags = append(mainTags, Tag{
+			Name:    t,
+			TagType: &tagType,
+		})
+	}
+	_, err := f.db(ctx).Model(&mainTags).Insert()
+	return dbErrWrap(err, "insert main tags")
 }

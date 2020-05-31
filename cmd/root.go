@@ -6,6 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/abyss.club/uexky/cmd/devtools"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/wire"
 )
@@ -13,7 +14,7 @@ import (
 func init() {
 	cobra.OnInitialize(initLog, initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file")
-	rootCmd.AddCommand(migrateCmd, devCmd)
+	rootCmd.AddCommand(migrateCmd, devtools.Command, uidCmd)
 }
 
 func initLog() {
@@ -38,6 +39,9 @@ var rootCmd = &cobra.Command{
                 uexky is backend program of abyss.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		runService()
+	},
+	PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		log.Info("Done.")
 	},
 }
 

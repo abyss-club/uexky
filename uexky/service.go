@@ -239,6 +239,10 @@ func (s *Service) GetPostByID(ctx context.Context, id uid.UID) (*entity.Post, er
 	return s.Forum.GetPostByID(ctx, id)
 }
 
+func (s *Service) SetMainTags(ctx context.Context, tags []string) error {
+	return s.Forum.SetMainTags(ctx, tags)
+}
+
 func (s *Service) GetMainTags(ctx context.Context) ([]string, error) {
 	return s.Forum.GetMainTags(ctx)
 }

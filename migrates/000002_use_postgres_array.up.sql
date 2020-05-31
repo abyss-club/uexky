@@ -9,6 +9,7 @@ CREATE INDEX post_quote_post_index ON public.post USING gin (quoted_ids);
 -- DROP TABLE public.posts_quotes CASCADE;
 
 ALTER TABLE public.tag ADD COLUMN tag_type text;
+ALTER TABLE public.tag ALTER COLUMN is_main DROP NOT NULL;
 -- DROP INDEX tag_is_main_index;
 -- DROP ALTER TABLE public.tag DROP COLUMN is_main;
 

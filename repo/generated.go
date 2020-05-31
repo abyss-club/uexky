@@ -179,22 +179,22 @@ type Notification struct {
 
 	ID          int             `pg:"id,pk"`
 	Key         *string         `pg:"key"`
-	CreatedAt   time.Time       `pg:"created_at,use_zero"`
-	UpdatedAt   time.Time       `pg:"updated_at,use_zero"`
+	CreatedAt   time.Time       `pg:"created_at"`
+	UpdatedAt   time.Time       `pg:"updated_at"`
 	Type        string          `pg:"type,use_zero"`
 	SendTo      *int            `pg:"send_to"`
 	SendToGroup *string         `pg:"send_to_group"`
 	Content     json.RawMessage `pg:"content"`
 
-	SendToRel *User `pg:"fk:send_to"`
+	SendToRel *User `pg:"notification_send_to_fkey,fk"`
 }
 
 type Post struct {
 	tableName struct{} `pg:"post,,discard_unknown_columns"`
 
 	ID          int64     `pg:"id,pk"`
-	CreatedAt   time.Time `pg:"created_at,use_zero"`
-	UpdatedAt   time.Time `pg:"updated_at,use_zero"`
+	CreatedAt   time.Time `pg:"created_at"`
+	UpdatedAt   time.Time `pg:"updated_at"`
 	ThreadID    int64     `pg:"thread_id,use_zero"`
 	Anonymous   bool      `pg:"anonymous,use_zero"`
 	UserID      int       `pg:"user_id,use_zero"`
@@ -204,9 +204,9 @@ type Post struct {
 	Content     string    `pg:"content,use_zero"`
 	QuotedIDs   []int64   `pg:"quoted_ids,array"`
 
-	Thread      *Thread `pg:"fk:thread_id"`
-	User        *User   `pg:"fk:user_id"`
-	UserNameRel *User   `pg:"fk:user_name"`
+	Thread      *Thread `pg:"post_thread_id_fkey,fk"`
+	User        *User   `pg:"post_user_id_fkey,fk"`
+	UserNameRel *User   `pg:"post_user_name_fkey,fk"`
 }
 
 type SchemaMigration struct {
@@ -220,8 +220,8 @@ type Tag struct {
 	tableName struct{} `pg:"tag,,discard_unknown_columns"`
 
 	Name      string    `pg:"name,pk"`
-	CreatedAt time.Time `pg:"created_at,use_zero"`
-	UpdatedAt time.Time `pg:"updated_at,use_zero"`
+	CreatedAt time.Time `pg:"created_at"`
+	UpdatedAt time.Time `pg:"updated_at"`
 	TagType   *string   `pg:"tag_type"`
 }
 
@@ -231,8 +231,8 @@ type Thread struct {
 	tableName struct{} `pg:"thread,,discard_unknown_columns"`
 
 	ID          int64     `pg:"id,pk"`
-	CreatedAt   time.Time `pg:"created_at,use_zero"`
-	UpdatedAt   time.Time `pg:"updated_at,use_zero"`
+	CreatedAt   time.Time `pg:"created_at"`
+	UpdatedAt   time.Time `pg:"updated_at"`
 	Anonymous   bool      `pg:"anonymous,use_zero"`
 	UserID      int       `pg:"user_id,use_zero"`
 	UserName    *string   `pg:"user_name"`
@@ -244,16 +244,16 @@ type Thread struct {
 	LastPostID  int64     `pg:"last_post_id,use_zero"`
 	Tags        []string  `pg:"tags,array"`
 
-	User        *User `pg:"fk:user_id"`
-	UserNameRel *User `pg:"fk:user_name"`
+	User        *User `pg:"thread_user_id_fkey,fk"`
+	UserNameRel *User `pg:"thread_user_name_fkey,fk"`
 }
 
 type User struct {
 	tableName struct{} `pg:"user,,discard_unknown_columns"`
 
 	ID                  int       `pg:"id,pk"`
-	CreatedAt           time.Time `pg:"created_at,use_zero"`
-	UpdatedAt           time.Time `pg:"updated_at,use_zero"`
+	CreatedAt           time.Time `pg:"created_at"`
+	UpdatedAt           time.Time `pg:"updated_at"`
 	Email               string    `pg:"email,use_zero"`
 	Name                *string   `pg:"name"`
 	Role                string    `pg:"role,use_zero"`

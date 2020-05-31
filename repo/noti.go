@@ -168,7 +168,7 @@ func (n *NotiRepo) InsertNoti(ctx context.Context, insert entity.NotiInsert) err
 			return err
 		}
 	}
-	_, err = n.db(ctx).Model(noti).Returning("*").Insert()
+	_, err = n.db(ctx).Model(noti).OnConflict("(key) DO UPDATE").Set("updated_at=now()").Returning("*").Insert()
 	return err
 }
 

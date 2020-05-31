@@ -121,7 +121,8 @@ func (u *UID) UnmarshalGQL(v interface{}) error {
 
 // MarshalGQL for UID scalar type in graphql
 func (u UID) MarshalGQL(w io.Writer) {
-	_, err := w.Write([]byte(u.ToBase64String()))
+	rawStr := fmt.Sprintf(`"%s"`, u.ToBase64String())
+	_, err := w.Write([]byte(rawStr))
 	if err != nil {
 		panic(err)
 	}

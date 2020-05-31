@@ -65,4 +65,5 @@ type ForumRepo interface {
 
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)
 	GetMainTags(ctx context.Context) ([]string, error)
+	SetMainTags(ctx context.Context, tags []string) error
 }

@@ -1137,7 +1137,7 @@ input PostInput {
   # Markdown formatted content.
   content: String!
   # Set quoting PostIDs.
-  quoteIds: [String!]
+  quoteIds: [UID!]
 }
 
 # Object describing a Post.
@@ -5837,7 +5837,7 @@ func (ec *executionContext) unmarshalInputPostInput(ctx context.Context, obj int
 			}
 		case "quoteIds":
 			var err error
-			it.QuoteIds, err = ec.unmarshalOString2ᚕstringᚄ(ctx, v)
+			it.QuoteIds, err = ec.unmarshalOUID2ᚕgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUIDᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -8088,6 +8088,38 @@ func (ec *executionContext) unmarshalOUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋ
 
 func (ec *executionContext) marshalOUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx context.Context, sel ast.SelectionSet, v uid.UID) graphql.Marshaler {
 	return v
+}
+
+func (ec *executionContext) unmarshalOUID2ᚕgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUIDᚄ(ctx context.Context, v interface{}) ([]uid.UID, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]uid.UID, len(vSlice))
+	for i := range vSlice {
+		res[i], err = ec.unmarshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOUID2ᚕgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUIDᚄ(ctx context.Context, sel ast.SelectionSet, v []uid.UID) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalOUID2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx context.Context, v interface{}) (*uid.UID, error) {

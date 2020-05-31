@@ -17,7 +17,7 @@ input PostInput {
   # Markdown formatted content.
   content: String!
   # Set quoting PostIDs.
-  quoteIds: [String!]
+  quoteIds: [UID!]
 }
 
 # Object describing a Post.

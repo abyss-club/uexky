@@ -1,12 +1,10 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
 	"github.com/99designs/gqlgen/graphql/handler"
-	"github.com/vektah/gqlparser/v2/gqlerror"
 	"gitlab.com/abyss.club/uexky/graph/generated"
 	"gitlab.com/abyss.club/uexky/lib/config"
 )
@@ -30,11 +28,7 @@ func (s *Server) AuthHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Server) GraphQLHandler() http.Handler {
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
+	return handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
 		Resolvers: s.Resolver,
 	}))
-	srv.SetErrorPresenter(func(ctx context.Context, err error) *gqlerror.Error {
-		return nil
-	})
-	return srv
 }

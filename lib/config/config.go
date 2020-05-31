@@ -3,15 +3,18 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/BurntSushi/toml"
 )
 
 type Config struct {
-	PostgresURI string `toml:"postgres_uri"`
-	RedisURI    string `toml:"redis_uri"`
-	Server      struct {
+	Env          RuntimeEnv `toml:"env"`
+	PostgresURI  string     `toml:"postgres_uri"`
+	RedisURI     string     `toml:"redis_uri"`
+	MigrateFiles string     `toml:"migrates_files"`
+	Server       struct {
 		Proto     string `toml:"proto"`
 		Domain    string `toml:"domain"`
 		APIDomain string `toml:"api_domain"`
@@ -34,6 +37,8 @@ type Config struct {
 			PubPost    int `toml:"pub_post"`
 		} `toml:"cost"`
 	} `toml:"rate_limit"`
+
+	filename string `toml:"-"`
 }
 
 var c = Config{}
@@ -42,6 +47,7 @@ func setDefault() {
 	c = Config{}
 	c.PostgresURI = "postgres://postgres:postgres@localhost:5432/uexky2?sslmode=disable"
 	c.RedisURI = "redis://localhost:6379/0"
+	c.MigrateFiles = "./migrates"
 	c.Server.Domain = "abyss.club"
 	c.Server.Domain = "api.abyss.club"
 	c.Server.Proto = "http"
@@ -49,8 +55,10 @@ func setDefault() {
 }
 
 func patchEnv() {
+	c.Env = RuntimeEnv(getenv("UEXKY_ENV", string(c.Env)))
 	c.PostgresURI = getenv("PG_URI", c.PostgresURI)
 	c.RedisURI = getenv("REDIS_URI", c.RedisURI)
+	c.MigrateFiles = getenv("MIGRATE_FILES", c.MigrateFiles)
 	c.Server.Domain = getenv("DOMAIN", c.Server.Domain)
 	c.Server.APIDomain = getenv("API_DOMAIN", c.Server.APIDomain)
 	c.Server.Proto = getenv("PROTO", c.Server.Proto)
@@ -67,13 +75,38 @@ func Load(filename string) error {
 			return fmt.Errorf("read config file: %w", err)
 		}
 	}
+	c.filename = filename
 	patchEnv()
+	mf, err := filepath.Abs(c.MigrateFiles)
+	if err != nil {
+		return err
+	}
+	c.MigrateFiles = mf
 	return nil
 }
 
 func Get() *Config {
 	return &c
 }
+
+func GetEnv() RuntimeEnv {
+	switch c.Env {
+	case TestEnv:
+		return TestEnv
+	case ProdEnv:
+		return ProdEnv
+	default:
+		return DevEnv
+	}
+}
+
+type RuntimeEnv string
+
+const (
+	DevEnv  RuntimeEnv = "dev"
+	TestEnv RuntimeEnv = "test"
+	ProdEnv RuntimeEnv = "prod"
+)
 
 func getenv(key, defaultValue string) string {
 	v := os.Getenv(key)
