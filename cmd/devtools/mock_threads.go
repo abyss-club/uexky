@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"sync"
 
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -97,18 +98,38 @@ func mockThreads(opt *mockThreadsOpt) error {
 		t := fmt.Sprintf("st:%s", uid.RandomBase64Str(5))
 		subTags = append(subTags, t)
 	}
+	var wg sync.WaitGroup
+	var errs []error
+	wg.Add(opt.threadCount)
+	workers := make(chan struct{}, 16)
 	for i := 0; i < opt.threadCount; i++ {
-		pc := opt.minPostCount + rand.Intn(1+opt.maxPostCount-opt.minPostCount)
-		if err := makeThread(service, users, mainTags, subTags, pc); err != nil {
-			return errors.Wrapf(err, "make thread %v", i+1)
-		}
-		fmt.Println("create thread: ", i+1)
+		workers <- struct{}{}
+		go func(i int) {
+			defer func() {
+				<-workers
+				wg.Done()
+			}()
+			if len(errs) != 0 {
+				return
+			}
+			pc := opt.minPostCount + rand.Intn(1+opt.maxPostCount-opt.minPostCount)
+			if err := makeThread(service, users, mainTags, subTags, pc, i); err != nil {
+				log.Error(err)
+				errs = append(errs, errors.Wrapf(err, "make thread %v", i+1))
+				return
+			}
+			fmt.Println("create thread: ", i+1)
+		}(i)
+	}
+	wg.Wait()
+	if len(errs) != 0 {
+		return errors.New("create threads error")
 	}
 	return nil
 }
 
 func makeThread(
-	service *uexky.Service, users []*mockUser, mainTags []string, subTags []string, postCount int,
+	service *uexky.Service, users []*mockUser, mainTags []string, subTags []string, postCount int, index int,
 ) error {
 	input := &entity.ThreadInput{
 		Anonymous: rand.Intn(2) == 1,
@@ -144,9 +165,9 @@ func makeThread(
 		}
 		post, err := makePost(service, users, thread, qids)
 		if err != nil {
-			return errors.Wrapf(err, "make post %v", i+1)
+			return errors.Wrapf(err, "create thread %v post %v", index+1, i+1)
 		}
-		fmt.Println("create post: ", i+1)
+		log.Infof("create thread %v post %v", index+1, i+1)
 		posts = append(posts, post)
 	}
 	return nil
