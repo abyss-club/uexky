@@ -2,6 +2,7 @@ package uid
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -139,7 +140,7 @@ func TestUID_MarshalGQL(t *testing.T) {
 		{
 			name:  "marshal",
 			u:     uid,
-			wantW: uid.ToBase64String(),
+			wantW: fmt.Sprintf(`"%s"`, uid.ToBase64String()),
 		},
 	}
 	for _, tt := range tests {
