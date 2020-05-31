@@ -1,24 +1,32 @@
-.DS_Store
-node_modules
-/dist
-/__tests__/__utils__/globalConfig.json
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
 
-# local env files
-.env
-.envrc
-.env.local
-.env.*.local
+# Test binary, build with `go test -c`
+*.test
 
-# Log files
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
 
-# Editor directories and files
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw*
+# Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
+vendor/
+
+# ide or editor
+.vscode/
+*.swp
+
+# config
+config.json
+
+# python
+*.pyc
+__pycache__/
+
+# configs
+*.toml
+!config.example.toml
+
+# build
+dist/*

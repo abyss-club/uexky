@@ -1,31 +1,41 @@
-image: node:latest
-
 variables:
-  REGISTRY_NAME: 'registry.gitlab.com'
-  IMAGE_NAME: "registry.gitlab.com/${CI_PROJECT_PATH}:${CI_COMMIT_REF_NAME}"
+  REGISTRY: "registry.gitlab.com"
+  IMAGE_NAME: "${REGISTRY}/${CI_PROJECT_PATH}:${CI_COMMIT_REF_NAME}"
 
 stages:
   - test
   - build
 
 test:
-  # install deps
-  before_script:
-    - yarn
+  image: golang:latest
+  cache:
+    paths:
+      - .cache
   tags:
     - docker
   services:
     - postgres:latest
     - redis:latest
   variables:
-    PG_URI: "postgresql://runner@postgres/test_uexky"
-    REDIS_URI: "redis://redis"
-    POSTGRES_DB: test_uexky
-    POSTGRES_USER: runner
-    POSTGRES_PASSWORD: ""
+    POSTGRES_PASSWORD: postgres
+    POSTGRES_DB: uexky-test
+    PG_URI: postgres://postgres:postgres@postgres:5432/uexky-test?sslmode=disable
+    REDIS_URI: redis://redis:6379
+    UEXKY_ENV: test
+    MIGRATE_FILES: "$CI_PROJECT_DIR/migrates"
   stage: test
+  only:
+    - merge_requests
+    - web
+    - master
+  before_script:
+    - mkdir -p .cache
+    - export GOPATH="$CI_PROJECT_DIR/.cache"
+    - curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b /go/bin v1.27.0
   script:
-    - yarn test
+    - make build
+    - make lint
+    - make test
 
 build:
   image: docker:stable
@@ -34,6 +44,11 @@ build:
   tags:
     - docker
   stage: build
+  dependencies:
+    - test
+  artifacts:
+    paths:
+      - ./build/uexky
   only:
     - master
     - tags

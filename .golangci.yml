@@ -1,0 +1,44 @@
+run:
+  # skip generated files
+  skip-files:
+    - graph/generated/generated.go
+    - uexky/entity/generated.go
+    - repo/model/models_gen.go
+    - repo/model/search_gen.go
+    - wire/wire_gen.go
+linters:
+  disable-all: true
+  enable:
+    - bodyclose
+    - deadcode
+    - dupl
+    - errcheck
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - golint
+    - gosimple
+    - govet
+    - ineffassign
+    - interfacer
+    - misspell
+    - nakedret
+    - staticcheck
+    - structcheck
+    - stylecheck
+    - typecheck
+    - unconvert
+    - unparam
+    - unused
+    - varcheck
+    # - depguard
+    # - funlen
+    # - gochecknoglobals
+    # - gochecknoinits
+    # - gosec
+    # - lll
+    # - maligned
+    # - prealloc
+    # - scopelint
