@@ -29,6 +29,7 @@ type PostsSearch struct {
 	IDs      []uid.UID
 	UserID   *int
 	ThreadID *uid.UID
+	DESC     bool
 }
 
 type PostUpdate struct {

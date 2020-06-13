@@ -4,6 +4,7 @@ package entity
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -183,6 +184,10 @@ type Post struct {
 	Data PostData  `json:"-"`
 }
 
+func (p Post) String() string {
+	return fmt.Sprintf("<Post:%v:%s>", p.ID, p.ID.ToBase64String())
+}
+
 type NewPostResponse struct {
 	Post   *Post
 	Thread *Thread
@@ -201,9 +206,10 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 
 		Repo: f.Repo,
 		Data: PostData{
-			Author:   Author{UserID: user.ID},
-			ThreadID: input.ThreadID,
-			QuoteIDs: input.QuoteIds,
+			Author:     Author{UserID: user.ID},
+			ThreadID:   input.ThreadID,
+			QuoteIDs:   input.QuoteIds,
+			QuotePosts: make([]*Post, 0),
 		},
 	}
 	if input.Anonymous {
@@ -231,7 +237,7 @@ func (f *ForumService) GetPostByID(ctx context.Context, postID uid.UID) (*Post, 
 }
 
 func (f *ForumService) GetUserPosts(ctx context.Context, user *User, query SliceQuery) (*PostSlice, error) {
-	return f.Repo.GetPostSlice(ctx, &PostsSearch{UserID: &user.ID}, query)
+	return f.Repo.GetPostSlice(ctx, &PostsSearch{UserID: &user.ID, DESC: true}, query)
 }
 
 func (p *Post) Author() string {

@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky"
@@ -51,7 +52,7 @@ func createUser(s *uexky.Service) (*mockUser, error) {
 	ctx := context.Background()
 	ctx = s.TxAdapter.AttachDB(ctx)
 	email := fmt.Sprintf("%s@%s", uid.RandomBase64Str(16), config.Get().Server.Domain)
-	code, err := s.GenSignInCodeByEmail(ctx, email)
+	code, err := s.TrySignInByEmail(ctx, email)
 	if err != nil {
 		return nil, errors.Wrap(err, "gen sign in code by email")
 	}
@@ -142,8 +143,7 @@ func makeThread(
 		input.SubTags = append(input.SubTags, t)
 	}
 	if rand.Intn(2) == 1 {
-		title := fmt.Sprintf("Title:%s", uid.RandomBase64Str(20))
-		input.Title = &title
+		input.Title = algo.NullString(uid.RandomBase64Str(20))
 	}
 	user := users[rand.Intn(len(users))]
 	var err error

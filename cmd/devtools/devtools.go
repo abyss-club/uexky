@@ -61,7 +61,7 @@ var signInUserCmd = &cobra.Command{
 		}
 		ctx := context.Background()
 		ctx = service.TxAdapter.AttachDB(ctx)
-		code, err := service.GenSignInCodeByEmail(ctx, devFlags.email)
+		code, err := service.TrySignInByEmail(ctx, devFlags.email)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -71,24 +71,28 @@ func (f *ForumRepo) GetThreadSlice(
 		q.Where("user_id = ?", search.UserID)
 	}
 	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
-		if cursor == "" {
-			return q, nil
+		if cursor != "" {
+			c, err := uid.ParseUID(cursor)
+			if err != nil {
+				return nil, err
+			}
+			if !isAfter {
+				q = q.Where("last_post_id > ?", c)
+			} else {
+				q = q.Where("last_post_id < ?", c)
+			}
 		}
-		c, err := uid.ParseUID(cursor)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Println("searching lastPostID: ", c)
 		if !isAfter {
-			return q.Where("last_post_id > ?", c).Order("last_post_id"), nil
+			return q.Order("last_post_id"), nil
 		}
-		return q.Where("last_post_id < ?", c).Order("last_post_id DESC"), nil
+		return q.Order("last_post_id DESC"), nil
 	}
 	var err error
 	q, err = applySliceQuery(applySlice, q, &query)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("query %#v\n", q)
 	if err := q.Select(); err != nil {
 		return nil, err
 	}
@@ -105,7 +109,6 @@ func (f *ForumRepo) GetThreadSlice(
 		}
 	}
 	dealSliceResult(dealSlice, &query, len(threads), query.Before != nil)
-
 	return &entity.ThreadSlice{
 		Threads:   entities,
 		SliceInfo: sliceInfo,
@@ -193,6 +196,8 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 				AnonymousID: (*uid.UID)(p.AnonymousID),
 				UserName:    p.UserName,
 			},
+			QuoteIDs:   make([]uid.UID, 0),
+			QuotePosts: make([]*entity.Post, 0),
 		},
 	}
 	var qids []uid.UID
@@ -204,7 +209,6 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 		post.Blocked = true
 		post.Content = blockedContent // TODO: move to service layer
 	}
-
 	return post
 }
 
@@ -249,17 +253,21 @@ func (f *ForumRepo) GetPostSlice(
 	var posts []Post
 	q := f.searchPostsQuery(ctx, search, &posts)
 	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
-		if cursor == "" {
-			return q, nil
+		if cursor != "" {
+			c, err := uid.ParseUID(cursor)
+			if err != nil {
+				return nil, err
+			}
+			if isAfter != search.DESC {
+				q = q.Where("id > ?", c)
+			} else {
+				q.Where("id < ?", c)
+			}
 		}
-		c, err := uid.ParseUID(cursor)
-		if err != nil {
-			return nil, err
+		if isAfter != search.DESC {
+			return q.Order("id"), nil
 		}
-		if !isAfter {
-			return q.Where("id < ?", c).Order("id DESC"), nil
-		}
-		return q.Where("id > ?", c).Order("id"), nil
+		return q.Order("id DESC"), nil
 	}
 	var err error
 	q, err = applySliceQuery(applySlice, q, &query)

@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	red "github.com/go-redis/redis/v7"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres" // postgres migrate
-	_ "github.com/golang-migrate/migrate/v4/source/file"       // migrate file source
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/redis"

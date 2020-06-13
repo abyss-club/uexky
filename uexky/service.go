@@ -17,16 +17,8 @@ type Service struct {
 	TxAdapter adapter.Tx
 }
 
-func (s *Service) GenSignInCodeByEmail(ctx context.Context, email string) (entity.Code, error) {
-	return s.User.GenSignInCodeByEmail(ctx, email)
-}
-
-func (s *Service) TrySignInByEmail(ctx context.Context, email string) (bool, error) {
-	code, err := s.User.GenSignInCodeByEmail(ctx, email)
-	if err != nil {
-		return false, err
-	}
-	return s.User.SendSignInEmail(ctx, email, code)
+func (s *Service) TrySignInByEmail(ctx context.Context, email string) (entity.Code, error) {
+	return s.User.TrySignInByEmail(ctx, email)
 }
 
 func (s *Service) SignInByCode(ctx context.Context, code string) (entity.Token, error) {

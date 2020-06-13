@@ -69,19 +69,17 @@ func newAuthMail(email string, code Code) *adapter.Mail {
 	}
 }
 
-func (s *UserService) GenSignInCodeByEmail(ctx context.Context, email string) (Code, error) {
+func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (Code, error) {
 	// TODO: validate email
-	code := uid.RandomBase64Str(codeLength)
-	err := s.Repo.SetCode(ctx, email, code, codeExpire)
-	return Code(code), err
-}
-
-func (s *UserService) SendSignInEmail(ctx context.Context, email string, code Code) (bool, error) {
+	code := Code(uid.RandomBase64Str(codeLength))
+	if err := s.Repo.SetCode(ctx, email, string(code), codeExpire); err != nil {
+		return "", err
+	}
 	mail := newAuthMail(email, code)
 	if err := s.Mail.SendEmail(ctx, mail); err != nil {
-		return false, err
+		return "", err
 	}
-	return true, nil
+	return code, nil
 }
 
 type Token struct {
