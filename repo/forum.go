@@ -2,7 +2,6 @@ package repo
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
@@ -92,7 +91,6 @@ func (f *ForumRepo) GetThreadSlice(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("query %#v\n", q)
 	if err := q.Select(); err != nil {
 		return nil, err
 	}

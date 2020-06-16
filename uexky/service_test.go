@@ -15,6 +15,7 @@ import (
 func TestService_LoginByEmail(t *testing.T) {
 	email := "user1@example.com"
 	service, err := getService()
+	getNewDBCtx(t)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -628,6 +629,7 @@ func TestService_PubThread(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	getNewDBCtx(t)
 	user, ctx, err := loginUser(service, testUser{email: "a@example.com", name: "a"})
 	if err != nil {
 		t.Fatal(err)
