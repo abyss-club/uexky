@@ -4,7 +4,6 @@ go 1.14
 
 require (
 	github.com/99designs/gqlgen v0.11.3
-	github.com/BurntSushi/toml v0.3.1
 	github.com/go-pg/pg/v9 v9.1.6
 	github.com/go-redis/redis/v7 v7.2.0
 	github.com/golang-migrate/migrate/v4 v4.11.0
@@ -16,6 +15,7 @@ require (
 	github.com/mailgun/mailgun-go/v4 v4.1.0
 	github.com/mitchellh/mapstructure v1.3.0 // indirect
 	github.com/onsi/ginkgo v1.10.2 // indirect
+	github.com/pelletier/go-toml v1.2.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.4.2
 	github.com/spf13/cobra v1.0.0

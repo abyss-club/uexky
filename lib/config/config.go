@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/BurntSushi/toml"
+	"github.com/pelletier/go-toml"
 )
 
 type Config struct {
@@ -74,7 +74,11 @@ func patchEnv() {
 func Load(filename string) error {
 	setDefault()
 	if filename != "" {
-		if _, err := toml.DecodeFile(filename, &c); err != nil {
+		f, err := os.Open(filename)
+		if err != nil {
+			return fmt.Errorf("open config file: %w", err)
+		}
+		if err := toml.NewDecoder(f).Decode(&c); err != nil {
 			return fmt.Errorf("read config file: %w", err)
 		}
 	}
