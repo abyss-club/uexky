@@ -10,11 +10,11 @@ import (
 )
 
 type Config struct {
-	Env          RuntimeEnv `toml:"env"`
-	PostgresURI  string     `toml:"postgres_uri"`
-	RedisURI     string     `toml:"redis_uri"`
-	MigrateFiles string     `toml:"migrates_files"`
-	Server       struct {
+	Env            RuntimeEnv `toml:"env"`
+	PostgresURI    string     `toml:"postgres_uri"`
+	RedisURI       string     `toml:"redis_uri"`
+	MigrationFiles string     `toml:"migration_files"`
+	Server         struct {
 		Proto     string `toml:"proto"`
 		Domain    string `toml:"domain"`
 		APIDomain string `toml:"api_domain"`
@@ -48,7 +48,7 @@ func setDefault() {
 	c = Config{}
 	c.PostgresURI = "postgres://postgres:postgres@localhost:5432/uexky2?sslmode=disable"
 	c.RedisURI = "redis://localhost:6379/0"
-	c.MigrateFiles = "./migrates"
+	c.MigrationFiles = "./migrations"
 	c.Server.Domain = "abyss.club"
 	c.Server.Domain = "api.abyss.club"
 	c.Server.Proto = "http"
@@ -60,7 +60,7 @@ func patchEnv() {
 	c.Env = RuntimeEnv(getenv("UEXKY_ENV", string(c.Env)))
 	c.PostgresURI = getenv("PG_URI", c.PostgresURI)
 	c.RedisURI = getenv("REDIS_URI", c.RedisURI)
-	c.MigrateFiles = getenv("MIGRATE_FILES", c.MigrateFiles)
+	c.MigrationFiles = getenv("MIGRATION_FILES", c.MigrationFiles)
 	c.Server.Domain = getenv("DOMAIN", c.Server.Domain)
 	c.Server.APIDomain = getenv("API_DOMAIN", c.Server.APIDomain)
 	c.Server.Proto = getenv("PROTO", c.Server.Proto)
@@ -84,11 +84,11 @@ func Load(filename string) error {
 	}
 	c.filename = filename
 	patchEnv()
-	mf, err := filepath.Abs(c.MigrateFiles)
+	mf, err := filepath.Abs(c.MigrationFiles)
 	if err != nil {
 		return err
 	}
-	c.MigrateFiles = mf
+	c.MigrationFiles = mf
 	return nil
 }
 

@@ -1,5 +1,6 @@
 postgres_uri = "postgres://postgres:postgres@localhost:5432/uexky2?sslmode=disable"
 redis_uri = "redis://localhost:6379/0"
+migration_files = "./migrations"
 
 [server]
 proto = "http"

@@ -34,7 +34,7 @@ func RebuildDB() error {
 }
 
 func GetMigrate() (*migrate.Migrate, error) {
-	source := fmt.Sprintf("file://%s", config.Get().MigrateFiles)
+	source := fmt.Sprintf("file://%s", config.Get().MigrationFiles)
 	m, err := migrate.New(source, config.Get().PostgresURI)
 	return m, errors.Wrap(err, "new migration")
 }

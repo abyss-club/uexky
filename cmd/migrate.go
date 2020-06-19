@@ -9,7 +9,7 @@ import (
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 )
 
-var migrateFilesPath string
+var migrationFilesPath string
 
 var (
 	mgr     *migrate.Migrate
@@ -18,7 +18,7 @@ var (
 )
 
 func init() {
-	migrateCmd.PersistentFlags().StringVarP(&migrateFilesPath, "source", "s", "", "migration files path")
+	migrateCmd.PersistentFlags().StringVarP(&migrationFilesPath, "source", "s", "", "migration files path")
 	migrateCmd.AddCommand(gotoCmd, upCmd, downCmd, forceCmd, versionCmd)
 	gotoCmd.PersistentFlags().UintVarP(&version, "version", "v", 0, "version")
 	upCmd.PersistentFlags().IntVarP(&nsteps, "nsteps", "n", 0, "nsteps")
