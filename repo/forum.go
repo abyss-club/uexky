@@ -112,9 +112,9 @@ func (f *ForumRepo) GetThreadSlice(
 	}, nil
 }
 
-func (f *ForumRepo) GetThreadCatelog(ctx context.Context, id uid.UID) ([]*entity.ThreadCatalogItem, error) {
+func (f *ForumRepo) GetThreadCatalog(ctx context.Context, id uid.UID) ([]*entity.ThreadCatalogItem, error) {
 	var posts []Post
-	q := f.db(ctx).Model(&posts).Column("id", "created_at").Where("thread=?", id).Order("id")
+	q := f.db(ctx).Model(&posts).Column("id", "created_at").Where("thread_id=?", id).Order("id")
 	if err := q.Select(); err != nil {
 		return nil, err
 	}
