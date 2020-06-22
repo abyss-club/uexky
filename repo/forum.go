@@ -64,7 +64,7 @@ func (f *ForumRepo) GetThreadSlice(
 	var threads []Thread
 	q := f.db(ctx).Model(&threads)
 	if search.Tags != nil {
-		q.Where("id IN (SELECT thread_id FROM threads_tags as tt WHERE tt.tag_name=ANY(?))", pg.Array(search.Tags))
+		q.Where("id IN (SELECT id FROM thread WHERE ? && thread.tags)", pg.Array(search.Tags))
 	}
 	if search.UserID != nil {
 		q.Where("user_id = ?", search.UserID)

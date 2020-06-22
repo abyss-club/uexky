@@ -717,6 +717,33 @@ func TestService_SearchThreads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := getNewDBCtx(t)
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	if err := service.SetMainTags(ctx, mainTags); err != nil {
+		t.Fatal(err)
+	}
+	var threads []*entity.Thread
+	tu := testUser{email: "a@example.com", name: "a"}
+	for i := 0; i < 10; i++ {
+		var thread *entity.Thread
+		var err error
+		switch {
+		case i < 3:
+			thread, _, err = pubThreadWithTags(service, tu, "MainA", []string{"SubA"})
+		case i < 6:
+			thread, _, err = pubThreadWithTags(service, tu, "MainA", []string{"SubA", "SubB"})
+		default:
+			thread, _, err = pubThreadWithTags(service, tu, "MainC", []string{"SubB", "SubC"})
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		threads = append(threads, thread)
+	}
+	_, ctx, err = loginUser(service, testUser{email: "a@example.com"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	type args struct {
 		ctx   context.Context
 		tags  []string
@@ -728,7 +755,88 @@ func TestService_SearchThreads(t *testing.T) {
 		want    *entity.ThreadSlice
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "first 5 threads with empty array as tag",
+			args: args{
+				ctx:  ctx,
+				tags: []string{""},
+				query: entity.SliceQuery{
+					After: algo.NullString(""),
+					Limit: 5,
+				},
+			},
+			want: &entity.ThreadSlice{
+				Threads: []*entity.Thread{},
+				SliceInfo: &entity.SliceInfo{
+					FirstCursor: "",
+					LastCursor:  "",
+					HasNext:     false,
+				},
+			},
+		},
+		{
+			name: "first 5 threads with a maintag",
+			args: args{
+				ctx:  ctx,
+				tags: []string{"MainA"},
+				query: entity.SliceQuery{
+					After: algo.NullString(""),
+					Limit: 5,
+				},
+			},
+			want: &entity.ThreadSlice{
+				Threads: []*entity.Thread{
+					threads[5], threads[4], threads[3], threads[2], threads[1],
+				},
+				SliceInfo: &entity.SliceInfo{
+					FirstCursor: threads[5].ID.ToBase64String(),
+					LastCursor:  threads[1].ID.ToBase64String(),
+					HasNext:     true,
+				},
+			},
+		},
+		{
+			name: "first 5 threads with two tags",
+			args: args{
+				ctx:  ctx,
+				tags: []string{"MainC", "SubB"},
+				query: entity.SliceQuery{
+					After: algo.NullString(""),
+					Limit: 5,
+				},
+			},
+			want: &entity.ThreadSlice{
+				Threads: []*entity.Thread{
+					threads[9], threads[8], threads[7], threads[6], threads[5],
+				},
+				SliceInfo: &entity.SliceInfo{
+					FirstCursor: threads[9].ID.ToBase64String(),
+					LastCursor:  threads[5].ID.ToBase64String(),
+					HasNext:     true,
+				},
+			},
+		},
+		{
+			name: "last 5 threads with only subtag",
+			args: args{
+				ctx:  ctx,
+				tags: []string{"SubC"},
+				query: entity.SliceQuery{
+					Before: algo.NullString(""),
+					Limit:  5,
+				},
+			},
+			want: &entity.ThreadSlice{
+				Threads: []*entity.Thread{
+					threads[9], threads[8], threads[7], threads[6],
+				},
+				SliceInfo: &entity.SliceInfo{
+					FirstCursor: threads[9].ID.ToBase64String(),
+					LastCursor:  threads[6].ID.ToBase64String(),
+					HasNext:     false,
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -737,8 +845,17 @@ func TestService_SearchThreads(t *testing.T) {
 				t.Errorf("Service.SearchThreads() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.SearchThreads() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(got.SliceInfo, tt.want.SliceInfo); diff != "" {
+				t.Errorf("Service.SearchThreads().SliceInfo diff: %s", diff)
+			}
+			if len(got.Threads) != len(tt.want.Threads) {
+				t.Errorf("Service.SearchThreads().len(Threads) = %v, want %v", len(got.Threads), len(tt.want.Threads))
+			}
+			for i, thread := range got.Threads {
+				thread.CreatedAt = tt.want.Threads[i].CreatedAt
+				if diff := cmp.Diff(thread, tt.want.Threads[i], forumRepoComp); diff != "" {
+					t.Errorf("Service.SearchThreads().Threads[%v] diff: %s", i, diff)
+				}
 			}
 		})
 	}

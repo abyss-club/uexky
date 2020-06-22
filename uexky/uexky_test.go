@@ -148,6 +148,29 @@ func pubThread(service *Service, u testUser) (*entity.Thread, context.Context, e
 	return thread, ctx, err
 }
 
+func pubThreadWithTags(service *Service, u testUser, mainTag string, subTags []string) (*entity.Thread, context.Context, error) {
+	user, ctx, err := loginUser(service, u)
+	if err != nil {
+		return nil, nil, err
+	}
+	_, err = service.GetMainTags(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	input := entity.ThreadInput{
+		Anonymous: rand.Intn(2) == 0,
+		Content:   uid.RandomBase64Str(50),
+		MainTag:   mainTag,
+		SubTags:   subTags,
+		Title:     algo.NullString(uid.RandomBase64Str(10)),
+	}
+	if user.Name == nil {
+		input.Anonymous = true
+	}
+	thread, err := service.PubThread(ctx, input)
+	return thread, ctx, err
+}
+
 func pubPost(service *Service, u testUser, threadID uid.UID, quotedIds []uid.UID) (*entity.Post, context.Context, error) {
 	user, ctx, err := loginUser(service, u)
 	if err != nil {
