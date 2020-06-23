@@ -28,6 +28,14 @@ func init() {
 	Command.AddCommand(signInUserCmd, setMainTagsCmd, rebuildCmd, mockDataCmd)
 }
 
+func mapArgs(vs []string, f func(string) string) []string {
+	vsm := make([]string, len(vs))
+	for i, v := range vs {
+		vsm[i] = f(v)
+	}
+	return vsm
+}
+
 var Command = &cobra.Command{
 	Use:   "dev",
 	Short: "dev utils",
@@ -75,12 +83,13 @@ var setMainTagsCmd = &cobra.Command{
 	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		tags := strings.Split(args[0], ",")
+		tagsTrimmed := mapArgs(tags, strings.TrimSpace)
 		service, err := wire.InitDevService()
 		if err != nil {
 			log.Fatal(err)
 		}
 		ctx := service.TxAdapter.AttachDB(context.Background())
-		if err := service.SetMainTags(ctx, tags); err != nil {
+		if err := service.SetMainTags(ctx, tagsTrimmed); err != nil {
 			log.Fatal(err)
 		}
 	},
