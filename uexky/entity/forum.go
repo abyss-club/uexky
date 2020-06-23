@@ -126,7 +126,7 @@ func (n *Thread) ReplyCount(ctx context.Context) (int, error) {
 }
 
 func (n *Thread) Catalog(ctx context.Context) ([]*ThreadCatalogItem, error) {
-	return n.Repo.GetThreadCatelog(ctx, n.ID)
+	return n.Repo.GetThreadCatalog(ctx, n.ID)
 }
 
 func (n *Thread) EditTags(ctx context.Context, mainTag string, subTags []string) error {
