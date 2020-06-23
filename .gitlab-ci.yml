@@ -36,6 +36,10 @@ test:
     - make build
     - make lint
     - make test
+  artifacts:
+    paths:
+      - ./build/uexky
+    expire_in: 1 week
 
 build:
   image: docker:stable
@@ -47,6 +51,7 @@ build:
   artifacts:
     paths:
       - ./build/uexky
+    expire_in: 1 week
   only:
     - master
     - tags
