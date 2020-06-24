@@ -25,9 +25,13 @@ test:
     MIGRATION_FILES: "$CI_PROJECT_DIR/migrations"
   stage: test
   only:
-    - merge_requests
-    - web
-    - master
+    refs:
+      - merge_requests
+      - web
+      - master
+    changes:
+      - Dockerfile
+      - .gitlab-ci.yml
   before_script:
     - mkdir -p .cache
     - export GOPATH="$CI_PROJECT_DIR/.cache"
@@ -38,7 +42,7 @@ test:
     - make test
   artifacts:
     paths:
-      - ./build/uexky
+      - ./dist/uexky
     expire_in: 1 week
 
 build:
@@ -50,11 +54,15 @@ build:
     - test
   artifacts:
     paths:
-      - ./build/uexky
+      - ./dist/uexky
     expire_in: 1 week
   only:
-    - master
-    - tags
+    refs:
+      - master
+      - tags
+    changes:
+      - Dockerfile
+      - .gitlab-ci.yml
   script:
     - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - docker build . -t $IMAGE_NAME
