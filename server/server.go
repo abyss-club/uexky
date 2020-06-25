@@ -23,7 +23,7 @@ func (s *Server) Run() error {
 	addr := fmt.Sprintf("%s:%v", srvCfg.Host, srvCfg.Port)
 	http.Handle("/", s.withDB(s.withUser(playground.Handler("GraphQL playground", "/graphql"))))
 	http.Handle("/graphql", s.withDB(s.withUser(s.GraphQLHandler())))
-	http.Handle("/auth", http.HandlerFunc(s.AuthHandler))
+	http.Handle("/auth/", http.HandlerFunc(s.AuthHandler))
 	log.Printf("connect to http://%s/ for GraphQL playground", addr)
 	return http.ListenAndServe(addr, nil)
 }
