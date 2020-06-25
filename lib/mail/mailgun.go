@@ -14,7 +14,7 @@ type Adapter struct {
 }
 
 func NewAdapter() *Adapter {
-	mg := mailgun.NewMailgun(config.Get().Server.Domain, config.Get().Mail.PrivateKey)
+	mg := mailgun.NewMailgun(config.Get().Mail.Domain, config.Get().Mail.PrivateKey)
 	return &Adapter{mg: mg}
 }
 
