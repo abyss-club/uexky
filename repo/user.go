@@ -46,8 +46,8 @@ func (u *UserRepo) db(ctx context.Context) postgres.Session {
 	return postgres.GetSessionFromContext(ctx)
 }
 
-func (u *UserRepo) toEntityUser(user *User) *entity.User {
-	return &entity.User{
+func (u *UserRepo) toEntityUser(user *User, mainTags []string) *entity.User {
+	entity := &entity.User{
 		Email: user.Email,
 		Name:  user.Name,
 		Role:  entity.ParseRole(user.Role),
@@ -61,6 +61,11 @@ func (u *UserRepo) toEntityUser(user *User) *entity.User {
 			QuotedNoti:  user.LastReadQuotedNoti,
 		},
 	}
+	// TODO: should in service level?
+	if len(user.Tags) == 0 {
+		entity.Tags = mainTags
+	}
+	return entity
 }
 
 func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.User, error) {
@@ -68,19 +73,20 @@ func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.U
 	if err := u.db(ctx).Model(&users).Where("email = ?", email).Select(); err != nil {
 		return nil, err
 	}
-	if len(users) > 0 {
-		return u.toEntityUser(&users[0]), nil
-	}
 	mainTags, err := u.Forum.GetMainTags(ctx)
 	if err != nil {
 		return nil, err
 	}
+	if len(users) > 0 {
+		return u.toEntityUser(&users[0], mainTags), nil
+	}
 	user := User{
 		Email: email,
-		Tags:  mainTags,
 	}
-	_, err = u.db(ctx).Model(&user).Returning("*").Insert()
-	return u.toEntityUser(&user), err
+	if _, err := u.db(ctx).Model(&user).Returning("*").Insert(); err != nil {
+		return nil, err
+	}
+	return u.toEntityUser(&user, mainTags), nil
 }
 
 func (u *UserRepo) UpdateUser(ctx context.Context, id int, update *entity.UserUpdate) error {

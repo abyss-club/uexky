@@ -348,7 +348,10 @@ func TestService_GetUserTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	getNewDBCtx(t)
+	ctx := getNewDBCtx(t)
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
+	}
 	user, ctx, err := loginUser(service, testUser{name: "a", email: "a@example.com"})
 	if err != nil {
 		t.Fatal(err)
@@ -369,7 +372,7 @@ func TestService_GetUserTags(t *testing.T) {
 				ctx: ctx,
 				obj: user,
 			},
-			want:    nil,
+			want:    []string{"MainA", "MainB", "MainC"},
 			wantErr: false,
 		},
 	}
@@ -473,7 +476,13 @@ func TestService_AddUserSubbedTag(t *testing.T) {
 		{
 			name:     "add 1 tag",
 			args:     args{ctx: ctx, tag: "subA"},
-			wantTags: []string{"subA"},
+			wantTags: []string{"MainA", "MainB", "MainC", "subA"},
+			wantErr:  false,
+		},
+		{
+			name:     "add 1 duplicated tag",
+			args:     args{ctx: ctx, tag: "MainB"},
+			wantTags: []string{"MainA", "MainB", "MainC", "subA"},
 			wantErr:  false,
 		},
 	}
@@ -496,7 +505,15 @@ func TestService_AddUserSubbedTag(t *testing.T) {
 }
 
 func TestService_DelUserSubbedTag(t *testing.T) {
+	ctx := getNewDBCtx(t)
 	service, err := InitDevService()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
+	}
+	_, ctx, err = loginUser(service, testUser{name: "a", email: "a@example.com"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -505,12 +522,29 @@ func TestService_DelUserSubbedTag(t *testing.T) {
 		tag string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *entity.User
-		wantErr bool
+		name     string
+		args     args
+		wantTags []string
+		wantErr  bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "del 1 tag",
+			args: args{
+				ctx: ctx,
+				tag: "MainA",
+			},
+			wantTags: []string{"MainB", "MainC"},
+			wantErr:  false,
+		},
+		{
+			name: "del 1 unexists tag",
+			args: args{
+				ctx: ctx,
+				tag: "subC",
+			},
+			wantTags: []string{"MainB", "MainC"},
+			wantErr:  false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -519,8 +553,12 @@ func TestService_DelUserSubbedTag(t *testing.T) {
 				t.Errorf("Service.DelUserSubbedTag() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.DelUserSubbedTag() = %v, want %v", got, tt.want)
+			tags, err := service.GetUserTags(ctx, got)
+			if err != nil {
+				t.Error(errors.Wrap(err, "GetUserTags"))
+			}
+			if diff := cmp.Diff(tags, tt.wantTags); diff != "" {
+				t.Errorf("Service.DelUserSubbedTag() diff = %v", diff)
 			}
 		})
 	}
