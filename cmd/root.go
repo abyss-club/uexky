@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"gitlab.com/abyss.club/uexky/cmd/devtools"
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/wire"
+	"gitlab.com/abyss.club/uexky/server"
 )
 
 func init() {
@@ -46,7 +46,7 @@ var rootCmd = &cobra.Command{
 }
 
 func runService() {
-	server, err := wire.InitProdServer()
+	server, err := server.InitProdServer()
 	if err != nil {
 		log.Fatal(err)
 	}

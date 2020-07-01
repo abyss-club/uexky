@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
-	"gitlab.com/abyss.club/uexky/wire"
+	"gitlab.com/abyss.club/uexky/uexky"
 )
 
 var devFlags struct {
@@ -55,7 +55,7 @@ var signInUserCmd = &cobra.Command{
 		if devFlags.email == "" {
 			log.Fatalf("must specify user email")
 		}
-		service, err := wire.InitDevService()
+		service, err := uexky.InitDevService()
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -84,7 +84,7 @@ var setMainTagsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		tags := strings.Split(args[0], ",")
 		tagsTrimmed := mapArgs(tags, strings.TrimSpace)
-		service, err := wire.InitDevService()
+		service, err := uexky.InitDevService()
 		if err != nil {
 			log.Fatal(err)
 		}

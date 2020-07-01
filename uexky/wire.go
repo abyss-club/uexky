@@ -1,23 +1,20 @@
 //+build wireinject
 
-package wire
+package uexky
 
 import (
 	"github.com/google/wire"
-	"gitlab.com/abyss.club/uexky/graph"
 	"gitlab.com/abyss.club/uexky/lib/mail"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/redis"
 	"gitlab.com/abyss.club/uexky/mocks"
 	"gitlab.com/abyss.club/uexky/repo"
-	"gitlab.com/abyss.club/uexky/server"
-	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 var serviceSet = wire.NewSet(
-	wire.Struct(new(uexky.Service), "*"),
+	wire.Struct(new(Service), "*"),
 	wire.Struct(new(entity.ForumService), "*"),
 	wire.Struct(new(entity.UserService), "*"),
 	wire.Struct(new(entity.NotiService), "*"),
@@ -48,25 +45,24 @@ var mockMailSet = wire.NewSet(
 	wire.Struct(new(mocks.MailAdapter), "*"),
 )
 
-func InitProdServer() (*server.Server, error) {
-	wire.Build(
-		wire.Struct(new(server.Server), "*"),
-		wire.Struct(new(graph.Resolver), "*"),
-		wire.Struct(new(uexky.Service), "*"),
-		wire.Struct(new(entity.ForumService), "*"),
-		wire.Struct(new(entity.UserService), "*"),
-		wire.Struct(new(entity.NotiService), "*"),
-		repoSet,
-		mailSet,
-	)
-	return &server.Server{}, nil
+var ProdServiceSet = wire.NewSet(
+	serviceSet,
+	repoSet,
+	mailSet,
+)
+
+func InitProdService() (*Service, error) {
+	wire.Build(ProdServiceSet)
+	return &Service{}, nil
 }
 
-func InitDevService() (*uexky.Service, error) {
-	wire.Build(
-		serviceSet,
-		repoSet,
-		mockMailSet,
-	)
-	return &uexky.Service{}, nil
+var DevServiceSet = wire.NewSet(
+	serviceSet,
+	repoSet,
+	mockMailSet,
+)
+
+func InitDevService() (*Service, error) {
+	wire.Build(DevServiceSet)
+	return &Service{}, nil
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
@@ -14,7 +15,7 @@ import (
 
 func TestService_LoginByEmail(t *testing.T) {
 	email := "user1@example.com"
-	service, err := getService()
+	service, err := InitDevService()
 	getNewDBCtx(t)
 	if err != nil {
 		t.Fatal(err)
@@ -35,7 +36,7 @@ func TestService_LoginByEmail(t *testing.T) {
 }
 
 func TestService_SetUserName(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +94,7 @@ func TestService_SetUserName(t *testing.T) {
 }
 
 func TestService_GetUserThreads(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +215,7 @@ func TestService_GetUserThreads(t *testing.T) {
 }
 
 func TestService_GetUserPosts(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -343,7 +344,12 @@ func TestService_GetUserPosts(t *testing.T) {
 }
 
 func TestService_GetUserTags(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
+	if err != nil {
+		t.Fatal(err)
+	}
+	getNewDBCtx(t)
+	user, ctx, err := loginUser(service, testUser{name: "a", email: "a@example.com"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -357,7 +363,15 @@ func TestService_GetUserTags(t *testing.T) {
 		want    []string
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "new user's tags",
+			args: args{
+				ctx: ctx,
+				obj: user,
+			},
+			want:    nil,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -374,7 +388,15 @@ func TestService_GetUserTags(t *testing.T) {
 }
 
 func TestService_SyncUserTags(t *testing.T) {
-	service, err := getService()
+	ctx := getNewDBCtx(t)
+	service, err := InitDevService()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
+	}
+	_, ctx, err = loginUser(service, testUser{name: "a", email: "a@example.com"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,12 +405,29 @@ func TestService_SyncUserTags(t *testing.T) {
 		tags []string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *entity.User
-		wantErr bool
+		name     string
+		args     args
+		wantTags []string
+		wantErr  bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "sync 3 tags",
+			args: args{
+				ctx:  ctx,
+				tags: []string{"MainA", "SubA", "SubB"},
+			},
+			wantTags: []string{"MainA", "SubA", "SubB"},
+			wantErr:  false,
+		},
+		{
+			name: "sync tags to add and del",
+			args: args{
+				ctx:  ctx,
+				tags: []string{"SubA", "SubB", "SubC"},
+			},
+			wantTags: []string{"SubA", "SubB", "SubC"},
+			wantErr:  false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -397,15 +436,27 @@ func TestService_SyncUserTags(t *testing.T) {
 				t.Errorf("Service.SyncUserTags() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.SyncUserTags() = %v, want %v", got, tt.want)
+			tags, err := service.GetUserTags(ctx, got)
+			if err != nil {
+				t.Error(errors.Wrap(err, "GetUserTags"))
+			}
+			if diff := cmp.Diff(tags, tt.wantTags); diff != "" {
+				t.Errorf("Service.SyncUserTags() = %v, wantTags %v", tags, tt.wantTags)
 			}
 		})
 	}
 }
 
 func TestService_AddUserSubbedTag(t *testing.T) {
-	service, err := getService()
+	ctx := getNewDBCtx(t)
+	service, err := InitDevService()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
+	}
+	_, ctx, err = loginUser(service, testUser{name: "a", email: "a@example.com"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -414,12 +465,17 @@ func TestService_AddUserSubbedTag(t *testing.T) {
 		tag string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *entity.User
-		wantErr bool
+		name     string
+		args     args
+		wantTags []string
+		wantErr  bool
 	}{
-		// TODO: Add test cases.
+		{
+			name:     "add 1 tag",
+			args:     args{ctx: ctx, tag: "subA"},
+			wantTags: []string{"subA"},
+			wantErr:  false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -428,15 +484,19 @@ func TestService_AddUserSubbedTag(t *testing.T) {
 				t.Errorf("Service.AddUserSubbedTag() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.AddUserSubbedTag() = %v, want %v", got, tt.want)
+			tags, err := service.GetUserTags(ctx, got)
+			if err != nil {
+				t.Error(errors.Wrap(err, "GetUserTags"))
+			}
+			if diff := cmp.Diff(tags, tt.wantTags); diff != "" {
+				t.Errorf("Service.AddUserSubbedTag() = %v, wantTags %v", tags, tt.wantTags)
 			}
 		})
 	}
 }
 
 func TestService_DelUserSubbedTag(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -467,7 +527,7 @@ func TestService_DelUserSubbedTag(t *testing.T) {
 }
 
 func TestService_BanUser(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -499,7 +559,7 @@ func TestService_BanUser(t *testing.T) {
 }
 
 func TestService_BlockPost(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -530,7 +590,7 @@ func TestService_BlockPost(t *testing.T) {
 }
 
 func TestService_LockThread(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -561,7 +621,7 @@ func TestService_LockThread(t *testing.T) {
 }
 
 func TestService_BlockThread(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -592,7 +652,7 @@ func TestService_BlockThread(t *testing.T) {
 }
 
 func TestService_EditTags(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -625,7 +685,7 @@ func TestService_EditTags(t *testing.T) {
 }
 
 func TestService_PubThread(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -713,7 +773,7 @@ func TestService_PubThread(t *testing.T) {
 }
 
 func TestService_SearchThreads(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -862,7 +922,7 @@ func TestService_SearchThreads(t *testing.T) {
 }
 
 func TestService_GetThreadByID(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -894,7 +954,7 @@ func TestService_GetThreadByID(t *testing.T) {
 
 func TestService_PubPost(t *testing.T) {
 	/*
-		service, err := getService()
+		service, err := InitDevService()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -937,7 +997,7 @@ func TestService_PubPost(t *testing.T) {
 }
 
 func TestService_GetPostByID(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -968,7 +1028,7 @@ func TestService_GetPostByID(t *testing.T) {
 }
 
 func TestService_SetMainTags(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -993,7 +1053,7 @@ func TestService_SetMainTags(t *testing.T) {
 }
 
 func TestService_GetMainTags(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1023,7 +1083,7 @@ func TestService_GetMainTags(t *testing.T) {
 }
 
 func TestService_GetRecommendedTags(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1053,7 +1113,7 @@ func TestService_GetRecommendedTags(t *testing.T) {
 }
 
 func TestService_SearchTags(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1085,7 +1145,7 @@ func TestService_SearchTags(t *testing.T) {
 }
 
 func TestService_GetUnreadNotiCount(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1115,7 +1175,7 @@ func TestService_GetUnreadNotiCount(t *testing.T) {
 }
 
 func TestService_GetNotification(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1147,7 +1207,7 @@ func TestService_GetNotification(t *testing.T) {
 }
 
 func TestService_GetSystemNotiHasRead(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1178,7 +1238,7 @@ func TestService_GetSystemNotiHasRead(t *testing.T) {
 }
 
 func TestService_GetSystemNotiContent(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1209,7 +1269,7 @@ func TestService_GetSystemNotiContent(t *testing.T) {
 }
 
 func TestService_GetRepliedNotiHasRead(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1240,7 +1300,7 @@ func TestService_GetRepliedNotiHasRead(t *testing.T) {
 }
 
 func TestService_GetRepliedNotiThread(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1271,7 +1331,7 @@ func TestService_GetRepliedNotiThread(t *testing.T) {
 }
 
 func TestService_GetRepliedNotiRepliers(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1302,7 +1362,7 @@ func TestService_GetRepliedNotiRepliers(t *testing.T) {
 }
 
 func TestService_GetQuotedNotiHasRead(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1333,7 +1393,7 @@ func TestService_GetQuotedNotiHasRead(t *testing.T) {
 }
 
 func TestService_GetQuotedNotiThread(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1364,7 +1424,7 @@ func TestService_GetQuotedNotiThread(t *testing.T) {
 }
 
 func TestService_GetQuotedNotiQuotedPost(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1395,7 +1455,7 @@ func TestService_GetQuotedNotiQuotedPost(t *testing.T) {
 }
 
 func TestService_GetQuotedNotiPost(t *testing.T) {
-	service, err := getService()
+	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}

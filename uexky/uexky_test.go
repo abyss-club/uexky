@@ -13,10 +13,7 @@ import (
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
-	"gitlab.com/abyss.club/uexky/lib/redis"
 	"gitlab.com/abyss.club/uexky/lib/uid"
-	"gitlab.com/abyss.club/uexky/mocks"
-	"gitlab.com/abyss.club/uexky/repo"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
@@ -35,46 +32,6 @@ func TestMain(m *testing.M) {
 // 	}
 // 	return rc
 // }
-
-// copy from wire.InitDevService
-// TODO: move service wire to here
-func getService() (*Service, error) {
-	client, err := redis.NewClient()
-	if err != nil {
-		return nil, err
-	}
-	forumRepo := &repo.ForumRepo{}
-	userRepo := &repo.UserRepo{
-		Redis: client,
-		Forum: forumRepo,
-	}
-	mailAdapter := &mocks.MailAdapter{}
-	userService := &entity.UserService{
-		Repo: userRepo,
-		Mail: mailAdapter,
-	}
-	forumService := &entity.ForumService{
-		Repo: forumRepo,
-	}
-	notiRepo := &repo.NotiRepo{}
-	notiService := &entity.NotiService{
-		Repo: notiRepo,
-	}
-	db, err := postgres.NewDB()
-	if err != nil {
-		return nil, err
-	}
-	txAdapter := &postgres.TxAdapter{
-		DB: db,
-	}
-	service := &Service{
-		User:      userService,
-		Forum:     forumService,
-		Noti:      notiService,
-		TxAdapter: txAdapter,
-	}
-	return service, nil
-}
 
 func getNewDBCtx(t *testing.T) context.Context {
 	if err := postgres.RebuildDB(); err != nil {

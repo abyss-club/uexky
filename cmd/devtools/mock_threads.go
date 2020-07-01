@@ -14,7 +14,6 @@ import (
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
-	"gitlab.com/abyss.club/uexky/wire"
 )
 
 type mockThreadsOpt struct {
@@ -74,7 +73,7 @@ func createUser(s *uexky.Service) (*mockUser, error) {
 }
 
 func mockThreads(opt *mockThreadsOpt) error {
-	service, err := wire.InitDevService()
+	service, err := uexky.InitDevService()
 	ctx := service.TxAdapter.AttachDB(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "init service")
