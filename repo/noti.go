@@ -104,7 +104,7 @@ func (n *NotiRepo) GetNotiSlice(
 			return q.Where("id > ?", id).Order("id"), nil
 		}
 		// after
-		return q.Where("? < ?", id).Order("id DESC"), nil
+		return q.Where("id < ?", id).Order("id DESC"), nil
 	}
 	var err error
 	q, err = applySliceQuery(applySlice, q, &query)
@@ -173,8 +173,9 @@ func (n *NotiRepo) InsertNoti(ctx context.Context, insert entity.NotiInsert) err
 }
 
 func (n *NotiRepo) UpdateReadID(ctx context.Context, userID int, nType entity.NotiType, id int) error {
-	user := User{}
+	user := &User{}
 	column := fmt.Sprintf("last_read_%s_noti", nType)
-	_, err := n.db(ctx).Model(user).Set("? = ?", column, id).Where("id = ?", userID).Update()
+	setStmt := fmt.Sprintf("%s = %d", column, id)
+	_, err := n.db(ctx).Model(user).Set(setStmt).Where("id = ?", userID).Update()
 	return err
 }
