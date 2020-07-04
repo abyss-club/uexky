@@ -51,45 +51,42 @@ type testUser struct {
 	name  string
 }
 
-func loginUser(service *Service, u testUser) (*entity.User, context.Context, error) {
+func loginUser(t *testing.T, service *Service, u testUser) (*entity.User, context.Context) {
 	ctx := service.TxAdapter.AttachDB(context.Background())
 	code, err := service.TrySignInByEmail(ctx, u.email)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "TrySignInByEmail")
+		t.Fatal(errors.Wrap(err, "TrySignInByEmail"))
 	}
 	token, err := service.SignInByCode(ctx, string(code))
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "SignInByCode")
+		t.Fatal(errors.Wrap(err, "SignInByCode"))
 	}
 	userCtx, err := service.CtxWithUserByToken(ctx, token.Tok)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "CtxWithUserByToken")
+		t.Fatal(errors.Wrap(err, "CtxWithUserByToken"))
 	}
 	user, err := service.Profile(userCtx)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Profile")
+		t.Fatal(errors.Wrap(err, "Profile"))
 	}
 	if u.name != "" && user.Name == nil {
 		var err error
 		if user, err = service.SetUserName(userCtx, u.name); err != nil {
-			return nil, nil, errors.Wrap(err, "SetUserName")
+			t.Fatal(errors.Wrap(err, "SetUserName"))
 		}
 	}
-	return user, userCtx, nil
+	return user, userCtx
 }
 
 var forumRepoComp = cmp.Comparer(func(lh, rh entity.ForumRepo) bool {
 	return (lh == nil && rh == nil) || (lh != nil && rh != nil)
 })
 
-func pubThread(service *Service, u testUser) (*entity.Thread, context.Context, error) {
-	user, ctx, err := loginUser(service, u)
-	if err != nil {
-		return nil, nil, err
-	}
+func pubThread(t *testing.T, service *Service, u testUser) (*entity.Thread, context.Context) {
+	user, ctx := loginUser(t, service, u)
 	mainTags, err := service.GetMainTags(ctx)
 	if err != nil {
-		return nil, nil, err
+		t.Fatal(err)
 	}
 	input := entity.ThreadInput{
 		Anonymous: rand.Intn(2) == 0,
@@ -102,17 +99,17 @@ func pubThread(service *Service, u testUser) (*entity.Thread, context.Context, e
 		input.Anonymous = true
 	}
 	thread, err := service.PubThread(ctx, input)
-	return thread, ctx, err
+	if err != nil {
+		t.Fatal(err)
+	}
+	return thread, ctx
 }
 
-func pubThreadWithTags(service *Service, u testUser, mainTag string, subTags []string) (*entity.Thread, context.Context, error) {
-	user, ctx, err := loginUser(service, u)
+func pubThreadWithTags(t *testing.T, service *Service, u testUser, mainTag string, subTags []string) (*entity.Thread, context.Context) {
+	user, ctx := loginUser(t, service, u)
+	_, err := service.GetMainTags(ctx)
 	if err != nil {
-		return nil, nil, err
-	}
-	_, err = service.GetMainTags(ctx)
-	if err != nil {
-		return nil, nil, err
+		t.Fatal(err)
 	}
 	input := entity.ThreadInput{
 		Anonymous: rand.Intn(2) == 0,
@@ -125,14 +122,14 @@ func pubThreadWithTags(service *Service, u testUser, mainTag string, subTags []s
 		input.Anonymous = true
 	}
 	thread, err := service.PubThread(ctx, input)
-	return thread, ctx, err
+	if err != nil {
+		t.Fatal(err)
+	}
+	return thread, ctx
 }
 
-func pubPost(service *Service, u testUser, threadID uid.UID, quotedIds []uid.UID) (*entity.Post, context.Context, error) {
-	user, ctx, err := loginUser(service, u)
-	if err != nil {
-		return nil, nil, err
-	}
+func pubPost(t *testing.T, service *Service, u testUser, threadID uid.UID, quotedIds []uid.UID) (*entity.Post, context.Context) {
+	user, ctx := loginUser(t, service, u)
 	input := entity.PostInput{
 		ThreadID:  threadID,
 		Anonymous: rand.Intn(2) == 0,
@@ -143,5 +140,8 @@ func pubPost(service *Service, u testUser, threadID uid.UID, quotedIds []uid.UID
 		input.Anonymous = true
 	}
 	post, err := service.PubPost(ctx, input)
-	return post, ctx, err
+	if err != nil {
+		t.Fatal(t)
+	}
+	return post, ctx
 }

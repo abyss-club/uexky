@@ -47,6 +47,8 @@ type UserTagUpdate struct {
 	DelTags []string
 }
 
+const BlockedContent = "[此内容已被管理员屏蔽]"
+
 type ForumRepo interface {
 	GetThread(ctx context.Context, search *ThreadSearch) (*Thread, error)
 	GetThreadSlice(ctx context.Context, search *ThreadsSearch, query SliceQuery) (*ThreadSlice, error)

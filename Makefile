@@ -27,7 +27,8 @@ gengql: ## generate all
 	@gqlgen generate
 
 genwire:
-	@cd ./wire;wire;cd -
+	@cd ./uexky;wire;cd -
+	@cd ./server;wire;cd -
 
 genpg:
 	@genna model -c $(pguri) -o repo/generated.go -fkw --pkg repo --gopg 9

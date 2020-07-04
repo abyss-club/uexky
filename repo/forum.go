@@ -15,8 +15,6 @@ type ForumRepo struct {
 	mainTags []string `wire:"-"`
 }
 
-const blockedContent = "[此内容已被管理员屏蔽]" // TODO: should be service layer
-
 func (f *ForumRepo) db(ctx context.Context) postgres.Session {
 	return postgres.GetSessionFromContext(ctx)
 }
@@ -44,7 +42,7 @@ func (f *ForumRepo) toEntityThread(t *Thread) *entity.Thread {
 		thread.AuthorObj.UserName = t.UserName
 	}
 	if thread.Blocked {
-		thread.Content = blockedContent
+		thread.Content = entity.BlockedContent
 	}
 	return thread
 }
@@ -165,10 +163,10 @@ func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity
 	thread := Thread{}
 	q := f.db(ctx).Model(&thread).Where("id = ?", id)
 	if update.Blocked != nil {
-		q.Set("blocked = ?Blocked", update)
+		q.Set("blocked = ?", update.Blocked)
 	}
 	if update.Locked != nil {
-		q.Set("locked = ?Locked", update)
+		q.Set("locked = ?", update.Locked)
 	}
 	if update.MainTag != nil {
 		tags := []string{*update.MainTag}
@@ -205,7 +203,7 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 	post.Data.QuoteIDs = qids
 	if p.Blocked != nil && *p.Blocked {
 		post.Blocked = true
-		post.Content = blockedContent // TODO: move to service layer
+		post.Content = entity.BlockedContent
 	}
 	return post
 }
@@ -352,7 +350,7 @@ func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.P
 	post := Post{}
 	q := f.db(ctx).Model(&post).Where("id = ?", id)
 	if update.Blocked != nil {
-		q.Set("blocked = ?Blocked", update)
+		q.Set("blocked = ?", update.Blocked)
 	}
 	_, err := q.Update()
 	if err != nil {

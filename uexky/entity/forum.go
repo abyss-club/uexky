@@ -163,6 +163,7 @@ func (n *Thread) Block(ctx context.Context) error {
 		return err
 	}
 	n.Blocked = true
+	n.Content = BlockedContent
 	return nil
 }
 
@@ -197,6 +198,9 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 	thread, err := f.Repo.GetThread(ctx, &ThreadSearch{ID: &input.ThreadID})
 	if err != nil {
 		return nil, err
+	}
+	if thread.Locked {
+		return nil, uerr.New(uerr.ParamsError, "thread has been locked")
 	}
 	post := &Post{
 		ID:        uid.NewUID(),
@@ -266,6 +270,7 @@ func (p *Post) Block(ctx context.Context) error {
 		return err
 	}
 	p.Blocked = true
+	p.Content = BlockedContent
 	return nil
 }
 

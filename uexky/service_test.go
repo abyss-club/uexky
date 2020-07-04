@@ -2,7 +2,6 @@ package uexky
 
 import (
 	"context"
-	"log"
 	"reflect"
 	"testing"
 
@@ -20,10 +19,7 @@ func TestService_LoginByEmail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	user, _, err := loginUser(service, testUser{email: email})
-	if err != nil {
-		t.Fatal(err)
-	}
+	user, _ := loginUser(t, service, testUser{email: email})
 	wantUser := &entity.User{
 		Email: email,
 		Role:  entity.RoleNormal,
@@ -74,10 +70,7 @@ func TestService_SetUserName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			user, ctx, err := loginUser(service, testUser{email: tt.args.email})
-			if err != nil {
-				t.Fatal(err)
-			}
+			user, ctx := loginUser(t, service, testUser{email: tt.args.email})
 			gotUser, err := service.SetUserName(ctx, tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Service.SetUserName() error = %v, wantErr %v", err, tt.wantErr)
@@ -106,16 +99,10 @@ func TestService_GetUserThreads(t *testing.T) {
 	var threads []*entity.Thread
 	tu := testUser{email: "a@example.com", name: "a"}
 	for i := 0; i < 10; i++ {
-		thread, _, err := pubThread(service, tu)
-		if err != nil {
-			t.Fatal(err)
-		}
+		thread, _ := pubThread(t, service, tu)
 		threads = append(threads, thread)
 	}
-	user, ctx, err := loginUser(service, testUser{email: "a@example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	user, ctx := loginUser(t, service, testUser{email: "a@example.com"})
 	type args struct {
 		ctx   context.Context
 		obj   *entity.User
@@ -226,7 +213,7 @@ func TestService_GetUserPosts(t *testing.T) {
 	}
 	var threads []*entity.Thread
 	for i := 0; i < 2; i++ {
-		thread, _, err := pubThread(service, testUser{email: "thread@example.com"})
+		thread, _ := pubThread(t, service, testUser{email: "thread@example.com"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -235,16 +222,10 @@ func TestService_GetUserPosts(t *testing.T) {
 	tu := testUser{email: "post@example.com", name: " post"}
 	var posts []*entity.Post
 	for i := 0; i < 10; i++ {
-		post, _, err := pubPost(service, tu, threads[i%2].ID, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
+		post, _ := pubPost(t, service, tu, threads[i%2].ID, nil)
 		posts = append(posts, post)
 	}
-	user, ctx, err := loginUser(service, tu)
-	if err != nil {
-		log.Fatal(err)
-	}
+	user, ctx := loginUser(t, service, tu)
 	type args struct {
 		ctx   context.Context
 		obj   *entity.User
@@ -343,53 +324,6 @@ func TestService_GetUserPosts(t *testing.T) {
 	}
 }
 
-func TestService_GetUserTags(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
-	user, ctx, err := loginUser(service, testUser{name: "a", email: "a@example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	type args struct {
-		ctx context.Context
-		obj *entity.User
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []string
-		wantErr bool
-	}{
-		{
-			name: "new user's tags",
-			args: args{
-				ctx: ctx,
-				obj: user,
-			},
-			want:    []string{"MainA", "MainB", "MainC"},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.GetUserTags(tt.args.ctx, tt.args.obj)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.GetUserTags() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.GetUserTags() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestService_SyncUserTags(t *testing.T) {
 	ctx := getNewDBCtx(t)
 	service, err := InitDevService()
@@ -399,10 +333,7 @@ func TestService_SyncUserTags(t *testing.T) {
 	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
 		t.Fatal(err)
 	}
-	_, ctx, err = loginUser(service, testUser{name: "a", email: "a@example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, ctx = loginUser(t, service, testUser{name: "a", email: "a@example.com"})
 	type args struct {
 		ctx  context.Context
 		tags []string
@@ -439,12 +370,8 @@ func TestService_SyncUserTags(t *testing.T) {
 				t.Errorf("Service.SyncUserTags() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			tags, err := service.GetUserTags(ctx, got)
-			if err != nil {
-				t.Error(errors.Wrap(err, "GetUserTags"))
-			}
-			if diff := cmp.Diff(tags, tt.wantTags); diff != "" {
-				t.Errorf("Service.SyncUserTags() = %v, wantTags %v", tags, tt.wantTags)
+			if diff := cmp.Diff(got.Tags, tt.wantTags); diff != "" {
+				t.Errorf("Service.SyncUserTags() = %v, wantTags %v", got.Tags, tt.wantTags)
 			}
 		})
 	}
@@ -459,10 +386,7 @@ func TestService_AddUserSubbedTag(t *testing.T) {
 	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
 		t.Fatal(err)
 	}
-	_, ctx, err = loginUser(service, testUser{name: "a", email: "a@example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, ctx = loginUser(t, service, testUser{name: "a", email: "a@example.com"})
 	type args struct {
 		ctx context.Context
 		tag string
@@ -493,12 +417,8 @@ func TestService_AddUserSubbedTag(t *testing.T) {
 				t.Errorf("Service.AddUserSubbedTag() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			tags, err := service.GetUserTags(ctx, got)
-			if err != nil {
-				t.Error(errors.Wrap(err, "GetUserTags"))
-			}
-			if diff := cmp.Diff(tags, tt.wantTags); diff != "" {
-				t.Errorf("Service.AddUserSubbedTag() = %v, wantTags %v", tags, tt.wantTags)
+			if diff := cmp.Diff(got.Tags, tt.wantTags); diff != "" {
+				t.Errorf("Service.AddUserSubbedTag() = %v, wantTags %v", got.Tags, tt.wantTags)
 			}
 		})
 	}
@@ -513,10 +433,7 @@ func TestService_DelUserSubbedTag(t *testing.T) {
 	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
 		t.Fatal(err)
 	}
-	_, ctx, err = loginUser(service, testUser{name: "a", email: "a@example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, ctx = loginUser(t, service, testUser{name: "a", email: "a@example.com"})
 	type args struct {
 		ctx context.Context
 		tag string
@@ -553,11 +470,7 @@ func TestService_DelUserSubbedTag(t *testing.T) {
 				t.Errorf("Service.DelUserSubbedTag() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			tags, err := service.GetUserTags(ctx, got)
-			if err != nil {
-				t.Error(errors.Wrap(err, "GetUserTags"))
-			}
-			if diff := cmp.Diff(tags, tt.wantTags); diff != "" {
+			if diff := cmp.Diff(got.Tags, tt.wantTags); diff != "" {
 				t.Errorf("Service.DelUserSubbedTag() diff = %v", diff)
 			}
 		})
@@ -569,28 +482,63 @@ func TestService_BanUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := getNewDBCtx(t)
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
+	}
+	thread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+	post, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID, nil)
+	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
+	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
+		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
 	type args struct {
 		ctx      context.Context
 		postID   *uid.UID
 		threadID *uid.UID
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    bool
-		wantErr bool
+		name       string
+		args       args
+		checkEmail string
+		wantBanned bool
+		wantErr    bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "ban user by post id",
+			args: args{
+				ctx:    modCtx,
+				postID: &post.ID,
+			},
+			checkEmail: "p@example.com",
+			wantBanned: true,
+		},
+		{
+			name: "ban user by thread id",
+			args: args{
+				ctx:      modCtx,
+				threadID: &thread.ID,
+			},
+			checkEmail: "t@example.com",
+			wantBanned: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.BanUser(tt.args.ctx, tt.args.postID, tt.args.threadID)
+			_, err := service.BanUser(tt.args.ctx, tt.args.postID, tt.args.threadID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Service.BanUser() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if got != tt.want {
-				t.Errorf("Service.BanUser() = %v, want %v", got, tt.want)
+			user, _ := loginUser(t, service, testUser{email: tt.checkEmail})
+			if err != nil {
+				t.Error(errors.Wrap(err, "get user profile"))
+			}
+			if (user.Role == entity.RoleBanned) != tt.wantBanned {
+				t.Errorf("user role = %v, wantBanned %v", user.Role, tt.wantBanned)
 			}
 		})
 	}
@@ -601,30 +549,43 @@ func TestService_BlockPost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	type args struct {
-		ctx    context.Context
-		postID uid.UID
+	ctx := getNewDBCtx(t)
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *entity.Post
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	thread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+
+	oriPost, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID, nil)
+	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
+	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
+		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
+	}); err != nil {
+		t.Fatal(err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.BlockPost(tt.args.ctx, tt.args.postID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.BlockPost() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.BlockPost() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	oriPost.Blocked = true
+	oriPost.Content = entity.BlockedContent
+	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
+
+	t.Run("check post in memory", func(t *testing.T) {
+		post, err := service.BlockPost(modCtx, oriPost.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "BlockPost"))
+		}
+		oriPost.CreatedAt = post.CreatedAt
+		if diff := cmp.Diff(post, oriPost, forumRepoComp); diff != "" {
+			t.Errorf("BlockPost() post matched: %s", diff)
+		}
+	})
+	t.Run("check post in database", func(t *testing.T) {
+		post, err := service.GetPostByID(modCtx, oriPost.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "GetPostByID"))
+		}
+		oriPost.CreatedAt = post.CreatedAt
+		if diff := cmp.Diff(post, oriPost, forumRepoComp); diff != "" {
+			t.Errorf("BlockPost() post matched: %s", diff)
+		}
+	})
 }
 
 func TestService_LockThread(t *testing.T) {
@@ -632,30 +593,53 @@ func TestService_LockThread(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	type args struct {
-		ctx      context.Context
-		threadID uid.UID
+	ctx := getNewDBCtx(t)
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *entity.Thread
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+
+	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
+	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
+		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
+	}); err != nil {
+		t.Fatal(err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.LockThread(tt.args.ctx, tt.args.threadID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.LockThread() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.LockThread() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	oriThread.Locked = true
+	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
+
+	t.Run("check thread in memory", func(t *testing.T) {
+		thread, err := service.LockThread(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "LockThread"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
+			t.Errorf("LockThread() not matched: %s", diff)
+		}
+	})
+	t.Run("check thread in database", func(t *testing.T) {
+		thread, err := service.GetThreadByID(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "GetThreadByID"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
+			t.Errorf("LockThread() not matched: %s", diff)
+		}
+	})
+	t.Run("thread locked", func(t *testing.T) {
+		_, ctx := loginUser(t, service, testUser{email: "p@example.com"})
+		input := entity.PostInput{
+			ThreadID:  oriThread.ID,
+			Anonymous: true,
+			Content:   uid.RandomBase64Str(50),
+		}
+		_, err := service.PubPost(ctx, input)
+		if err == nil {
+			t.Errorf("locked thread still can send new post")
+		}
+	})
 }
 
 func TestService_BlockThread(t *testing.T) {
@@ -663,30 +647,42 @@ func TestService_BlockThread(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	type args struct {
-		ctx      context.Context
-		threadID uid.UID
+	ctx := getNewDBCtx(t)
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *entity.Thread
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+
+	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
+	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
+		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
+	}); err != nil {
+		t.Fatal(err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.BlockThread(tt.args.ctx, tt.args.threadID)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.BlockThread() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.BlockThread() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	oriThread.Blocked = true
+	oriThread.Content = entity.BlockedContent
+	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
+
+	t.Run("check thread in memory", func(t *testing.T) {
+		thread, err := service.BlockThread(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "BlockThread"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
+			t.Errorf("LockThread() not matched: %s", diff)
+		}
+	})
+	t.Run("check thread in database", func(t *testing.T) {
+		thread, err := service.GetThreadByID(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "GetThreadByID"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
+			t.Errorf("LockThread() not matched: %s", diff)
+		}
+	})
 }
 
 func TestService_EditTags(t *testing.T) {
@@ -694,32 +690,42 @@ func TestService_EditTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	type args struct {
-		ctx      context.Context
-		threadID uid.UID
-		mainTag  string
-		subTags  []string
+	ctx := getNewDBCtx(t)
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
 	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *entity.Thread
-		wantErr bool
-	}{
-		// TODO: Add test cases.
+	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+
+	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
+	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
+		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
+	}); err != nil {
+		t.Fatal(err)
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.EditTags(tt.args.ctx, tt.args.threadID, tt.args.mainTag, tt.args.subTags)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.EditTags() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.EditTags() = %v, want %v", got, tt.want)
-			}
-		})
-	}
+	oriThread.MainTag = "MainC"
+	oriThread.SubTags = []string{"SubC", "SubB", "SubA"}
+	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
+
+	t.Run("check thread in memory", func(t *testing.T) {
+		thread, err := service.EditTags(modCtx, oriThread.ID, oriThread.MainTag, oriThread.SubTags)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "EditTags"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
+			t.Errorf("EditTags() not matched: %s", diff)
+		}
+	})
+	t.Run("check thread in database", func(t *testing.T) {
+		thread, err := service.GetThreadByID(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "GetThreadByID"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
+			t.Errorf("EditTags() not matched: %s", diff)
+		}
+	})
 }
 
 func TestService_PubThread(t *testing.T) {
@@ -728,10 +734,7 @@ func TestService_PubThread(t *testing.T) {
 		t.Fatal(err)
 	}
 	getNewDBCtx(t)
-	user, ctx, err := loginUser(service, testUser{email: "a@example.com", name: "a"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	user, ctx := loginUser(t, service, testUser{email: "a@example.com", name: "a"})
 	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
 		t.Fatal(err)
 	}
@@ -824,24 +827,17 @@ func TestService_SearchThreads(t *testing.T) {
 	tu := testUser{email: "a@example.com", name: "a"}
 	for i := 0; i < 10; i++ {
 		var thread *entity.Thread
-		var err error
 		switch {
 		case i < 3:
-			thread, _, err = pubThreadWithTags(service, tu, "MainA", []string{"SubA"})
+			thread, _ = pubThreadWithTags(t, service, tu, "MainA", []string{"SubA"})
 		case i < 6:
-			thread, _, err = pubThreadWithTags(service, tu, "MainA", []string{"SubA", "SubB"})
+			thread, _ = pubThreadWithTags(t, service, tu, "MainA", []string{"SubA", "SubB"})
 		default:
-			thread, _, err = pubThreadWithTags(service, tu, "MainC", []string{"SubB", "SubC"})
-		}
-		if err != nil {
-			t.Fatal(err)
+			thread, _ = pubThreadWithTags(t, service, tu, "MainC", []string{"SubB", "SubC"})
 		}
 		threads = append(threads, thread)
 	}
-	_, ctx, err = loginUser(service, testUser{email: "a@example.com"})
-	if err != nil {
-		t.Fatal(err)
-	}
+	_, ctx = loginUser(t, service, testUser{email: "a@example.com"})
 	type args struct {
 		ctx   context.Context
 		tags  []string
