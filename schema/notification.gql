@@ -56,6 +56,14 @@ type SystemNoti {
   content: String!
 }
 
+type ThreadOutline {
+  id: UID!
+  title: String
+  brief: String!
+  mainTag: String!
+  subTags: [String!]!
+}
+
 # Object describing a replied notification.
 type RepliedNoti {
   # ID contains different types of format.
@@ -67,10 +75,15 @@ type RepliedNoti {
   # The notification is read or not.
   hasRead: Boolean!
   # The thread object that is replied.
-  thread: Thread!
+  thread: ThreadOutline!
   # Array of users that replied. Same as the corresponding author field in
   # the object "Post".
   repliers: [String!]!
+}
+
+type PostOutline {
+  author: String!
+  brief: String!
 }
 
 # Object describing a quoted notification.
@@ -83,10 +96,10 @@ type QuotedNoti {
   eventTime: Time!
   # The notification is read or not.
   hasRead: Boolean!
-  # The thread object that is quoted in.
-  thread: Thread!
+  # The thread id that is quoted in.
+  threadId: UID!
   # The post object that is quoted.
-  quotedPost: Post!
+  quotedPost: PostOutline!
   # The post object that made this notification.
-  post: Post!
+  post: PostOutline!
 }
