@@ -37,9 +37,8 @@ type PostUpdate struct {
 }
 
 type TagSearch struct {
-	Text   *string
-	UserID *int
-	Limit  int
+	Text  string
+	Limit int
 }
 
 type UserTagUpdate struct {

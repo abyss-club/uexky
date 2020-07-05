@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
@@ -360,15 +361,22 @@ func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.P
 }
 
 func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entity.Tag, error) {
-	var tags []Tag
-	q := f.db(ctx).Model(&tags).Limit(search.Limit)
-	if search.Text != nil {
-		q.Where("name LIKE '%?%'", *search.Text)
+	type tag struct {
+		Tag string `pg:"tag"`
 	}
-	if search.UserID != nil {
-		q.Where("name IN (SELECT tag_name FROM users_tags WHERE user_id=?)", *search.UserID)
+	var tags []tag
+	var where, limit string
+	if search.Text != "" {
+		where = fmt.Sprintf("WHERE tag LIKE '%%%s%%'", search.Text)
 	}
-	if err := q.Select(); err != nil {
+	if search.Limit != 0 {
+		limit = fmt.Sprintf("LIMIT %v", search.Limit)
+	}
+	sql := fmt.Sprintf(`SELECT tag FROM (
+		SELECT unnest(tags) as tag, max(created_at) as updated_at
+		FROM thread group by tag
+	) as tags %s ORDER BY updated_at DESC %s`, where, limit)
+	if _, err := f.db(ctx).Query(&tags, sql); err != nil {
 		return nil, err
 	}
 	mainTags, err := f.GetMainTags(ctx)
@@ -378,8 +386,8 @@ func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*e
 	var entities []*entity.Tag
 	for _, t := range tags {
 		entities = append(entities, &entity.Tag{
-			Name:   t.Name,
-			IsMain: algo.InStrSlice(mainTags, t.Name),
+			Name:   t.Tag,
+			IsMain: algo.InStrSlice(mainTags, t.Tag),
 		})
 	}
 	return entities, nil

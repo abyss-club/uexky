@@ -955,89 +955,23 @@ func TestService_SearchThreads(t *testing.T) {
 	}
 }
 
-func TestService_GetThreadByID(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	type args struct {
-		ctx context.Context
-		id  uid.UID
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *entity.Thread
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.GetThreadByID(tt.args.ctx, tt.args.id)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.GetThreadByID() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.GetThreadByID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestService_PubPost(t *testing.T) {
-	/*
-		service, err := InitDevService()
-		if err != nil {
-			t.Fatal(err)
-		}
-		ctx := getNewDBCtx(t)
-		mainTags := []string{"MainA", "MainB", "MainC"}
-		if err := service.SetMainTags(ctx, mainTags); err != nil {
-			t.Fatal(err)
-		}
-		thread, ctx, err := pubThread(service, testUser{email: "a@example.com", name: "a"})
-		type args struct {
-			email string
-			name  *string
-			post  entity.PostInput
-		}
-		tests := []struct {
-			name    string
-			args    args
-			want    *entity.Post
-			wantErr bool
-		}{}
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				user, ctx := loginUser(service, testUser{email: tt.args.email})
-				if tt.args.name != nil && user.name == nil {
-					if _, err := service.SetUserName(ctx, *tt.args.name); err != nil {
-						t.Fatal(err)
-					}
-				}
-				got, err := service.PubPost(tt.args.ctx, tt.args.post)
-				if (err != nil) != tt.wantErr {
-					t.Errorf("Service.PubPost() error = %v, wantErr %v", err, tt.wantErr)
-					return
-				}
-				if !reflect.DeepEqual(got, tt.want) {
-					t.Errorf("Service.PubPost() = %v, want %v", got, tt.want)
-				}
-			})
-		}
-	*/
-}
-
-func TestService_GetPostByID(t *testing.T) {
 	service, err := InitDevService()
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := getNewDBCtx(t)
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	if err := service.SetMainTags(ctx, mainTags); err != nil {
+		t.Fatal(err)
+	}
+	thread, _ := pubThread(t, service, testUser{email: "a@example.com", name: "a"})
+	post, _ := pubPost(t, service, testUser{email: "a@example.com", name: "a"}, thread.ID, nil)
+	user1, userCtx1 := loginUser(t, service, testUser{email: "p1@example.com"})
+	user2, userCtx2 := loginUser(t, service, testUser{email: "p2@example.com", name: "p2"})
 	type args struct {
-		ctx context.Context
-		id  uid.UID
+		ctx  context.Context
+		post entity.PostInput
 	}
 	tests := []struct {
 		name    string
@@ -1045,102 +979,107 @@ func TestService_GetPostByID(t *testing.T) {
 		want    *entity.Post
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "anonymous signed in user",
+			args: args{
+				ctx: userCtx1,
+				post: entity.PostInput{
+					ThreadID:  thread.ID,
+					Anonymous: true,
+					Content:   "content1",
+				},
+			},
+			want: &entity.Post{
+				Anonymous: true,
+				Content:   "content1",
+				Repo:      service.Forum.Repo,
+				Data: entity.PostData{
+					ThreadID: thread.ID,
+					Author: entity.Author{
+						UserID: user1.ID,
+					},
+					QuotePosts: []*entity.Post{},
+				},
+			},
+		},
+		{
+			name: "pub post with user name",
+			args: args{
+				ctx: userCtx2,
+				post: entity.PostInput{
+					ThreadID:  thread.ID,
+					Anonymous: false,
+					Content:   "content2",
+				},
+			},
+			want: &entity.Post{
+				Anonymous: false,
+				Content:   "content2",
+				Repo:      service.Forum.Repo,
+				Data: entity.PostData{
+					ThreadID: thread.ID,
+					Author: entity.Author{
+						UserID:   user2.ID,
+						UserName: user2.Name,
+					},
+					QuotePosts: []*entity.Post{},
+				},
+			},
+		},
+		{
+			name: "pub post with quoted post",
+			args: args{
+				ctx: userCtx1,
+				post: entity.PostInput{
+					ThreadID:  thread.ID,
+					Anonymous: true,
+					Content:   "content3",
+					QuoteIds:  []uid.UID{post.ID},
+				},
+			},
+			want: &entity.Post{
+				Anonymous: true,
+				Content:   "content3",
+				Repo:      service.Forum.Repo,
+				Data: entity.PostData{
+					ThreadID: thread.ID,
+					Author: entity.Author{
+						UserID: user1.ID,
+					},
+					QuoteIDs:   []uid.UID{post.ID},
+					QuotePosts: []*entity.Post{},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.GetPostByID(tt.args.ctx, tt.args.id)
+			got, err := service.PubPost(tt.args.ctx, tt.args.post)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.GetPostByID() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("Service.PubPost() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.GetPostByID() = %v, want %v", got, tt.want)
+			tt.want.ID = got.ID
+			tt.want.CreatedAt = got.CreatedAt
+			if tt.args.post.Anonymous {
+				tt.want.Data.Author.AnonymousID = got.Data.Author.AnonymousID
 			}
-		})
-	}
-}
-
-func TestService_SetMainTags(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	type args struct {
-		ctx  context.Context
-		tags []string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := service.SetMainTags(tt.args.ctx, tt.args.tags); (err != nil) != tt.wantErr {
-				t.Errorf("Service.SetMainTags() error = %v, wantErr %v", err, tt.wantErr)
+			if diff := cmp.Diff(got, tt.want, forumRepoComp); diff != "" {
+				t.Errorf("Service.PubPost() missmatch %s", diff)
 			}
-		})
-	}
-}
-
-func TestService_GetMainTags(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	type args struct {
-		ctx context.Context
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []string
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.GetMainTags(tt.args.ctx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.GetMainTags() error = %v, wantErr %v", err, tt.wantErr)
-				return
+			if got.Author() != tt.want.Author() {
+				t.Errorf("Service.PubPost().Author = %s, want = %s", got.Author(), tt.want.Author())
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.GetMainTags() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestService_GetRecommendedTags(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	type args struct {
-		ctx context.Context
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []string
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.GetRecommendedTags(tt.args.ctx)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.GetRecommendedTags() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.GetRecommendedTags() = %v, want %v", got, tt.want)
+			if len(tt.want.Data.QuoteIDs) != 0 {
+				quoted, err := got.Quotes(tt.args.ctx)
+				if err != nil {
+					t.Error(errors.Wrap(err, "Quotes()"))
+				}
+				if len(quoted) == 0 {
+					t.Error("should have a quoted post")
+				} else if diff := cmp.Diff(quoted[0], post, forumRepoComp, timeCmp); diff != "" {
+					t.Errorf("Service.PubPost().Quotes() missmatch: %s", diff)
+				}
 			}
 		})
 	}
@@ -1151,18 +1090,77 @@ func TestService_SearchTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := getNewDBCtx(t)
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
+	}
+	pubThreadWithTags(t, service, testUser{email: "a@example.com"}, "MainA", []string{"Sub11", "Sub21"})
+	pubThreadWithTags(t, service, testUser{email: "a@example.com"}, "MainB", []string{"Sub12", "Sub22"})
+	pubThreadWithTags(t, service, testUser{email: "a@example.com"}, "MainC", []string{"Sub13", "Sub23"})
+	pubThreadWithTags(t, service, testUser{email: "a@example.com"}, "MainA", []string{"Sub14", "Sub24"})
+	pubThreadWithTags(t, service, testUser{email: "a@example.com"}, "MainB", []string{"Sub15", "Sub25"})
+	pubThreadWithTags(t, service, testUser{email: "a@example.com"}, "MainC", []string{"Sub16", "Sub26"})
 	type args struct {
 		ctx   context.Context
 		query *string
 		limit *int
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    []*entity.Tag
-		wantErr bool
+		name        string
+		args        args
+		ignoreOrder bool
+		want        []*entity.Tag
+		wantErr     bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "search all tags",
+			args: args{
+				ctx:   ctx,
+				query: nil,
+				limit: algo.NullInt(9),
+			},
+			want: []*entity.Tag{
+				{Name: "MainA", IsMain: true},
+				{Name: "MainB", IsMain: true},
+				{Name: "MainC", IsMain: true},
+				{Name: "Sub14", IsMain: false},
+				{Name: "Sub15", IsMain: false},
+				{Name: "Sub16", IsMain: false},
+				{Name: "Sub24", IsMain: false},
+				{Name: "Sub25", IsMain: false},
+				{Name: "Sub26", IsMain: false},
+			},
+			ignoreOrder: true,
+		},
+		{
+			name: "search mainTags tags",
+			args: args{
+				ctx:   ctx,
+				query: algo.NullString("Main"),
+				limit: algo.NullInt(10),
+			},
+			want: []*entity.Tag{
+				{Name: "MainC", IsMain: true},
+				{Name: "MainB", IsMain: true},
+				{Name: "MainA", IsMain: true},
+			},
+		},
+		{
+			name: "search sub tags",
+			args: args{
+				ctx:   ctx,
+				query: algo.NullString("ub1"),
+				limit: algo.NullInt(10),
+			},
+			want: []*entity.Tag{
+				{Name: "Sub16", IsMain: false},
+				{Name: "Sub15", IsMain: false},
+				{Name: "Sub14", IsMain: false},
+				{Name: "Sub13", IsMain: false},
+				{Name: "Sub12", IsMain: false},
+				{Name: "Sub11", IsMain: false},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1171,8 +1169,14 @@ func TestService_SearchTags(t *testing.T) {
 				t.Errorf("Service.SearchTags() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.SearchTags() = %v, want %v", got, tt.want)
+			if !tt.ignoreOrder {
+				if diff := cmp.Diff(got, tt.want); diff != "" {
+					t.Errorf("Service.SearchTags() missmatch: %s", diff)
+				}
+			} else {
+				if diff := cmp.Diff(got, tt.want, tagSetCmp); diff != "" {
+					t.Errorf("Service.SearchTags() missmatch: %s", diff)
+				}
 			}
 		})
 	}

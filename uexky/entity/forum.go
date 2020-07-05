@@ -249,14 +249,13 @@ func (p *Post) Author() string {
 }
 
 func (p *Post) Quotes(ctx context.Context) ([]*Post, error) {
-	if p.Data.QuotePosts != nil {
-		return p.Data.QuotePosts, nil
+	if len(p.Data.QuoteIDs) != 0 && len(p.Data.QuotePosts) == 0 {
+		quotedPosts, err := p.Repo.GetPosts(ctx, &PostsSearch{IDs: p.Data.QuoteIDs})
+		if err != nil {
+			return nil, err
+		}
+		p.Data.QuotePosts = quotedPosts
 	}
-	quotedPosts, err := p.Repo.GetPosts(ctx, &PostsSearch{IDs: p.Data.QuoteIDs})
-	if err != nil {
-		return nil, err
-	}
-	p.Data.QuotePosts = quotedPosts
 	return p.Data.QuotePosts, nil
 }
 
@@ -278,10 +277,6 @@ func (f *ForumService) GetMainTags(ctx context.Context) ([]string, error) {
 	return f.Repo.GetMainTags(ctx)
 }
 
-func (f *ForumService) GetRecommendedTags(ctx context.Context) ([]string, error) {
-	return f.GetMainTags(ctx)
-}
-
 func (f *ForumService) SetMainTags(ctx context.Context, tags []string) error {
 	mainTags, err := f.GetMainTags(ctx)
 	if err != nil {
@@ -294,10 +289,11 @@ func (f *ForumService) SetMainTags(ctx context.Context, tags []string) error {
 }
 
 func (f *ForumService) SearchTags(ctx context.Context, query *string, limit *int) ([]*Tag, error) {
-	search := &TagSearch{Text: query}
-	if limit == nil {
-		search.Limit = 10
-	} else {
+	search := &TagSearch{Limit: 10}
+	if query != nil {
+		search.Text = *query
+	}
+	if limit != nil {
 		search.Limit = *limit
 	}
 	return f.Repo.GetTags(ctx, search)

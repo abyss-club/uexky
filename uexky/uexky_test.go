@@ -6,7 +6,9 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"sort"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
@@ -78,10 +80,6 @@ func loginUser(t *testing.T, service *Service, u testUser) (*entity.User, contex
 	return user, userCtx
 }
 
-var forumRepoComp = cmp.Comparer(func(lh, rh entity.ForumRepo) bool {
-	return (lh == nil && rh == nil) || (lh != nil && rh != nil)
-})
-
 func pubThread(t *testing.T, service *Service, u testUser) (*entity.Thread, context.Context) {
 	user, ctx := loginUser(t, service, u)
 	mainTags, err := service.GetMainTags(ctx)
@@ -145,3 +143,22 @@ func pubPost(t *testing.T, service *Service, u testUser, threadID uid.UID, quote
 	}
 	return post, ctx
 }
+
+var forumRepoComp = cmp.Comparer(func(lh, rh entity.ForumRepo) bool {
+	return (lh == nil && rh == nil) || (lh != nil && rh != nil)
+})
+
+var timeCmp = cmp.Comparer(func(lh, rh time.Time) bool {
+	delta := lh.Sub(rh)
+	return delta > (-10*time.Millisecond) && delta < (10*time.Millisecond)
+})
+
+var tagSetCmp = cmp.Comparer(func(lh, rh []*entity.Tag) bool {
+	sort.SliceStable(lh, func(i, j int) bool {
+		return lh[i].Name < lh[j].Name
+	})
+	sort.SliceStable(rh, func(i, j int) bool {
+		return rh[i].Name < rh[j].Name
+	})
+	return cmp.Equal(lh, rh)
+})

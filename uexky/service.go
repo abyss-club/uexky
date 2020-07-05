@@ -232,7 +232,7 @@ func (s *Service) GetMainTags(ctx context.Context) ([]string, error) {
 }
 
 func (s *Service) GetRecommendedTags(ctx context.Context) ([]string, error) {
-	return s.Forum.GetRecommendedTags(ctx)
+	return s.Forum.GetMainTags(ctx)
 }
 
 func (s *Service) SearchTags(ctx context.Context, query *string, limit *int) ([]*entity.Tag, error) {
