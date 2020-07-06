@@ -231,7 +231,7 @@ func TestUserRepo_toEntityUser(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			u := &UserRepo{}
-			if got := u.toEntityUser(tt.args.user); !reflect.DeepEqual(got, tt.want) {
+			if got := u.toEntityUser(tt.args.user, nil); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("UserRepo.toEntityUser() = %v, want %v", got, tt.want)
 			}
 		})

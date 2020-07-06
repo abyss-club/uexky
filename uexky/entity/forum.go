@@ -4,6 +4,7 @@ package entity
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -162,6 +163,7 @@ func (n *Thread) Block(ctx context.Context) error {
 		return err
 	}
 	n.Blocked = true
+	n.Content = BlockedContent
 	return nil
 }
 
@@ -183,6 +185,10 @@ type Post struct {
 	Data PostData  `json:"-"`
 }
 
+func (p Post) String() string {
+	return fmt.Sprintf("<Post:%v:%s>", p.ID, p.ID.ToBase64String())
+}
+
 type NewPostResponse struct {
 	Post   *Post
 	Thread *Thread
@@ -193,6 +199,9 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 	if err != nil {
 		return nil, err
 	}
+	if thread.Locked {
+		return nil, uerr.New(uerr.ParamsError, "thread has been locked")
+	}
 	post := &Post{
 		ID:        uid.NewUID(),
 		CreatedAt: time.Now(),
@@ -201,9 +210,10 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 
 		Repo: f.Repo,
 		Data: PostData{
-			Author:   Author{UserID: user.ID},
-			ThreadID: input.ThreadID,
-			QuoteIDs: input.QuoteIds,
+			Author:     Author{UserID: user.ID},
+			ThreadID:   input.ThreadID,
+			QuoteIDs:   input.QuoteIds,
+			QuotePosts: make([]*Post, 0),
 		},
 	}
 	if input.Anonymous {
@@ -231,7 +241,7 @@ func (f *ForumService) GetPostByID(ctx context.Context, postID uid.UID) (*Post, 
 }
 
 func (f *ForumService) GetUserPosts(ctx context.Context, user *User, query SliceQuery) (*PostSlice, error) {
-	return f.Repo.GetPostSlice(ctx, &PostsSearch{UserID: &user.ID}, query)
+	return f.Repo.GetPostSlice(ctx, &PostsSearch{UserID: &user.ID, DESC: true}, query)
 }
 
 func (p *Post) Author() string {
@@ -239,14 +249,13 @@ func (p *Post) Author() string {
 }
 
 func (p *Post) Quotes(ctx context.Context) ([]*Post, error) {
-	if p.Data.QuotePosts != nil {
-		return p.Data.QuotePosts, nil
+	if len(p.Data.QuoteIDs) != 0 && len(p.Data.QuotePosts) == 0 {
+		quotedPosts, err := p.Repo.GetPosts(ctx, &PostsSearch{IDs: p.Data.QuoteIDs})
+		if err != nil {
+			return nil, err
+		}
+		p.Data.QuotePosts = quotedPosts
 	}
-	quotedPosts, err := p.Repo.GetPosts(ctx, &PostsSearch{IDs: p.Data.QuoteIDs})
-	if err != nil {
-		return nil, err
-	}
-	p.Data.QuotePosts = quotedPosts
 	return p.Data.QuotePosts, nil
 }
 
@@ -260,15 +269,12 @@ func (p *Post) Block(ctx context.Context) error {
 		return err
 	}
 	p.Blocked = true
+	p.Content = BlockedContent
 	return nil
 }
 
 func (f *ForumService) GetMainTags(ctx context.Context) ([]string, error) {
 	return f.Repo.GetMainTags(ctx)
-}
-
-func (f *ForumService) GetRecommendedTags(ctx context.Context) ([]string, error) {
-	return f.GetMainTags(ctx)
 }
 
 func (f *ForumService) SetMainTags(ctx context.Context, tags []string) error {
@@ -283,10 +289,11 @@ func (f *ForumService) SetMainTags(ctx context.Context, tags []string) error {
 }
 
 func (f *ForumService) SearchTags(ctx context.Context, query *string, limit *int) ([]*Tag, error) {
-	search := &TagSearch{Text: query}
-	if limit == nil {
-		search.Limit = 10
-	} else {
+	search := &TagSearch{Limit: 10}
+	if query != nil {
+		search.Text = *query
+	}
+	if limit != nil {
 		search.Limit = *limit
 	}
 	return f.Repo.GetTags(ctx, search)

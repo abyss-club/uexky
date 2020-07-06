@@ -10,6 +10,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
@@ -69,19 +70,17 @@ func newAuthMail(email string, code Code) *adapter.Mail {
 	}
 }
 
-func (s *UserService) GenSignInCodeByEmail(ctx context.Context, email string) (Code, error) {
+func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (Code, error) {
 	// TODO: validate email
-	code := uid.RandomBase64Str(codeLength)
-	err := s.Repo.SetCode(ctx, email, code, codeExpire)
-	return Code(code), err
-}
-
-func (s *UserService) SendSignInEmail(ctx context.Context, email string, code Code) (bool, error) {
+	code := Code(uid.RandomBase64Str(codeLength))
+	if err := s.Repo.SetCode(ctx, email, string(code), codeExpire); err != nil {
+		return "", err
+	}
 	mail := newAuthMail(email, code)
 	if err := s.Mail.SendEmail(ctx, mail); err != nil {
-		return false, err
+		return "", err
 	}
-	return true, nil
+	return code, nil
 }
 
 type Token struct {
@@ -119,6 +118,12 @@ func (s *UserService) SignInByCode(ctx context.Context, code string) (Token, err
 	return Token{Tok: tok, Expire: tokenExpire}, nil
 }
 
+type contextKey int
+
+const (
+	userKey contextKey = 1 + iota
+)
+
 func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, error) {
 	email, err := s.Repo.GetTokenEmail(ctx, tok)
 	if err != nil {
@@ -137,11 +142,12 @@ func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (conte
 	return context.WithValue(ctx, userKey, user), nil
 }
 
-type contextKey int
-
-const (
-	userKey contextKey = 1 + iota
-)
+func (s *UserService) BanUser(ctx context.Context, id int) (bool, error) {
+	if err := s.Repo.UpdateUser(ctx, id, &UserUpdate{Role: (*Role)(algo.NullString(string(RoleBanned)))}); err != nil {
+		return false, err
+	}
+	return true, nil
+}
 
 func ParseRole(s string) Role {
 	if s == "" {
@@ -176,6 +182,7 @@ type Action string
 const (
 	ActionProfile     = Action("PROFILE")
 	ActionBanUser     = Action("BAN_USER")
+	ActionPromoteUser = Action("PROMOTE_USER")
 	ActionBlockPost   = Action("BLOCK_POST")
 	ActionLockThread  = Action("LOCK_THREAD")
 	ActionBlockThread = Action("BLOCK_THREAD")
@@ -186,8 +193,9 @@ const (
 )
 
 var ActionRole = map[Action]Role{
-	ActionProfile:     RoleNormal,
+	ActionProfile:     RoleBanned, // Because a user can only read the profile own by himself.
 	ActionBanUser:     RoleMod,
+	ActionPromoteUser: RoleAdmin,
 	ActionBlockPost:   RoleMod,
 	ActionLockThread:  RoleMod,
 	ActionBlockThread: RoleMod,
@@ -258,13 +266,4 @@ func (u *User) DelSubbedTag(ctx context.Context, user *User, tag string) error {
 	}
 	u.Tags = tagSet
 	return nil
-}
-
-func (u *User) BanUser(ctx context.Context, id int) (bool, error) {
-	banned := RoleBanned
-	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Role: &banned}); err != nil {
-		return false, err
-	}
-	u.Role = RoleBanned
-	return true, nil
 }

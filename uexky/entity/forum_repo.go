@@ -29,6 +29,7 @@ type PostsSearch struct {
 	IDs      []uid.UID
 	UserID   *int
 	ThreadID *uid.UID
+	DESC     bool
 }
 
 type PostUpdate struct {
@@ -36,15 +37,16 @@ type PostUpdate struct {
 }
 
 type TagSearch struct {
-	Text   *string
-	UserID *int
-	Limit  int
+	Text  string
+	Limit int
 }
 
 type UserTagUpdate struct {
 	AddTags []string
 	DelTags []string
 }
+
+const BlockedContent = "[此内容已被管理员屏蔽]"
 
 type ForumRepo interface {
 	GetThread(ctx context.Context, search *ThreadSearch) (*Thread, error)

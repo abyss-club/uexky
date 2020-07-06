@@ -16,8 +16,6 @@ type ForumRepo struct {
 	mainTags []string `wire:"-"`
 }
 
-const blockedContent = "[此内容已被管理员屏蔽]" // TODO: should be service layer
-
 func (f *ForumRepo) db(ctx context.Context) postgres.Session {
 	return postgres.GetSessionFromContext(ctx)
 }
@@ -45,7 +43,7 @@ func (f *ForumRepo) toEntityThread(t *Thread) *entity.Thread {
 		thread.AuthorObj.UserName = t.UserName
 	}
 	if thread.Blocked {
-		thread.Content = blockedContent
+		thread.Content = entity.BlockedContent
 	}
 	return thread
 }
@@ -65,24 +63,27 @@ func (f *ForumRepo) GetThreadSlice(
 	var threads []Thread
 	q := f.db(ctx).Model(&threads)
 	if search.Tags != nil {
-		q.Where("id IN (SELECT thread_id FROM threads_tags as tt WHERE tt.tag_name=ANY(?))", pg.Array(search.Tags))
+		q.Where("id IN (SELECT id FROM thread WHERE ? && thread.tags)", pg.Array(search.Tags))
 	}
 	if search.UserID != nil {
 		q.Where("user_id = ?", search.UserID)
 	}
 	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
-		if cursor == "" {
-			return q, nil
+		if cursor != "" {
+			c, err := uid.ParseUID(cursor)
+			if err != nil {
+				return nil, err
+			}
+			if !isAfter {
+				q = q.Where("last_post_id > ?", c)
+			} else {
+				q = q.Where("last_post_id < ?", c)
+			}
 		}
-		c, err := uid.ParseUID(cursor)
-		if err != nil {
-			return nil, err
-		}
-		fmt.Println("searching lastPostID: ", c)
 		if !isAfter {
-			return q.Where("last_post_id > ?", c).Order("last_post_id"), nil
+			return q.Order("last_post_id"), nil
 		}
-		return q.Where("last_post_id < ?", c).Order("last_post_id DESC"), nil
+		return q.Order("last_post_id DESC"), nil
 	}
 	var err error
 	q, err = applySliceQuery(applySlice, q, &query)
@@ -105,7 +106,6 @@ func (f *ForumRepo) GetThreadSlice(
 		}
 	}
 	dealSliceResult(dealSlice, &query, len(threads), query.Before != nil)
-
 	return &entity.ThreadSlice{
 		Threads:   entities,
 		SliceInfo: sliceInfo,
@@ -164,10 +164,10 @@ func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity
 	thread := Thread{}
 	q := f.db(ctx).Model(&thread).Where("id = ?", id)
 	if update.Blocked != nil {
-		q.Set("blocked = ?Blocked", update)
+		q.Set("blocked = ?", update.Blocked)
 	}
 	if update.Locked != nil {
-		q.Set("locked = ?Locked", update)
+		q.Set("locked = ?", update.Locked)
 	}
 	if update.MainTag != nil {
 		tags := []string{*update.MainTag}
@@ -193,6 +193,8 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 				AnonymousID: (*uid.UID)(p.AnonymousID),
 				UserName:    p.UserName,
 			},
+			QuoteIDs:   make([]uid.UID, 0),
+			QuotePosts: make([]*entity.Post, 0),
 		},
 	}
 	var qids []uid.UID
@@ -202,9 +204,8 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 	post.Data.QuoteIDs = qids
 	if p.Blocked != nil && *p.Blocked {
 		post.Blocked = true
-		post.Content = blockedContent // TODO: move to service layer
+		post.Content = entity.BlockedContent
 	}
-
 	return post
 }
 
@@ -249,17 +250,21 @@ func (f *ForumRepo) GetPostSlice(
 	var posts []Post
 	q := f.searchPostsQuery(ctx, search, &posts)
 	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
-		if cursor == "" {
-			return q, nil
+		if cursor != "" {
+			c, err := uid.ParseUID(cursor)
+			if err != nil {
+				return nil, err
+			}
+			if isAfter != search.DESC {
+				q = q.Where("id > ?", c)
+			} else {
+				q.Where("id < ?", c)
+			}
 		}
-		c, err := uid.ParseUID(cursor)
-		if err != nil {
-			return nil, err
+		if isAfter != search.DESC {
+			return q.Order("id"), nil
 		}
-		if !isAfter {
-			return q.Where("id < ?", c).Order("id DESC"), nil
-		}
-		return q.Where("id > ?", c).Order("id"), nil
+		return q.Order("id DESC"), nil
 	}
 	var err error
 	q, err = applySliceQuery(applySlice, q, &query)
@@ -346,7 +351,7 @@ func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.P
 	post := Post{}
 	q := f.db(ctx).Model(&post).Where("id = ?", id)
 	if update.Blocked != nil {
-		q.Set("blocked = ?Blocked", update)
+		q.Set("blocked = ?", update.Blocked)
 	}
 	_, err := q.Update()
 	if err != nil {
@@ -356,15 +361,22 @@ func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.P
 }
 
 func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entity.Tag, error) {
-	var tags []Tag
-	q := f.db(ctx).Model(&tags).Limit(search.Limit)
-	if search.Text != nil {
-		q.Where("name LIKE '%?%'", *search.Text)
+	type tag struct {
+		Tag string `pg:"tag"`
 	}
-	if search.UserID != nil {
-		q.Where("name IN (SELECT tag_name FROM users_tags WHERE user_id=?)", *search.UserID)
+	var tags []tag
+	var where, limit string
+	if search.Text != "" {
+		where = fmt.Sprintf("WHERE tag LIKE '%%%s%%'", search.Text)
 	}
-	if err := q.Select(); err != nil {
+	if search.Limit != 0 {
+		limit = fmt.Sprintf("LIMIT %v", search.Limit)
+	}
+	sql := fmt.Sprintf(`SELECT tag FROM (
+		SELECT unnest(tags) as tag, max(created_at) as updated_at
+		FROM thread group by tag
+	) as tags %s ORDER BY updated_at DESC %s`, where, limit)
+	if _, err := f.db(ctx).Query(&tags, sql); err != nil {
 		return nil, err
 	}
 	mainTags, err := f.GetMainTags(ctx)
@@ -374,8 +386,8 @@ func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*e
 	var entities []*entity.Tag
 	for _, t := range tags {
 		entities = append(entities, &entity.Tag{
-			Name:   t.Name,
-			IsMain: algo.InStrSlice(mainTags, t.Name),
+			Name:   t.Tag,
+			IsMain: algo.InStrSlice(mainTags, t.Tag),
 		})
 	}
 	return entities, nil

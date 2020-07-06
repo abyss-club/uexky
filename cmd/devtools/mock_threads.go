@@ -9,11 +9,11 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
-	"gitlab.com/abyss.club/uexky/wire"
 )
 
 type mockThreadsOpt struct {
@@ -51,7 +51,7 @@ func createUser(s *uexky.Service) (*mockUser, error) {
 	ctx := context.Background()
 	ctx = s.TxAdapter.AttachDB(ctx)
 	email := fmt.Sprintf("%s@%s", uid.RandomBase64Str(16), config.Get().Server.Domain)
-	code, err := s.GenSignInCodeByEmail(ctx, email)
+	code, err := s.TrySignInByEmail(ctx, email)
 	if err != nil {
 		return nil, errors.Wrap(err, "gen sign in code by email")
 	}
@@ -73,7 +73,7 @@ func createUser(s *uexky.Service) (*mockUser, error) {
 }
 
 func mockThreads(opt *mockThreadsOpt) error {
-	service, err := wire.InitDevService()
+	service, err := uexky.InitDevService()
 	ctx := service.TxAdapter.AttachDB(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "init service")
@@ -142,8 +142,7 @@ func makeThread(
 		input.SubTags = append(input.SubTags, t)
 	}
 	if rand.Intn(2) == 1 {
-		title := fmt.Sprintf("Title:%s", uid.RandomBase64Str(20))
-		input.Title = &title
+		input.Title = algo.NullString(uid.RandomBase64Str(20))
 	}
 	user := users[rand.Intn(len(users))]
 	var err error

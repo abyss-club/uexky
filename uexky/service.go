@@ -17,16 +17,8 @@ type Service struct {
 	TxAdapter adapter.Tx
 }
 
-func (s *Service) GenSignInCodeByEmail(ctx context.Context, email string) (entity.Code, error) {
-	return s.User.GenSignInCodeByEmail(ctx, email)
-}
-
-func (s *Service) TrySignInByEmail(ctx context.Context, email string) (bool, error) {
-	code, err := s.User.GenSignInCodeByEmail(ctx, email)
-	if err != nil {
-		return false, err
-	}
-	return s.User.SendSignInEmail(ctx, email, code)
+func (s *Service) TrySignInByEmail(ctx context.Context, email string) (entity.Code, error) {
+	return s.User.TrySignInByEmail(ctx, email)
 }
 
 func (s *Service) SignInByCode(ctx context.Context, code string) (entity.Token, error) {
@@ -74,14 +66,6 @@ func (s *Service) GetUserPosts(ctx context.Context, obj *entity.User, query enti
 	return s.Forum.GetUserPosts(ctx, user, query)
 }
 
-func (s *Service) GetUserTags(ctx context.Context, obj *entity.User) ([]string, error) {
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
-		return nil, err
-	}
-	return user.Tags, nil
-}
-
 func (s *Service) SyncUserTags(ctx context.Context, tags []string) (*entity.User, error) {
 	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
 	if err != nil {
@@ -107,7 +91,7 @@ func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 }
 
 func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error) {
-	user, err := s.User.RequirePermission(ctx, entity.ActionBanUser)
+	_, err := s.User.RequirePermission(ctx, entity.ActionBanUser)
 	if err != nil {
 		return false, err
 	}
@@ -116,13 +100,13 @@ func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UI
 		if err != nil {
 			return false, err
 		}
-		return user.BanUser(ctx, post.Data.Author.UserID)
+		return s.User.BanUser(ctx, post.Data.Author.UserID)
 	} else if threadID != nil {
 		thread, err := s.Forum.GetThreadByID(ctx, *threadID)
 		if err != nil {
 			return false, err
 		}
-		return user.BanUser(ctx, thread.AuthorObj.UserID)
+		return s.User.BanUser(ctx, thread.AuthorObj.UserID)
 	}
 	return false, errors.New("must specified post id or thread id")
 }
@@ -248,7 +232,7 @@ func (s *Service) GetMainTags(ctx context.Context) ([]string, error) {
 }
 
 func (s *Service) GetRecommendedTags(ctx context.Context) ([]string, error) {
-	return s.Forum.GetRecommendedTags(ctx)
+	return s.Forum.GetMainTags(ctx)
 }
 
 func (s *Service) SearchTags(ctx context.Context, query *string, limit *int) ([]*entity.Tag, error) {
