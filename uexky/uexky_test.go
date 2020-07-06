@@ -126,13 +126,13 @@ func pubThreadWithTags(t *testing.T, service *Service, u testUser, mainTag strin
 	return thread, ctx
 }
 
-func pubPost(t *testing.T, service *Service, u testUser, threadID uid.UID, quotedIds []uid.UID) (*entity.Post, context.Context) {
+func pubPost(t *testing.T, service *Service, u testUser, threadID uid.UID) (*entity.Post, context.Context) {
 	user, ctx := loginUser(t, service, u)
 	input := entity.PostInput{
 		ThreadID:  threadID,
 		Anonymous: rand.Intn(2) == 0,
 		Content:   uid.RandomBase64Str(50),
-		QuoteIds:  quotedIds,
+		// QuoteIds:  quotedIds,
 	}
 	if user.Name == nil {
 		input.Anonymous = true

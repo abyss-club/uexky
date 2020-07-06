@@ -222,7 +222,7 @@ func TestService_GetUserPosts(t *testing.T) {
 	tu := testUser{email: "post@example.com", name: " post"}
 	var posts []*entity.Post
 	for i := 0; i < 10; i++ {
-		post, _ := pubPost(t, service, tu, threads[i%2].ID, nil)
+		post, _ := pubPost(t, service, tu, threads[i%2].ID)
 		posts = append(posts, post)
 	}
 	user, ctx := loginUser(t, service, tu)
@@ -487,7 +487,7 @@ func TestService_BanUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	thread, _ := pubThread(t, service, testUser{email: "t@example.com"})
-	post, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID, nil)
+	post, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
 	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
 	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
 		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
@@ -555,7 +555,7 @@ func TestService_BlockPost(t *testing.T) {
 	}
 	thread, _ := pubThread(t, service, testUser{email: "t@example.com"})
 
-	oriPost, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID, nil)
+	oriPost, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
 	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
 	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
 		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
@@ -966,7 +966,7 @@ func TestService_PubPost(t *testing.T) {
 		t.Fatal(err)
 	}
 	thread, _ := pubThread(t, service, testUser{email: "a@example.com", name: "a"})
-	post, _ := pubPost(t, service, testUser{email: "a@example.com", name: "a"}, thread.ID, nil)
+	post, _ := pubPost(t, service, testUser{email: "a@example.com", name: "a"}, thread.ID)
 	user1, userCtx1 := loginUser(t, service, testUser{email: "p1@example.com"})
 	user2, userCtx2 := loginUser(t, service, testUser{email: "p2@example.com", name: "p2"})
 	type args struct {
