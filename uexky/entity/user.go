@@ -209,9 +209,8 @@ type User struct {
 	Role  Role     `json:"role"`
 	Tags  []string `json:"tags"`
 
-	Repo         UserRepo     `json:"-"`
-	ID           int          `json:"-"`
-	LastReadNoti LastReadNoti `json:"-"`
+	Repo UserRepo `json:"-"`
+	ID   int      `json:"-"`
 }
 
 func (u *User) RequirePermission(action Action) error {

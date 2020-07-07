@@ -1,6 +1,6 @@
 extend type Query {
   # The count of unread notifications.
-  unreadNotiCount(): Int!
+  unreadNotiCount: Int!
   # Notifications for current user.
   notification(query: SliceQuery!): NotiSlice!
 }
@@ -27,8 +27,10 @@ type Notification {
   # The notification is read or not.
   hasRead: Boolean!
   # notification content for different type.
-  content: SystemNoti! | RepliedNoti! | QuotedNoti!
+  content: NotiContent!
 }
+
+union NotiContent = SystemNoti | RepliedNoti | QuotedNoti
 
 # Object describing a system notification.
 type SystemNoti {

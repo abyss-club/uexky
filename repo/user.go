@@ -55,11 +55,6 @@ func (u *UserRepo) toEntityUser(user *User, mainTags []string) *entity.User {
 
 		Repo: u,
 		ID:   user.ID,
-		LastReadNoti: entity.LastReadNoti{
-			SystemNoti:  user.LastReadSystemNoti,
-			RepliedNoti: user.LastReadRepliedNoti,
-			QuotedNoti:  user.LastReadQuotedNoti,
-		},
 	}
 	// TODO: should in service level?
 	if len(user.Tags) == 0 {

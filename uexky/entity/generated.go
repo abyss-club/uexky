@@ -11,11 +11,13 @@ import (
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
+type NotiContent interface {
+	IsNotiContent()
+}
+
 type NotiSlice struct {
-	System    []*SystemNoti  `json:"system"`
-	Replied   []*RepliedNoti `json:"replied"`
-	Quoted    []*QuotedNoti  `json:"quoted"`
-	SliceInfo *SliceInfo     `json:"sliceInfo"`
+	Notifications []*Notification `json:"notifications"`
+	SliceInfo     *SliceInfo      `json:"sliceInfo"`
 }
 
 type PostInput struct {
@@ -25,10 +27,31 @@ type PostInput struct {
 	QuoteIds  []uid.UID `json:"quoteIds"`
 }
 
+type PostOutline struct {
+	Author string `json:"author"`
+	Brief  string `json:"brief"`
+}
+
 type PostSlice struct {
 	Posts     []*Post    `json:"posts"`
 	SliceInfo *SliceInfo `json:"sliceInfo"`
 }
+
+type QuotedNoti struct {
+	ThreadID   uid.UID      `json:"threadId"`
+	QuotedPost *PostOutline `json:"quotedPost"`
+	Post       *PostOutline `json:"post"`
+}
+
+func (QuotedNoti) IsNotiContent() {}
+
+type RepliedNoti struct {
+	Thread        *ThreadOutline `json:"thread"`
+	NewReplyCount int            `json:"newReplyCount"`
+	NewReplyID    uid.UID        `json:"newReplyId"`
+}
+
+func (RepliedNoti) IsNotiContent() {}
 
 type SliceInfo struct {
 	FirstCursor string `json:"firstCursor"`
@@ -41,6 +64,13 @@ type SliceQuery struct {
 	After  *string `json:"after"`
 	Limit  int     `json:"limit"`
 }
+
+type SystemNoti struct {
+	Title   string `json:"title"`
+	Content string `json:"content"`
+}
+
+func (SystemNoti) IsNotiContent() {}
 
 type Tag struct {
 	Name   string `json:"name"`
@@ -60,15 +90,17 @@ type ThreadInput struct {
 	Title     *string  `json:"title"`
 }
 
+type ThreadOutline struct {
+	ID      uid.UID  `json:"id"`
+	Title   *string  `json:"title"`
+	Brief   string   `json:"brief"`
+	MainTag string   `json:"mainTag"`
+	SubTags []string `json:"subTags"`
+}
+
 type ThreadSlice struct {
 	Threads   []*Thread  `json:"threads"`
 	SliceInfo *SliceInfo `json:"sliceInfo"`
-}
-
-type UnreadNotiCount struct {
-	System  int `json:"system"`
-	Replied int `json:"replied"`
-	Quoted  int `json:"quoted"`
 }
 
 type NotiType string
