@@ -17,19 +17,6 @@ type ForumService struct {
 	Repo ForumRepo
 }
 
-type Author struct {
-	UserID      int
-	AnonymousID *uid.UID
-	UserName    *string
-}
-
-func (a Author) Name(anonymous bool) string {
-	if !anonymous {
-		return *a.UserName
-	}
-	return a.AnonymousID.ToBase64String()
-}
-
 type Thread struct {
 	ID        uid.UID   `json:"id"`
 	CreatedAt time.Time `json:"createdAt"`
@@ -167,13 +154,6 @@ func (n *Thread) Block(ctx context.Context) error {
 	return nil
 }
 
-type PostData struct {
-	ThreadID   uid.UID
-	Author     Author
-	QuoteIDs   []uid.UID
-	QuotePosts []*Post
-}
-
 type Post struct {
 	ID        uid.UID   `json:"id"`
 	CreatedAt time.Time `json:"createdAt"`
@@ -187,11 +167,6 @@ type Post struct {
 
 func (p Post) String() string {
 	return fmt.Sprintf("<Post:%v:%s>", p.ID, p.ID.ToBase64String())
-}
-
-type NewPostResponse struct {
-	Post   *Post
-	Thread *Thread
 }
 
 func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput) (*NewPostResponse, error) {

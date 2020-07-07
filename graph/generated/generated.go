@@ -87,8 +87,8 @@ type ComplexityRoot struct {
 	}
 
 	PostOutline struct {
-		Author func(childComplexity int) int
-		Brief  func(childComplexity int) int
+		Author  func(childComplexity int) int
+		Content func(childComplexity int) int
 	}
 
 	PostSlice struct {
@@ -158,7 +158,7 @@ type ComplexityRoot struct {
 	}
 
 	ThreadOutline struct {
-		Brief   func(childComplexity int) int
+		Content func(childComplexity int) int
 		ID      func(childComplexity int) int
 		MainTag func(childComplexity int) int
 		SubTags func(childComplexity int) int
@@ -477,12 +477,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PostOutline.Author(childComplexity), true
 
-	case "PostOutline.brief":
-		if e.complexity.PostOutline.Brief == nil {
+	case "PostOutline.content":
+		if e.complexity.PostOutline.Content == nil {
 			break
 		}
 
-		return e.complexity.PostOutline.Brief(childComplexity), true
+		return e.complexity.PostOutline.Content(childComplexity), true
 
 	case "PostSlice.posts":
 		if e.complexity.PostSlice.Posts == nil {
@@ -787,12 +787,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.ThreadCatalogItem.PostID(childComplexity), true
 
-	case "ThreadOutline.brief":
-		if e.complexity.ThreadOutline.Brief == nil {
+	case "ThreadOutline.content":
+		if e.complexity.ThreadOutline.Content == nil {
 			break
 		}
 
-		return e.complexity.ThreadOutline.Brief(childComplexity), true
+		return e.complexity.ThreadOutline.Content(childComplexity), true
 
 	case "ThreadOutline.id":
 		if e.complexity.ThreadOutline.ID == nil {
@@ -1020,18 +1020,16 @@ type SystemNoti {
 }
 
 type ThreadOutline {
-  # thread id
   id: UID!
   title: String
-  # brief of thread content
-  brief: String!
+  content: String!
   mainTag: String!
   subTags: [String!]!
 }
 
 type PostOutline {
   author: String!
-  brief: String!
+  content: String!
 }
 
 # Object describing a replied notification.
@@ -2611,7 +2609,7 @@ func (ec *executionContext) _PostOutline_author(ctx context.Context, field graph
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _PostOutline_brief(ctx context.Context, field graphql.CollectedField, obj *entity.PostOutline) (ret graphql.Marshaler) {
+func (ec *executionContext) _PostOutline_content(ctx context.Context, field graphql.CollectedField, obj *entity.PostOutline) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2628,7 +2626,7 @@ func (ec *executionContext) _PostOutline_brief(ctx context.Context, field graphq
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Brief, nil
+		return obj.Content, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4141,7 +4139,7 @@ func (ec *executionContext) _ThreadOutline_title(ctx context.Context, field grap
 	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ThreadOutline_brief(ctx context.Context, field graphql.CollectedField, obj *entity.ThreadOutline) (ret graphql.Marshaler) {
+func (ec *executionContext) _ThreadOutline_content(ctx context.Context, field graphql.CollectedField, obj *entity.ThreadOutline) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -4158,7 +4156,7 @@ func (ec *executionContext) _ThreadOutline_brief(ctx context.Context, field grap
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Brief, nil
+		return obj.Content, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5986,8 +5984,8 @@ func (ec *executionContext) _PostOutline(ctx context.Context, sel ast.SelectionS
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "brief":
-			out.Values[i] = ec._PostOutline_brief(ctx, field, obj)
+		case "content":
+			out.Values[i] = ec._PostOutline_content(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -6523,8 +6521,8 @@ func (ec *executionContext) _ThreadOutline(ctx context.Context, sel ast.Selectio
 			}
 		case "title":
 			out.Values[i] = ec._ThreadOutline_title(ctx, field, obj)
-		case "brief":
-			out.Values[i] = ec._ThreadOutline_brief(ctx, field, obj)
+		case "content":
+			out.Values[i] = ec._ThreadOutline_content(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

@@ -41,18 +41,16 @@ type SystemNoti {
 }
 
 type ThreadOutline {
-  # thread id
   id: UID!
   title: String
-  # brief of thread content
-  brief: String!
+  content: String!
   mainTag: String!
   subTags: [String!]!
 }
 
 type PostOutline {
   author: String!
-  brief: String!
+  content: String!
 }
 
 # Object describing a replied notification.

@@ -6,6 +6,8 @@ import (
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
+// -- ForumRepo
+
 type ThreadSearch struct {
 	ID *uid.UID
 }
@@ -68,4 +70,33 @@ type ForumRepo interface {
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)
 	GetMainTags(ctx context.Context) ([]string, error)
 	SetMainTags(ctx context.Context, tags []string) error
+}
+
+// -- Author
+
+type Author struct {
+	UserID      int
+	AnonymousID *uid.UID
+	UserName    *string
+}
+
+func (a Author) Name(anonymous bool) string {
+	if !anonymous {
+		return *a.UserName
+	}
+	return a.AnonymousID.ToBase64String()
+}
+
+// -- Entity Extension
+
+type PostData struct {
+	ThreadID   uid.UID
+	Author     Author
+	QuoteIDs   []uid.UID
+	QuotePosts []*Post
+}
+
+type NewPostResponse struct {
+	Post   *Post
+	Thread *Thread
 }

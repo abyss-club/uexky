@@ -28,8 +28,8 @@ type PostInput struct {
 }
 
 type PostOutline struct {
-	Author string `json:"author"`
-	Brief  string `json:"brief"`
+	Author  string `json:"author"`
+	Content string `json:"content"`
 }
 
 type PostSlice struct {
@@ -93,7 +93,7 @@ type ThreadInput struct {
 type ThreadOutline struct {
 	ID      uid.UID  `json:"id"`
 	Title   *string  `json:"title"`
-	Brief   string   `json:"brief"`
+	Content string   `json:"content"`
 	MainTag string   `json:"mainTag"`
 	SubTags []string `json:"subTags"`
 }
