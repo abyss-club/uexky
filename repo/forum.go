@@ -130,7 +130,7 @@ func (f *ForumRepo) GetThreadCatalog(ctx context.Context, id uid.UID) ([]*entity
 
 func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int, threadID uid.UID) (uid.UID, error) {
 	var posts []Post
-	q := f.db(ctx).Model(&posts).Column(Columns.Post.AnonymousID).
+	q := f.db(ctx).Model(&posts).Column("anonymous_id").
 		Where("thread_id = ?", threadID).Where("anonymous = true").Order("id DESC").Limit(1)
 	if err := q.Select(); err != nil {
 		return uid.UID(0), err

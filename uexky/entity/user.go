@@ -102,8 +102,9 @@ type User struct {
 	Role  Role     `json:"role"`
 	Tags  []string `json:"tags"`
 
-	Repo UserRepo `json:"-"`
-	ID   int      `json:"-"`
+	Repo         UserRepo `json:"-"`
+	ID           int      `json:"-"`
+	LastReadNoti uid.UID  `json:"-"`
 }
 
 func (u *User) RequirePermission(action Action) error {
@@ -158,4 +159,8 @@ func (u *User) DelSubbedTag(ctx context.Context, user *User, tag string) error {
 	}
 	u.Tags = tagSet
 	return nil
+}
+
+func (u *User) NotiReceivers() []Receiver {
+	return []Receiver{SendToUser(u.ID), SendToGroup(AllUser)}
 }

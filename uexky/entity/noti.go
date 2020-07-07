@@ -26,7 +26,7 @@ func (n *NotiService) NewSystemNoti(ctx context.Context, title, content string, 
 	noti := &Notification{
 		Type:      NotiTypeSystem,
 		EventTime: time.Now(),
-		Content: &SystemNoti{
+		Content: SystemNoti{
 			Title:   title,
 			Content: content,
 		},
@@ -42,7 +42,7 @@ func (n *NotiService) NewRepliedNoti(ctx context.Context, thread *Thread, reply 
 	noti := &Notification{
 		Type:      NotiTypeSystem,
 		EventTime: time.Now(),
-		Content: &RepliedNoti{
+		Content: RepliedNoti{
 			Thread: &ThreadOutline{
 				ID:      thread.ID,
 				Title:   thread.Title,
@@ -65,7 +65,7 @@ func (n *NotiService) NewQuotedNoti(ctx context.Context, thread *Thread, post *P
 	noti := &Notification{
 		Type:      NotiTypeSystem,
 		EventTime: time.Now(),
-		Content: &QuotedNoti{
+		Content: QuotedNoti{
 			ThreadID: thread.ID,
 			QuotedPost: &PostOutline{
 				Author:  quotedPost.Author(),

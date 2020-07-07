@@ -21,6 +21,7 @@ CREATE INDEX thread_tags_index ON public.thread USING gin (tags);
 -- DROP TABLE public.threads_tags CASCADE;
 
 ALTER TABLE public."user" ADD COLUMN tags text[];
+ALTER TABLE public."user" ADD COLUMN last_read_noti bigint DEFAULT 0 NOT NULL;
 CREATE INDEX user_tags_index ON public."user" USING gin (tags);
 
 -- DROP TABLE users_tags CASCADE;
