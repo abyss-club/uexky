@@ -84,7 +84,7 @@ func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.U
 	return u.toEntityUser(&user, mainTags), nil
 }
 
-func (u *UserRepo) UpdateUser(ctx context.Context, id int, update *entity.UserUpdate) error {
+func (u *UserRepo) UpdateUser(ctx context.Context, id int64, update *entity.UserUpdate) error {
 	user := User{}
 	q := u.db(ctx).Model(&user).Where("id = ?", id)
 	if update.Name != nil {

@@ -10,7 +10,7 @@ import (
 //-- NotiRepo
 
 type NotiSearch struct {
-	UserID int
+	UserID int64
 }
 
 type NotiRepo interface {
@@ -38,7 +38,7 @@ const AllUser SendGroup = "all_user"
 
 type Receiver string
 
-func SendToUser(userID int) Receiver {
+func SendToUser(userID int64) Receiver {
 	return Receiver(fmt.Sprintf("u:%v", userID))
 }
 

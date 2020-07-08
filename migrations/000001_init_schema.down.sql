@@ -1,0 +1,5 @@
+-- DROP TABLE public."user" CASCADE;
+-- DROP TABLE public.thread CASCADE;
+-- DROP TABLE public.post CASCADE;
+-- DROP TABLE public.tag CASCADE;
+-- DROP TABLE public.notification CASCADE;

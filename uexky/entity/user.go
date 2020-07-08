@@ -89,7 +89,7 @@ func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (conte
 	return context.WithValue(ctx, userKey, user), nil
 }
 
-func (s *UserService) BanUser(ctx context.Context, id int) (bool, error) {
+func (s *UserService) BanUser(ctx context.Context, id int64) (bool, error) {
 	if err := s.Repo.UpdateUser(ctx, id, &UserUpdate{Role: (*Role)(algo.NullString(string(RoleBanned)))}); err != nil {
 		return false, err
 	}
@@ -103,7 +103,7 @@ type User struct {
 	Tags  []string `json:"tags"`
 
 	Repo         UserRepo `json:"-"`
-	ID           int      `json:"-"`
+	ID           int64    `json:"-"`
 	LastReadNoti uid.UID  `json:"-"`
 }
 

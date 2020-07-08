@@ -23,7 +23,7 @@ type UserRepo interface {
 	GetTokenEmail(ctx context.Context, tok string) (string, error)
 
 	GetOrInsertUser(ctx context.Context, email string) (*User, error)
-	UpdateUser(ctx context.Context, id int, update *UserUpdate) error
+	UpdateUser(ctx context.Context, id int64, update *UserUpdate) error
 }
 
 const (
