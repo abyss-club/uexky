@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/uid"
@@ -142,6 +143,7 @@ func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int64, threadID uid.U
 }
 
 func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) error {
+	log.Infof("InsertThread(%v)", thread)
 	t := Thread{
 		ID:         int64(thread.ID),
 		Anonymous:  thread.Anonymous,
@@ -320,6 +322,7 @@ func (f *ForumRepo) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, er
 }
 
 func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) error {
+	log.Infof("InsertPost(%v)", post)
 	newPost := &Post{
 		ID:        int64(post.ID),
 		ThreadID:  int64(post.Data.ThreadID),

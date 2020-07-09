@@ -39,7 +39,6 @@ type Config struct {
 
 type ResolverRoot interface {
 	Mutation() MutationResolver
-	Notification() NotificationResolver
 	Query() QueryResolver
 	User() UserResolver
 }
@@ -193,9 +192,6 @@ type MutationResolver interface {
 	LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error)
 	BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error)
 	EditTags(ctx context.Context, threadID uid.UID, mainTag string, subTags []string) (*entity.Thread, error)
-}
-type NotificationResolver interface {
-	HasRead(ctx context.Context, obj *entity.Notification) (bool, error)
 }
 type QueryResolver interface {
 	UnreadNotiCount(ctx context.Context) (int, error)
@@ -2249,13 +2245,13 @@ func (ec *executionContext) _Notification_hasRead(ctx context.Context, field gra
 		Object:   "Notification",
 		Field:    field,
 		Args:     nil,
-		IsMethod: true,
+		IsMethod: false,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Notification().HasRead(rctx, obj)
+		return obj.HasRead, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5854,31 +5850,22 @@ func (ec *executionContext) _Notification(ctx context.Context, sel ast.Selection
 		case "type":
 			out.Values[i] = ec._Notification_type(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "eventTime":
 			out.Values[i] = ec._Notification_eventTime(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		case "hasRead":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Notification_hasRead(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
+			out.Values[i] = ec._Notification_hasRead(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "content":
 			out.Values[i] = ec._Notification_content(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
+				invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))

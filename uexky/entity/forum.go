@@ -101,6 +101,10 @@ func (f *ForumService) SearchThreads(
 	return f.Repo.GetThreadSlice(ctx, &ThreadsSearch{Tags: tags}, query)
 }
 
+func (n *Thread) String() string {
+	return fmt.Sprintf("<Thread:%v:%s>", n.ID, n.ID.ToBase64String())
+}
+
 func (n *Thread) Author() string {
 	return n.AuthorObj.Name(n.Anonymous)
 }

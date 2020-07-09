@@ -5,19 +5,18 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
 //-- NotiRepo
 
-type NotiSearch struct {
-	UserID int64
-}
-
 type NotiRepo interface {
 	GetUserUnreadCount(ctx context.Context, user *User) (int, error)
-	GetNotiSlice(ctx context.Context, search *NotiSearch, query SliceQuery) (*NotiSlice, error)
+	GetNotiByKey(ctx context.Context, user *User, key string) (*Notification, error)
+	GetNotiSlice(ctx context.Context, user *User, query SliceQuery) (*NotiSlice, error)
 	InsertNoti(ctx context.Context, notification *Notification) error
-	UpdateReadID(ctx context.Context, userID int, id int) error
+	UpdateNotiContent(ctx context.Context, noti *Notification) error
+	UpdateReadID(ctx context.Context, userID int64, id uid.UID) error
 }
 
 // -- NotiType

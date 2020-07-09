@@ -1,13 +1,13 @@
 package repo
 
 import (
-	"encoding/json"
 	"time"
 
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 type User struct {
+	//nolint: structcheck, unused
 	tableName struct{} `pg:"user,,discard_unknown_columns"`
 
 	ID           int64     `pg:"id,pk"`
@@ -23,6 +23,7 @@ type User struct {
 // TODO: tag_type index
 
 type Thread struct {
+	//nolint: structcheck, unused
 	tableName struct{} `pg:"thread,,discard_unknown_columns"`
 
 	ID          int64     `pg:"id,pk"`
@@ -41,6 +42,7 @@ type Thread struct {
 }
 
 type Post struct {
+	//nolint: structcheck, unused
 	tableName struct{} `pg:"post,,discard_unknown_columns"`
 
 	ID          int64     `pg:"id,pk"`
@@ -57,6 +59,7 @@ type Post struct {
 }
 
 type Tag struct {
+	//nolint: structcheck, unused
 	tableName struct{} `pg:"tag,,discard_unknown_columns"`
 
 	Name      string    `pg:"name,pk"`
@@ -66,13 +69,14 @@ type Tag struct {
 }
 
 type Notification struct {
+	//nolint: structcheck, unused
 	tableName struct{} `pg:"notification,,discard_unknown_columns"`
 
-	Key       string            `pg:"key,pk"`
-	SortKey   int64             `pg:"sort_key"`
-	CreatedAt time.Time         `pg:"created_at"`
-	UpdatedAt time.Time         `pg:"updated_at"`
-	Type      string            `pg:"type,use_zero"`
-	Receivers []entity.Receiver `pg:"receivers,array"`
-	Content   json.RawMessage   `pg:"content"`
+	Key       string                 `pg:"key,pk"`
+	SortKey   int64                  `pg:"sort_key"`
+	CreatedAt time.Time              `pg:"created_at"`
+	UpdatedAt time.Time              `pg:"updated_at"`
+	Type      string                 `pg:"type,use_zero"`
+	Receivers []entity.Receiver      `pg:"receivers,array"`
+	Content   map[string]interface{} `pg:"content,json_use_number"`
 }

@@ -198,23 +198,18 @@ func (s *Service) PubPost(ctx context.Context, post entity.PostInput) (*entity.P
 		return nil, s.TxAdapter.Rollback(ctx, err)
 	}
 	// go func() {
-	// 	ctx := context.Background()
-	// 	ctx = s.TxAdapter.AttachDB(ctx)
-	// 	if err := s.Noti.NewRepliedNoti(ctx, res.Thread, res.Post); err != nil {
-	// 		log.Error(err)
-	// 		return
-	// 	}
-	// 	quotePosts, err := res.Post.Quotes(ctx)
-	// 	if err != nil {
-	// 		log.Error(err)
-	// 		return
-	// 	}
-	// 	for _, qp := range quotePosts {
-	// 		if err := s.Noti.NewQuotedNoti(ctx, res.Thread, res.Post, qp); err != nil {
-	// 			log.Error(err)
-	// 		}
-	// 	}
-	// }()
+	if err := s.Noti.NewRepliedNoti(ctx, user, res.Thread, res.Post); err != nil {
+		return res.Post, s.TxAdapter.Rollback(ctx, err)
+	}
+	quotePosts, err := res.Post.Quotes(ctx)
+	if err != nil {
+		return res.Post, s.TxAdapter.Rollback(ctx, err)
+	}
+	for _, qp := range quotePosts {
+		if err := s.Noti.NewQuotedNoti(ctx, res.Thread, res.Post, qp); err != nil {
+			return res.Post, s.TxAdapter.Rollback(ctx, err)
+		}
+	}
 	return res.Post, s.TxAdapter.Commit(ctx)
 }
 
@@ -254,10 +249,4 @@ func (s *Service) GetNotification(ctx context.Context, query entity.SliceQuery) 
 	return s.Noti.GetNotification(ctx, user, query)
 }
 
-func (s *Service) GetNotificationHasRead(ctx context.Context, obj *entity.Notification) (bool, error) {
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
-		return false, err
-	}
-	return obj.HasRead(user), nil
-}
+// TODO: anytime change user, should change the value in ctx.

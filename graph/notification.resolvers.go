@@ -10,10 +10,6 @@ import (
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
-func (r *notificationResolver) HasRead(ctx context.Context, obj *entity.Notification) (bool, error) {
-	return r.Service.GetNotificationHasRead(ctx, obj)
-}
-
 func (r *queryResolver) UnreadNotiCount(ctx context.Context) (int, error) {
 	return r.Service.GetUnreadNotiCount(ctx)
 }
@@ -22,11 +18,7 @@ func (r *queryResolver) Notification(ctx context.Context, query entity.SliceQuer
 	return r.Service.GetNotification(ctx, query)
 }
 
-// Notification returns generated.NotificationResolver implementation.
-func (r *Resolver) Notification() generated.NotificationResolver { return &notificationResolver{r} }
-
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
-type notificationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }

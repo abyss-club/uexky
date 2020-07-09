@@ -2,8 +2,10 @@ package uexky
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
@@ -1047,7 +1049,7 @@ func TestService_PubPost(t *testing.T) {
 						UserID: user1.ID,
 					},
 					QuoteIDs:   []uid.UID{post.ID},
-					QuotePosts: []*entity.Post{},
+					QuotePosts: []*entity.Post{post},
 				},
 			},
 		},
@@ -1064,7 +1066,7 @@ func TestService_PubPost(t *testing.T) {
 			if tt.args.post.Anonymous {
 				tt.want.Data.Author.AnonymousID = got.Data.Author.AnonymousID
 			}
-			if diff := cmp.Diff(got, tt.want, forumRepoComp); diff != "" {
+			if diff := cmp.Diff(got, tt.want, forumRepoComp, timeCmp); diff != "" {
 				t.Errorf("Service.PubPost() missmatch %s", diff)
 			}
 			if got.Author() != tt.want.Author() {
@@ -1187,19 +1189,82 @@ func TestService_GetUnreadNotiCount(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := getNewDBCtx(t)
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
+	}
+	user, userCtx := loginUser(t, service, testUser{email: "a@example.com"})
 	type args struct {
 		ctx context.Context
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    int
-		wantErr bool
+		name       string
+		args       args
+		beforeTest func(t *testing.T)
+		want       int
+		wantErr    bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "1 system noti",
+			args: args{
+				ctx: userCtx,
+			},
+			beforeTest: func(t *testing.T) {
+				if err := service.Noti.NewSystemNoti(
+					ctx, "welcome!", "welcome to abyss", entity.SendToUser(user.ID),
+				); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: 1,
+		},
+		{
+			name: "1 global system noti",
+			args: args{
+				ctx: userCtx,
+			},
+			beforeTest: func(t *testing.T) {
+				if err := service.Noti.NewSystemNoti(
+					ctx, "welcome!", "welcome to abyss", entity.SendToGroup(entity.AllUser),
+				); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: 2,
+		},
+		{
+			name: "count after read",
+			args: args{
+				ctx: userCtx,
+			},
+			beforeTest: func(t *testing.T) {
+				if _, err := service.GetNotification(userCtx, entity.SliceQuery{
+					After: algo.NullString(""),
+					Limit: 5,
+				}); err != nil {
+					t.Fatal(err)
+				}
+			},
+			want: 0,
+		},
+		{
+			name: "new reply noti",
+			args: args{
+				ctx: userCtx,
+			},
+			beforeTest: func(t *testing.T) {
+				thread, _ := pubThread(t, service, testUser{email: user.Email})
+				pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
+				time.Sleep(100 * time.Millisecond)
+			},
+			want: 1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if tt.beforeTest != nil {
+				tt.beforeTest(t)
+			}
 			got, err := service.GetUnreadNotiCount(tt.args.ctx)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Service.GetUnreadNotiCount() error = %v, wantErr %v", err, tt.wantErr)
@@ -1217,27 +1282,193 @@ func TestService_GetNotification(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := getNewDBCtx(t)
+	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
+		t.Fatal(err)
+	}
+	user, _ := loginUser(t, service, testUser{email: "t@example.com"})
+	thread, _ := pubThread(t, service, testUser{email: user.Email})
+
 	type args struct {
-		ctx   context.Context
+		email string
 		query entity.SliceQuery
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *entity.NotiSlice
-		wantErr bool
+		name       string
+		args       args
+		beforeTest func(t *testing.T, want *entity.NotiSlice)
+		want       *entity.NotiSlice
+		wantErr    bool
 	}{
-		// TODO: Add test cases.
+		{
+			name: "2 system noti 1 replied noti",
+			args: args{
+				email: user.Email,
+				query: entity.SliceQuery{After: algo.NullString(""), Limit: 5},
+			},
+			beforeTest: func(t *testing.T, want *entity.NotiSlice) {
+				if err := service.Noti.NewSystemNoti(
+					ctx, "welcome!", "welcome to abyss", entity.SendToUser(user.ID),
+				); err != nil {
+					t.Fatal(err)
+				}
+				if err := service.Noti.NewSystemNoti(
+					ctx, "welcome!", "welcome to abyss", entity.SendToGroup(entity.AllUser),
+				); err != nil {
+					t.Fatal(err)
+				}
+				post, _ := pubPost(t, service, testUser{email: "p1@example.com"}, thread.ID)
+				content := want.Notifications[0].Content.(entity.RepliedNoti)
+				content.NewReplyID = post.ID
+				want.Notifications[0].Content = content
+				time.Sleep(100 * time.Millisecond)
+			},
+			want: &entity.NotiSlice{
+				SliceInfo: &entity.SliceInfo{
+					HasNext: false,
+				},
+				Notifications: []*entity.Notification{
+					{
+						Type: entity.NotiTypeReplied,
+						Content: entity.RepliedNoti{
+							Thread: &entity.ThreadOutline{
+								ID:      thread.ID,
+								Title:   thread.Title,
+								Content: thread.Content,
+								MainTag: thread.MainTag,
+								SubTags: thread.SubTags,
+							},
+							NewReplyCount: 1,
+						},
+						Key:       fmt.Sprintf("replied:%s", thread.ID.ToBase64String()),
+						Receivers: []entity.Receiver{entity.SendToUser(user.ID)},
+					},
+					{
+						Type: entity.NotiTypeSystem,
+						Content: entity.SystemNoti{
+							Title:   "welcome!",
+							Content: "welcome to abyss",
+						},
+						Receivers: []entity.Receiver{entity.SendToGroup(entity.AllUser)},
+					},
+					{
+						Type: entity.NotiTypeSystem,
+						Content: entity.SystemNoti{
+							Title:   "welcome!",
+							Content: "welcome to abyss",
+						},
+						Receivers: []entity.Receiver{entity.SendToUser(user.ID)},
+					},
+				},
+			},
+		},
+		{
+			name: "3 quoted noti, 1 replied",
+			args: args{
+				email: user.Email,
+				query: entity.SliceQuery{After: algo.NullString(""), Limit: 4},
+			},
+			beforeTest: func(t *testing.T, want *entity.NotiSlice) {
+				qp1, _ := pubPost(t, service, testUser{email: user.Email}, thread.ID)
+				qp2, _ := pubPost(t, service, testUser{email: user.Email}, thread.ID)
+				p1, _ := pubPost(t, service, testUser{email: "p1@example.com"}, thread.ID, qp1.ID)
+				p2, _ := pubPost(t, service, testUser{email: "p1@example.com"}, thread.ID, qp1.ID, qp2.ID)
+				writeWant := func(noti *entity.Notification, q, p *entity.Post) {
+					noti.Content = entity.QuotedNoti{
+						ThreadID: thread.ID,
+						QuotedPost: &entity.PostOutline{
+							Author:  q.Author(),
+							Content: q.Content,
+						},
+						Post: &entity.PostOutline{
+							Author:  p.Author(),
+							Content: p.Content,
+						},
+					}
+					noti.Key = fmt.Sprintf("quoted:%s:%s", q.ID.ToBase64String(), p.ID.ToBase64String())
+				}
+				writeWant(want.Notifications[0], qp2, p2)
+				writeWant(want.Notifications[1], qp1, p2)
+				content := want.Notifications[2].Content.(entity.RepliedNoti)
+				content.NewReplyID = qp1.ID
+				content.NewReplyCount = 4
+				want.Notifications[2].Content = content
+				writeWant(want.Notifications[3], qp1, p1)
+			},
+			want: &entity.NotiSlice{
+				SliceInfo: &entity.SliceInfo{
+					HasNext: true,
+				},
+				Notifications: []*entity.Notification{
+					{ // 0
+						Type:      entity.NotiTypeQuoted,
+						Receivers: []entity.Receiver{entity.SendToUser(user.ID)},
+					},
+					{ // 1
+						Type:      entity.NotiTypeQuoted,
+						Receivers: []entity.Receiver{entity.SendToUser(user.ID)},
+					},
+					{ // 2
+						Type: entity.NotiTypeReplied,
+						Content: entity.RepliedNoti{
+							Thread: &entity.ThreadOutline{
+								ID:      thread.ID,
+								Title:   thread.Title,
+								Content: thread.Content,
+								MainTag: thread.MainTag,
+								SubTags: thread.SubTags,
+							},
+							NewReplyCount: 1,
+						},
+						Key:       fmt.Sprintf("replied:%s", thread.ID.ToBase64String()),
+						Receivers: []entity.Receiver{entity.SendToUser(user.ID)},
+					},
+					{ // 3
+						Type:      entity.NotiTypeQuoted,
+						Receivers: []entity.Receiver{entity.SendToUser(user.ID)},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := service.GetNotification(tt.args.ctx, tt.args.query)
+			if tt.beforeTest != nil {
+				tt.beforeTest(t, tt.want)
+			}
+			user, ctx := loginUser(t, service, testUser{email: tt.args.email})
+			t.Logf("get user context: %#v, %#v", user, ctx)
+			got, err := service.GetNotification(ctx, tt.args.query)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Service.GetNotification() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.GetNotification() = %v, want %v", got, tt.want)
+			// sliceInfo
+			wantSliceInfo := &entity.SliceInfo{HasNext: tt.want.SliceInfo.HasNext}
+			if len(got.Notifications) > 0 {
+				wantSliceInfo.FirstCursor = got.Notifications[0].SortKey.ToBase64String()
+				wantSliceInfo.LastCursor = got.Notifications[len(got.Notifications)-1].SortKey.ToBase64String()
+			}
+			if diff := cmp.Diff(got.SliceInfo, wantSliceInfo); diff != "" {
+				t.Errorf("Service.GetNotification().SliceInfo missmatch: %s", diff)
+			}
+			// notifications.count
+			if len(got.Notifications) != len(tt.want.Notifications) {
+				t.Errorf(
+					"Service.GetNotification().count missmatch, got=%v, want=%v",
+					len(got.Notifications), tt.want.Notifications,
+				)
+			}
+			// notifications
+			for i := range got.Notifications {
+				g, w := got.Notifications[i], tt.want.Notifications[i]
+				w.EventTime, w.SortKey = g.EventTime, g.SortKey
+				if w.Key == "" {
+					w.Key = g.Key
+				}
+				if diff := cmp.Diff(g, w); diff != "" {
+					t.Errorf("Service.GetNotification().Notifications[%v] missmatch: %s", i, diff)
+				}
 			}
 		})
 	}

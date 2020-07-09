@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mailgun/mailgun-go/v4 v4.1.0
-	github.com/mitchellh/mapstructure v1.3.0 // indirect
+	github.com/mitchellh/mapstructure v1.3.0
 	github.com/onsi/ginkgo v1.10.2 // indirect
 	github.com/pelletier/go-toml v1.2.0
 	github.com/pkg/errors v0.9.1

@@ -7,6 +7,7 @@ import (
 	"github.com/go-pg/pg/v9"
 	"github.com/go-redis/redis/v7"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
+	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
@@ -53,8 +54,9 @@ func (u *UserRepo) toEntityUser(user *User, mainTags []string) *entity.User {
 		Role:  entity.ParseRole(user.Role),
 		Tags:  user.Tags,
 
-		Repo: u,
-		ID:   user.ID,
+		Repo:         u,
+		ID:           user.ID,
+		LastReadNoti: uid.UID(user.LastReadNoti),
 	}
 	// TODO: should in service level?
 	if len(user.Tags) == 0 {
