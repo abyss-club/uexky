@@ -38,7 +38,7 @@ type Thread {
   # Only one mainTag is allowed.
   mainTag: String!
   # Optional, maximum of 4.
-  subTags: [String!]
+  subTags: [String!]!
   # Replied posts.
   replies(query: SliceQuery!): PostSlice!
   # Amount of posts replied.

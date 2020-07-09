@@ -19,9 +19,8 @@ mod: ## Get the dependencies
 tool: ## Get/Update tools
 	@go get -u github.com/99designs/gqlgen
 	@go get -u github.com/google/wire
-	@go get -u github.com/dizzyfool/genna
 
-gen: gengql genwire genpg
+gen: gengql genwire
 
 gengql: ## generate all
 	@gqlgen generate
@@ -29,9 +28,6 @@ gengql: ## generate all
 genwire:
 	@cd ./uexky;wire;cd -
 	@cd ./server;wire;cd -
-
-genpg:
-	@genna model -c $(pguri) -o repo/generated.go -fkw --pkg repo --gopg 9
 
 build: mod ## Build the binary file
 	@mkdir -p dist

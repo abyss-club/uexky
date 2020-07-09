@@ -172,15 +172,13 @@ func TestUserRepo_toEntityUser(t *testing.T) {
 			"normal",
 			args{
 				user: &User{
-					ID:                  1,
-					CreatedAt:           now,
-					UpdatedAt:           now,
-					Email:               "a@example.com",
-					Role:                "mod",
-					LastReadSystemNoti:  2,
-					LastReadRepliedNoti: 2,
-					LastReadQuotedNoti:  2,
-					Tags:                []string{"a", "b"},
+					ID:           1,
+					CreatedAt:    now,
+					UpdatedAt:    now,
+					Email:        "a@example.com",
+					Role:         "mod",
+					LastReadNoti: 2,
+					Tags:         []string{"a", "b"},
 				},
 			},
 			&entity.User{
@@ -188,28 +186,22 @@ func TestUserRepo_toEntityUser(t *testing.T) {
 				Role:  entity.RoleMod,
 				Tags:  []string{"a", "b"},
 
-				Repo: u,
-				ID:   1,
-				LastReadNoti: entity.LastReadNoti{
-					SystemNoti:  2,
-					RepliedNoti: 2,
-					QuotedNoti:  2,
-				},
+				Repo:         u,
+				ID:           1,
+				LastReadNoti: 2,
 			},
 		},
 		{
 			"normal, with empty role",
 			args{
 				user: &User{
-					ID:                  1,
-					CreatedAt:           now,
-					UpdatedAt:           now,
-					Email:               "a@example.com",
-					Name:                &name,
-					LastReadSystemNoti:  2,
-					LastReadRepliedNoti: 2,
-					LastReadQuotedNoti:  2,
-					Tags:                []string{"a", "b"},
+					ID:           1,
+					CreatedAt:    now,
+					UpdatedAt:    now,
+					Email:        "a@example.com",
+					Name:         &name,
+					LastReadNoti: 2,
+					Tags:         []string{"a", "b"},
 				},
 			},
 			&entity.User{
@@ -218,13 +210,9 @@ func TestUserRepo_toEntityUser(t *testing.T) {
 				Role:  entity.RoleNormal,
 				Tags:  []string{"a", "b"},
 
-				Repo: u,
-				ID:   1,
-				LastReadNoti: entity.LastReadNoti{
-					SystemNoti:  2,
-					RepliedNoti: 2,
-					QuotedNoti:  2,
-				},
+				Repo:         u,
+				ID:           1,
+				LastReadNoti: 2,
 			},
 		},
 	}
@@ -303,7 +291,7 @@ func TestUserRepo_UpdateUser(t *testing.T) {
 	newRole := entity.RoleMod
 	newName1 := "amy"
 	type args struct {
-		id     int
+		id     int64
 		update *entity.UserUpdate
 	}
 	tests := []struct {

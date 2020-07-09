@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/uid"
@@ -128,9 +129,9 @@ func (f *ForumRepo) GetThreadCatalog(ctx context.Context, id uid.UID) ([]*entity
 	return cats, nil
 }
 
-func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int, threadID uid.UID) (uid.UID, error) {
+func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int64, threadID uid.UID) (uid.UID, error) {
 	var posts []Post
-	q := f.db(ctx).Model(&posts).Column(Columns.Post.AnonymousID).
+	q := f.db(ctx).Model(&posts).Column("anonymous_id").
 		Where("thread_id = ?", threadID).Where("anonymous = true").Order("id DESC").Limit(1)
 	if err := q.Select(); err != nil {
 		return uid.UID(0), err
@@ -142,6 +143,7 @@ func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int, threadID uid.UID
 }
 
 func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) error {
+	log.Infof("InsertThread(%v)", thread)
 	t := Thread{
 		ID:         int64(thread.ID),
 		Anonymous:  thread.Anonymous,
@@ -320,6 +322,7 @@ func (f *ForumRepo) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, er
 }
 
 func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) error {
+	log.Infof("InsertPost(%v)", post)
 	newPost := &Post{
 		ID:        int64(post.ID),
 		ThreadID:  int64(post.Data.ThreadID),
@@ -398,7 +401,7 @@ func (f *ForumRepo) GetMainTags(ctx context.Context) ([]string, error) {
 		return f.mainTags, nil
 	}
 	var tags []Tag
-	if err := f.db(ctx).Model(&tags).Where("tag_type = ?", "main").Select(); err != nil {
+	if err := f.db(ctx).Model(&tags).Where("type = ?", "main").Select(); err != nil {
 		return nil, dbErrWrap(err, "get main tags")
 	}
 	var mainTags []string

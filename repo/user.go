@@ -7,6 +7,7 @@ import (
 	"github.com/go-pg/pg/v9"
 	"github.com/go-redis/redis/v7"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
+	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
@@ -53,13 +54,9 @@ func (u *UserRepo) toEntityUser(user *User, mainTags []string) *entity.User {
 		Role:  entity.ParseRole(user.Role),
 		Tags:  user.Tags,
 
-		Repo: u,
-		ID:   user.ID,
-		LastReadNoti: entity.LastReadNoti{
-			SystemNoti:  user.LastReadSystemNoti,
-			RepliedNoti: user.LastReadRepliedNoti,
-			QuotedNoti:  user.LastReadQuotedNoti,
-		},
+		Repo:         u,
+		ID:           user.ID,
+		LastReadNoti: uid.UID(user.LastReadNoti),
 	}
 	// TODO: should in service level?
 	if len(user.Tags) == 0 {
@@ -89,7 +86,7 @@ func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.U
 	return u.toEntityUser(&user, mainTags), nil
 }
 
-func (u *UserRepo) UpdateUser(ctx context.Context, id int, update *entity.UserUpdate) error {
+func (u *UserRepo) UpdateUser(ctx context.Context, id int64, update *entity.UserUpdate) error {
 	user := User{}
 	q := u.db(ctx).Model(&user).Where("id = ?", id)
 	if update.Name != nil {

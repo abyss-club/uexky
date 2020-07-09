@@ -6,12 +6,14 @@ import (
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
+// -- ForumRepo
+
 type ThreadSearch struct {
 	ID *uid.UID
 }
 
 type ThreadsSearch struct {
-	UserID *int
+	UserID *int64
 	Tags   []string
 }
 
@@ -27,7 +29,7 @@ type PostSearch struct {
 }
 type PostsSearch struct {
 	IDs      []uid.UID
-	UserID   *int
+	UserID   *int64
 	ThreadID *uid.UID
 	DESC     bool
 }
@@ -52,7 +54,7 @@ type ForumRepo interface {
 	GetThread(ctx context.Context, search *ThreadSearch) (*Thread, error)
 	GetThreadSlice(ctx context.Context, search *ThreadsSearch, query SliceQuery) (*ThreadSlice, error)
 	GetThreadCatalog(ctx context.Context, id uid.UID) ([]*ThreadCatalogItem, error)
-	GetAnonyID(ctx context.Context, userID int, threadID uid.UID) (uid.UID, error)
+	GetAnonyID(ctx context.Context, userID int64, threadID uid.UID) (uid.UID, error)
 	InsertThread(ctx context.Context, thread *Thread) error
 	UpdateThread(ctx context.Context, id uid.UID, update *ThreadUpdate) error
 
@@ -68,4 +70,33 @@ type ForumRepo interface {
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)
 	GetMainTags(ctx context.Context) ([]string, error)
 	SetMainTags(ctx context.Context, tags []string) error
+}
+
+// -- Author
+
+type Author struct {
+	UserID      int64
+	AnonymousID *uid.UID
+	UserName    *string
+}
+
+func (a Author) Name(anonymous bool) string {
+	if !anonymous {
+		return *a.UserName
+	}
+	return a.AnonymousID.ToBase64String()
+}
+
+// -- Entity Extension
+
+type PostData struct {
+	ThreadID   uid.UID
+	Author     Author
+	QuoteIDs   []uid.UID
+	QuotePosts []*Post
+}
+
+type NewPostResponse struct {
+	Post   *Post
+	Thread *Thread
 }
