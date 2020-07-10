@@ -1,20 +1,20 @@
 extend type Query {
-  # Main Tags.
+  """ Main Tags."""
   mainTags: [String!]!
-  # Tags that are recommended.
+  """ Tags that are recommended."""
   recommended: [String!]!
-  # Searching tags by keyword.
+  """ Searching tags by keyword."""
   tags(
-    # Search keyword.
+    """ Search keyword."""
     query: String,
-    # Amount of tags returned.
+    """ Amount of tags returned."""
     limit: Int,
   ): [Tag!]!
 }
 
 type Tag {
-  # Name of tag.
+  """ Name of tag."""
   name: String!
-  # The tag is a Main Tag if true, Sub Tag otherwise.
+  """ The tag is a MainTag if true, SubTag otherwise."""
   isMain: Boolean!
 }

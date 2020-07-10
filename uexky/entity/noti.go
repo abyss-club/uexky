@@ -69,8 +69,8 @@ func (n *NotiService) NewRepliedNoti(ctx context.Context, user *User, thread *Th
 			MainTag: thread.MainTag,
 			SubTags: thread.SubTags,
 		},
-		NewReplyID:    reply.ID,
-		NewReplyCount: 1,
+		FirstReplyID:    reply.ID,
+		NewRepliesCount: 1,
 	}
 	noti := &Notification{
 		Type:      NotiTypeReplied,
@@ -81,8 +81,8 @@ func (n *NotiService) NewRepliedNoti(ctx context.Context, user *User, thread *Th
 	if oldNoti != nil {
 		if !oldNoti.HasRead {
 			oldContent := oldNoti.Content.(RepliedNoti)
-			content.NewReplyCount = oldContent.NewReplyCount + 1
-			content.NewReplyID = oldContent.NewReplyID
+			content.NewRepliesCount = oldContent.NewRepliesCount + 1
+			content.FirstReplyID = oldContent.FirstReplyID
 		}
 		noti.Content = content
 		log.Infof("UpdateNotiContent(%#v), key=%s", noti, key)
