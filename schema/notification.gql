@@ -1,7 +1,7 @@
 extend type Query {
-  # The count of unread notifications.
+  """ The count of unread notifications. """
   unreadNotiCount: Int!
-  # Notifications for current user.
+  """ Notifications for current user. """
   notification(query: SliceQuery!): NotiSlice!
 }
 
@@ -11,35 +11,37 @@ enum NotiType {
   quoted
 }
 
-# NotiSlice object is for selecting specific 'slice' of an object to return.
-# Affects the returning SliceInfo.
+""" NotiSlice object is for selecting specific 'slice' of an object to return.
+Affects the returning SliceInfo. """
 type NotiSlice {
   notifications: [Notification!]!
   sliceInfo: SliceInfo!
 }
 
 type Notification {
-  # Type of Notification. "system", "replied" or "quoted".
+  """ Type of Notification. "system", "replied" or "quoted"."""
   type: NotiType!
-  # Time when a notify event triggers. E.g. The time when a system event is
-  # announced from the server.
+  """ Time when a notify event triggers. E.g. The time when a system event is
+  announced from the server."""
   eventTime: Time!
-  # The notification is read or not.
+  """ The notification is read or not."""
   hasRead: Boolean!
-  # notification content for different type.
+  """ notification content for different type."""
   content: NotiContent!
 }
 
+""" Union type of Notificatiion contents """
 union NotiContent = SystemNoti | RepliedNoti | QuotedNoti
 
-# Object describing a system notification.
+""" Object describing contents of a system notification."""
 type SystemNoti {
-  # Notification title.
+  """ Notification title."""
   title: String!
-  # Markdown formatted notification content.
+  """ Markdown formatted notification content."""
   content: String!
 }
 
+""" Stripped version of Thread object."""
 type ThreadOutline {
   id: UID!
   title: String
@@ -48,27 +50,30 @@ type ThreadOutline {
   subTags: [String!]!
 }
 
+""" Stripped version of Post object."""
 type PostOutline {
+  """ Name if not anonymous, anonymous ID otherwise."""
   author: String!
+  """ Markdown formatted content."""
   content: String!
 }
 
-# Object describing a replied notification.
+""" Object describing contents of a replied notification."""
 type RepliedNoti {
-  # The thread object that is replied.
+  """ The Thread object that is replied."""
   thread: ThreadOutline!
-  # count of replies from last read this notification
-  newReplyCount: Int!
-  # first new reply from last read this notification
-  newReplyId: UID!
+  """ How much new replies since the last read of this notification."""
+  newRepliesCount: Int!
+  """ ID of the first reply since the last read of this notification."""
+  firstReplyId: UID!
 }
 
-# Object describing a quoted notification.
+""" Object describing contents of a quoted notification."""
 type QuotedNoti {
-  # The thread id that is quoted in.
+  """ ID of the Thread quoted."""
   threadId: UID!
-  # The post object that is quoted.
+  """ The Post object quoted."""
   quotedPost: PostOutline!
-  # The post object that made this notification.
+  """ The Post object that made this notification."""
   post: PostOutline!
 }

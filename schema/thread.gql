@@ -1,59 +1,60 @@
 extend type Query {
-  # A slice of thread.
+  """ A slice of Thread."""
   threadSlice(tags: [String!], query: SliceQuery!): ThreadSlice!
-  # A thread object.
+  """ A Thread object."""
   thread(id: UID!): Thread!
 }
 
 extend type Mutation {
-  # Publish a new thread.
+  """ Publish a new Thread."""
   pubThread(thread: ThreadInput!): Thread!
 }
 
-# Construct a new thread.
+""" Construct a new Thread."""
 input ThreadInput {
-  # Toggle anonymousness. If true, a new ID will be generated in each thread.
+  """ Toggle anonymousness. If true, a new ID will be generated in each thread."""
   anonymous: Boolean!
+  """ Markdown formmatted text. """
   content: String!
-  # Required. Only one mainTag is allowed.
+  """ Required. Only one mainTag is allowed."""
   mainTag: String!
-  # Optional, maximum of 4.
+  """ Optional, maximum of 4."""
   subTags: [String!]
-  # Optional. If not set, the title will be '无题'.
+  """ Optional. If not set, the title will be '无题'."""
   title: String
 }
 
 type Thread {
-  # UUID with 8 chars in length, and will increase to 9 after 30 years.
+  """ UUID with 8 chars in length, and will increase to 9 after 30 years."""
   id: UID!
   createdAt: Time!
-  # Thread was published anonymously or not.
+  """ Thread was published anonymously or not."""
   anonymous: Boolean!
-  # Same format as id if anonymous, name of User otherwise.
+  """ Same format as id if anonymous, name of User otherwise."""
   author: String!
-  # Default to '无题'.
+  """ Default to '无题'."""
   title: String
-  # Markdown formatted content.
+  """ Markdown formatted content."""
   content: String!
-  # Only one mainTag is allowed.
+  """ Only one mainTag is allowed."""
   mainTag: String!
-  # Optional, maximum of 4.
+  """ Optional, maximum of 4."""
   subTags: [String!]!
-  # Replied posts.
+  """ Replied posts."""
   replies(query: SliceQuery!): PostSlice!
-  # Amount of posts replied.
+  """ Amount of posts replied."""
   replyCount: Int!
-  # A list of all posts replied in the thread. Sorted by timestamp.
+  """ A list of all posts replied in the thread. Sorted by timestamp."""
   catalog: [ThreadCatalogItem!]
-  # Thread is blocked.
+  """ Thread is blocked."""
   blocked: Boolean!
-  # Thread is locked.
+  """ Thread is locked."""
   locked: Boolean!
 }
 
-# The ID and timestamp of post replied in the thread.
+""" The ID and timestamp of post replied in the thread."""
 type ThreadCatalogItem {
-  # The ID of post.
+  """ The ID of post."""
   postId: String!
   createdAt: Time!
 }

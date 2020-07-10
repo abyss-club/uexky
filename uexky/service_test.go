@@ -1319,7 +1319,7 @@ func TestService_GetNotification(t *testing.T) {
 				}
 				post, _ := pubPost(t, service, testUser{email: "p1@example.com"}, thread.ID)
 				content := want.Notifications[0].Content.(entity.RepliedNoti)
-				content.NewReplyID = post.ID
+				content.FirstReplyID = post.ID
 				want.Notifications[0].Content = content
 				time.Sleep(100 * time.Millisecond)
 			},
@@ -1338,7 +1338,7 @@ func TestService_GetNotification(t *testing.T) {
 								MainTag: thread.MainTag,
 								SubTags: thread.SubTags,
 							},
-							NewReplyCount: 1,
+							NewRepliesCount: 1,
 						},
 						Key:       fmt.Sprintf("replied:%s", thread.ID.ToBase64String()),
 						Receivers: []entity.Receiver{entity.SendToUser(user.ID)},
@@ -1390,8 +1390,8 @@ func TestService_GetNotification(t *testing.T) {
 				writeWant(want.Notifications[0], qp2, p2)
 				writeWant(want.Notifications[1], qp1, p2)
 				content := want.Notifications[2].Content.(entity.RepliedNoti)
-				content.NewReplyID = qp1.ID
-				content.NewReplyCount = 4
+				content.FirstReplyID = qp1.ID
+				content.NewRepliesCount = 4
 				want.Notifications[2].Content = content
 				writeWant(want.Notifications[3], qp1, p1)
 			},
@@ -1418,7 +1418,7 @@ func TestService_GetNotification(t *testing.T) {
 								MainTag: thread.MainTag,
 								SubTags: thread.SubTags,
 							},
-							NewReplyCount: 1,
+							NewRepliesCount: 1,
 						},
 						Key:       fmt.Sprintf("replied:%s", thread.ID.ToBase64String()),
 						Receivers: []entity.Receiver{entity.SendToUser(user.ID)},
