@@ -3,6 +3,7 @@ package uerr
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -51,4 +52,20 @@ func (e *Error) Is(target error) bool {
 		return false
 	}
 	return ue.t == e.t
+}
+
+type ErrSlice []error
+
+func (e ErrSlice) Error() string {
+	if len(e) == 0 {
+		return "empty error"
+	}
+	if len(e) == 1 {
+		return e[0].Error()
+	}
+	var msg []string
+	for _, err := range e {
+		msg = append(msg, err.Error())
+	}
+	return fmt.Sprintf("multiple errors: %s", strings.Join(msg, "; "))
 }

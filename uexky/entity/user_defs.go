@@ -22,7 +22,7 @@ type UserRepo interface {
 	SetToken(ctx context.Context, email string, tok string, ex time.Duration) error
 	GetTokenEmail(ctx context.Context, tok string) (string, error)
 
-	GetOrInsertUser(ctx context.Context, email string) (*User, error)
+	GetOrInsertUser(ctx context.Context, email string) (user *User, isNew bool, err error)
 	UpdateUser(ctx context.Context, id int64, update *UserUpdate) error
 }
 

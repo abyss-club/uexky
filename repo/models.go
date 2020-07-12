@@ -80,3 +80,9 @@ type Notification struct {
 	Receivers []entity.Receiver      `pg:"receivers,array"`
 	Content   map[string]interface{} `pg:"content,json_use_number"`
 }
+
+type NotificationQuery struct {
+	Notification `pg:",inherit"`
+
+	HasRead bool `pg:"has_read"`
+}

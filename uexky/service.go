@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
@@ -25,7 +26,20 @@ func (s *Service) SignInByCode(ctx context.Context, code string) (entity.Token, 
 }
 
 func (s *Service) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, error) {
-	return s.User.CtxWithUserByToken(ctx, tok)
+	ctx, isNew, err := s.User.CtxWithUserByToken(ctx, tok)
+	if err != nil {
+		return nil, err
+	}
+	if isNew {
+		user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
+		if err != nil {
+			return nil, err
+		}
+		if err := s.Noti.NewNotiOnNewUser(ctx, user); err != nil {
+			log.Error(err)
+		}
+	}
+	return ctx, err
 }
 
 func (s *Service) Profile(ctx context.Context) (*entity.User, error) {
@@ -197,18 +211,8 @@ func (s *Service) PubPost(ctx context.Context, post entity.PostInput) (*entity.P
 	if err != nil {
 		return nil, s.TxAdapter.Rollback(ctx, err)
 	}
-	// go func() {
-	if err := s.Noti.NewRepliedNoti(ctx, user, res.Thread, res.Post); err != nil {
+	if err := s.Noti.NewNotiOnNewPost(ctx, user, res.Thread, res.Post); err != nil {
 		return res.Post, s.TxAdapter.Rollback(ctx, err)
-	}
-	quotePosts, err := res.Post.Quotes(ctx)
-	if err != nil {
-		return res.Post, s.TxAdapter.Rollback(ctx, err)
-	}
-	for _, qp := range quotePosts {
-		if err := s.Noti.NewQuotedNoti(ctx, res.Thread, res.Post, qp); err != nil {
-			return res.Post, s.TxAdapter.Rollback(ctx, err)
-		}
 	}
 	return res.Post, s.TxAdapter.Commit(ctx)
 }

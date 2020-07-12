@@ -57,10 +57,11 @@ func (n *NotiService) NewSystemNoti(ctx context.Context, title, content string, 
 
 func (n *NotiService) NewRepliedNoti(ctx context.Context, user *User, thread *Thread, reply *Post) error {
 	key := fmt.Sprintf("replied:%s", thread.ID.ToBase64String())
-	oldNoti, err := n.Repo.GetNotiByKey(ctx, user, key)
+	oldNoti, err := n.Repo.GetNotiByKey(ctx, thread.AuthorObj.UserID, key)
 	if err != nil {
 		return err
 	}
+	log.Infof("NewRepliedNoti, User = %#v GetNotiByKey = %#v", user, oldNoti)
 	content := RepliedNoti{
 		Thread: &ThreadOutline{
 			ID:      thread.ID,
@@ -115,6 +116,32 @@ func (n *NotiService) NewQuotedNoti(ctx context.Context, thread *Thread, post *P
 	}
 	log.Infof("NewQuotedNoti, post %v quote post %v, key=%s", post, quotedPost, noti.Key)
 	return n.Repo.InsertNoti(ctx, noti)
+}
+
+func (n *NotiService) NewNotiOnNewUser(ctx context.Context, user *User) error {
+	return n.NewSystemNoti(ctx, WelcomeTitle, WelcomeContent, SendToUser(user.ID))
+}
+
+func (n *NotiService) NewNotiOnNewPost(ctx context.Context, user *User, thread *Thread, post *Post) uerr.ErrSlice {
+	var errs uerr.ErrSlice
+	if user.ID != thread.AuthorObj.UserID {
+		if err := n.NewRepliedNoti(ctx, user, thread, post); err != nil {
+			errs = append(errs, err) // not exist
+		}
+	}
+	quotes, err := post.Quotes(ctx)
+	if err != nil {
+		errs = append(errs, err)
+		return errs
+	}
+	for _, qp := range quotes {
+		if user.ID != qp.Data.Author.UserID {
+			if err := n.NewQuotedNoti(ctx, thread, post, qp); err != nil {
+				errs = append(errs, err) // not exist
+			}
+		}
+	}
+	return errs
 }
 
 type Notification struct {

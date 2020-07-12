@@ -65,25 +65,25 @@ func (u *UserRepo) toEntityUser(user *User, mainTags []string) *entity.User {
 	return entity
 }
 
-func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.User, error) {
+func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.User, bool, error) {
 	var users []User
 	if err := u.db(ctx).Model(&users).Where("email = ?", email).Select(); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	mainTags, err := u.Forum.GetMainTags(ctx)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if len(users) > 0 {
-		return u.toEntityUser(&users[0], mainTags), nil
+		return u.toEntityUser(&users[0], mainTags), false, nil
 	}
 	user := User{
 		Email: email,
 	}
 	if _, err := u.db(ctx).Model(&user).Returning("*").Insert(); err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return u.toEntityUser(&user, mainTags), nil
+	return u.toEntityUser(&user, mainTags), true, nil
 }
 
 func (u *UserRepo) UpdateUser(ctx context.Context, id int64, update *entity.UserUpdate) error {
