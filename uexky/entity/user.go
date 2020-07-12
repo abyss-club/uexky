@@ -71,22 +71,22 @@ func (s *UserService) SignInByCode(ctx context.Context, code string) (Token, err
 	return Token{Tok: tok, Expire: tokenExpire}, nil
 }
 
-func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, error) {
+func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (ct context.Context, isNew bool, err error) {
 	email, err := s.Repo.GetTokenEmail(ctx, tok)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if email == "" {
 		user := &User{
 			Role: RoleGuest,
 		}
-		return context.WithValue(ctx, userKey, user), nil
+		return context.WithValue(ctx, userKey, user), false, nil
 	}
-	user, err := s.Repo.GetOrInsertUser(ctx, email)
+	user, isNew, err := s.Repo.GetOrInsertUser(ctx, email)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return context.WithValue(ctx, userKey, user), nil
+	return context.WithValue(ctx, userKey, user), isNew, nil
 }
 
 func (s *UserService) BanUser(ctx context.Context, id int64) (bool, error) {

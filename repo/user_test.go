@@ -237,6 +237,7 @@ func TestUserRepo_GetOrInsertUser(t *testing.T) {
 		name    string
 		email   string
 		want    *entity.User
+		wantNew bool
 		wantErr bool
 	}{
 		{
@@ -249,6 +250,7 @@ func TestUserRepo_GetOrInsertUser(t *testing.T) {
 				Repo:  repo,
 				ID:    1,
 			},
+			wantNew: true,
 		},
 		{
 			name:  "get user",
@@ -264,9 +266,13 @@ func TestUserRepo_GetOrInsertUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repo.GetOrInsertUser(ctx, tt.email)
+			got, isNew, err := repo.GetOrInsertUser(ctx, tt.email)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UserRepo.GetOrInsertUser() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if isNew != tt.wantNew {
+				t.Errorf("UserRepo.GetOrInsertUser() isNew = %v, wantErr %v", isNew, tt.wantNew)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
@@ -284,7 +290,7 @@ func TestUserRepo_UpdateUser(t *testing.T) {
 	}
 	ctx := getNewDBCtx(t)
 	email := "a@example.com"
-	user, err := repo.GetOrInsertUser(ctx, email)
+	user, _, err := repo.GetOrInsertUser(ctx, email)
 	if err != nil {
 		t.Errorf("create user error: %v", err)
 	}
@@ -340,7 +346,7 @@ func TestUserRepo_UpdateUser(t *testing.T) {
 			if err := repo.UpdateUser(ctx, tt.args.id, tt.args.update); (err != nil) != tt.wantErr {
 				t.Errorf("UserRepo.UpdateUser() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			got, err := repo.GetOrInsertUser(ctx, user.Email)
+			got, _, err := repo.GetOrInsertUser(ctx, user.Email)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("UserRepo.GetOrInsertUser() error = %+v, wantErr %v", err, tt.wantErr)
 				return

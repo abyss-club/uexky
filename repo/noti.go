@@ -17,11 +17,11 @@ func (n *NotiRepo) db(ctx context.Context) postgres.Session {
 	return postgres.GetSessionFromContext(ctx)
 }
 
-func (n *NotiRepo) ToEntityNoti(user *entity.User, noti *Notification) *entity.Notification {
+func (n *NotiRepo) ToEntityNoti(noti *NotificationQuery) *entity.Notification {
 	e := &entity.Notification{
 		Type:      entity.NotiType(noti.Type),
 		EventTime: noti.CreatedAt,
-		HasRead:   noti.SortKey <= int64(user.LastReadNoti),
+		HasRead:   noti.HasRead,
 		Key:       noti.Key,
 		SortKey:   uid.UID(noti.SortKey),
 		Receivers: noti.Receivers,
@@ -44,24 +44,32 @@ func (n *NotiRepo) GetUserUnreadCount(ctx context.Context, user *entity.User) (i
 	return count, err
 }
 
-func (n *NotiRepo) GetNotiByKey(ctx context.Context, user *entity.User, key string) (*entity.Notification, error) {
-	var notification Notification
-	err := n.db(ctx).Model(&notification).Where("key = ?", key).Select()
+func (n *NotiRepo) GetNotiByKey(ctx context.Context, userID int64, key string) (*entity.Notification, error) {
+	var notification NotificationQuery
+	err := n.db(ctx).Model(&notification).
+		Column("notification.*").
+		ColumnExpr("u.last_read_noti >= sort_key as has_read").
+		Join(`LEFT JOIN public."user" as u ON u.id = ?`, userID).
+		Where("key = ?", key).Select()
 	if err != nil {
 		if err == pg.ErrNoRows {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return n.ToEntityNoti(user, &notification), err
+	return n.ToEntityNoti(&notification), err
 }
 
 func (n *NotiRepo) GetNotiSlice(
 	ctx context.Context, user *entity.User, query entity.SliceQuery,
 ) (*entity.NotiSlice, error) {
-	var notifications []Notification
+	var notifications []NotificationQuery
 	receivers := user.NotiReceivers()
-	q := n.db(ctx).Model(&notifications).Where("receivers && ?", pg.Array(receivers))
+	q := n.db(ctx).Model(&notifications).
+		Column("notification.*").
+		ColumnExpr("u.last_read_noti >= sort_key as has_read").
+		Join(`LEFT JOIN public."user" as u on u.id = ?`, user.ID).
+		Where("receivers && ?", pg.Array(receivers))
 	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
 		if cursor != "" {
 			c, err := uid.ParseUID(cursor)
@@ -92,7 +100,7 @@ func (n *NotiRepo) GetNotiSlice(
 	sliceInfo := &entity.SliceInfo{HasNext: len(notifications) > query.Limit}
 	var entities []*entity.Notification
 	dealSlice := func(i int, isFirst bool, isLast bool) {
-		entities = append(entities, n.ToEntityNoti(user, &notifications[i]))
+		entities = append(entities, n.ToEntityNoti(&notifications[i]))
 		if isFirst {
 			sliceInfo.FirstCursor = uid.UID(notifications[i].SortKey).ToBase64String()
 		}

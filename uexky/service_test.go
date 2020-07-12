@@ -1205,16 +1205,9 @@ func TestService_GetUnreadNotiCount(t *testing.T) {
 		wantErr    bool
 	}{
 		{
-			name: "1 system noti",
+			name: "1 system noti(welcome)",
 			args: args{
 				ctx: userCtx,
-			},
-			beforeTest: func(t *testing.T) {
-				if err := service.Noti.NewSystemNoti(
-					ctx, "welcome!", "welcome to abyss", entity.SendToUser(user.ID),
-				); err != nil {
-					t.Fatal(err)
-				}
 			},
 			want: 1,
 		},
@@ -1286,7 +1279,7 @@ func TestService_GetNotification(t *testing.T) {
 	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
 		t.Fatal(err)
 	}
-	user, _ := loginUser(t, service, testUser{email: "t@example.com"})
+	user, _ := loginUser(t, service, testUser{email: "t@example.com"}) // One Welcome Noti
 	thread, _ := pubThread(t, service, testUser{email: user.Email})
 
 	type args struct {
@@ -1308,12 +1301,7 @@ func TestService_GetNotification(t *testing.T) {
 			},
 			beforeTest: func(t *testing.T, want *entity.NotiSlice) {
 				if err := service.Noti.NewSystemNoti(
-					ctx, "welcome!", "welcome to abyss", entity.SendToUser(user.ID),
-				); err != nil {
-					t.Fatal(err)
-				}
-				if err := service.Noti.NewSystemNoti(
-					ctx, "welcome!", "welcome to abyss", entity.SendToGroup(entity.AllUser),
+					ctx, "Hi everyone!", "Let's Party!", entity.SendToGroup(entity.AllUser),
 				); err != nil {
 					t.Fatal(err)
 				}
@@ -1346,16 +1334,16 @@ func TestService_GetNotification(t *testing.T) {
 					{
 						Type: entity.NotiTypeSystem,
 						Content: entity.SystemNoti{
-							Title:   "welcome!",
-							Content: "welcome to abyss",
+							Title:   "Hi everyone!",
+							Content: "Let's Party!",
 						},
 						Receivers: []entity.Receiver{entity.SendToGroup(entity.AllUser)},
 					},
 					{
 						Type: entity.NotiTypeSystem,
 						Content: entity.SystemNoti{
-							Title:   "welcome!",
-							Content: "welcome to abyss",
+							Title:   entity.WelcomeTitle,
+							Content: entity.WelcomeContent,
 						},
 						Receivers: []entity.Receiver{entity.SendToUser(user.ID)},
 					},
@@ -1390,8 +1378,8 @@ func TestService_GetNotification(t *testing.T) {
 				writeWant(want.Notifications[0], qp2, p2)
 				writeWant(want.Notifications[1], qp1, p2)
 				content := want.Notifications[2].Content.(entity.RepliedNoti)
-				content.FirstReplyID = qp1.ID
-				content.NewRepliesCount = 4
+				content.FirstReplyID = p1.ID
+				content.NewRepliesCount = 2
 				want.Notifications[2].Content = content
 				writeWant(want.Notifications[3], qp1, p1)
 			},
