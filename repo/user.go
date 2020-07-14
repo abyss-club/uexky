@@ -7,7 +7,6 @@ import (
 	"github.com/go-pg/pg/v9"
 	"github.com/go-redis/redis/v7"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
-	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
@@ -48,21 +47,24 @@ func (u *UserRepo) db(ctx context.Context) postgres.Session {
 }
 
 func (u *UserRepo) toEntityUser(user *User, mainTags []string) *entity.User {
-	entity := &entity.User{
+	e := &entity.User{
 		Email: user.Email,
 		Name:  user.Name,
-		Role:  entity.ParseRole(user.Role),
+		Role:  user.Role,
 		Tags:  user.Tags,
 
 		Repo:         u,
 		ID:           user.ID,
-		LastReadNoti: uid.UID(user.LastReadNoti),
+		LastReadNoti: user.LastReadNoti,
 	}
 	// TODO: should in service level?
 	if len(user.Tags) == 0 {
-		entity.Tags = mainTags
+		e.Tags = mainTags
 	}
-	return entity
+	if e.Role == "" {
+		e.Role = entity.RoleNormal
+	}
+	return e
 }
 
 func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.User, bool, error) {

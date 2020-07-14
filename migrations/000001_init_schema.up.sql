@@ -39,21 +39,15 @@ CREATE TABLE public.thread (
     last_post_id bigint NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    anonymous boolean NOT NULL,
     user_id integer NOT NULL,
-    user_name character varying(16),
-    anonymous_id bigint,
+    anonymous boolean NOT NULL,
+    author character varying(16) NOT NULL,
     title text DEFAULT ''::text,
     content text NOT NULL,
     locked boolean DEFAULT false NOT NULL,
     blocked boolean DEFAULT false NOT NULL,
     tags text[]
 );
-
-/* TODO:
-    1. use 'sort_id' replace last_post_id
-    2. use 'author' replace 'user_name + anonymous_id'
-*/
 
 CREATE TRIGGER thread_updated_at
     before update on public.thread
@@ -73,10 +67,9 @@ CREATE TABLE public.post (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     thread_id bigint NOT NULL,
-    anonymous boolean NOT NULL,
     user_id integer NOT NULL,
-    user_name character varying(16),
-    anonymous_id bigint,
+    anonymous boolean NOT NULL,
+    author character varying(16) NOT NULL,
     blocked boolean DEFAULT false,
     content text NOT NULL,
     quoted_ids bigint[]

@@ -19,11 +19,11 @@ func (n *NotiRepo) db(ctx context.Context) postgres.Session {
 
 func (n *NotiRepo) ToEntityNoti(noti *NotificationQuery) *entity.Notification {
 	e := &entity.Notification{
-		Type:      entity.NotiType(noti.Type),
+		Type:      noti.Type,
 		EventTime: noti.CreatedAt,
 		HasRead:   noti.HasRead,
 		Key:       noti.Key,
-		SortKey:   uid.UID(noti.SortKey),
+		SortKey:   noti.SortKey,
 		Receivers: noti.Receivers,
 	}
 	if err := e.DecodeContent(noti.Content); err != nil {
@@ -102,10 +102,10 @@ func (n *NotiRepo) GetNotiSlice(
 	dealSlice := func(i int, isFirst bool, isLast bool) {
 		entities = append(entities, n.ToEntityNoti(&notifications[i]))
 		if isFirst {
-			sliceInfo.FirstCursor = uid.UID(notifications[i].SortKey).ToBase64String()
+			sliceInfo.FirstCursor = notifications[i].SortKey.ToBase64String()
 		}
 		if isLast {
-			sliceInfo.LastCursor = uid.UID(notifications[i].SortKey).ToBase64String()
+			sliceInfo.LastCursor = notifications[i].SortKey.ToBase64String()
 		}
 	}
 	dealSliceResult(dealSlice, &query, len(notifications), query.Before != nil)
@@ -118,8 +118,8 @@ func (n *NotiRepo) GetNotiSlice(
 func (n *NotiRepo) InsertNoti(ctx context.Context, noti *entity.Notification) error {
 	notification := &Notification{
 		Key:       noti.Key,
-		SortKey:   int64(noti.SortKey),
-		Type:      noti.Type.String(),
+		SortKey:   noti.SortKey,
+		Type:      noti.Type,
 		Receivers: noti.Receivers,
 	}
 	content, err := noti.EncodeContent()

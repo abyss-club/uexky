@@ -43,7 +43,9 @@ type SystemNoti {
 
 """ Stripped version of Thread object."""
 type ThreadOutline {
+  """ thread.id """
   id: UID!
+  """ thread.title """
   title: String
   """ Markdown formatted content."""
   content: String!
@@ -53,9 +55,10 @@ type ThreadOutline {
 
 """ Stripped version of Post object."""
 type PostOutline {
+  """ post.id """
   id: UID!
-  """ Name if not anonymous, anonymous ID otherwise."""
-  author: String!
+  """ post.author """
+  author: Author!
   """ Markdown formatted content."""
   content: String!
 }

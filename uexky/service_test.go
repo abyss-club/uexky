@@ -762,15 +762,15 @@ func TestService_PubThread(t *testing.T) {
 				},
 			},
 			want: &entity.Thread{
-				Anonymous: true,
-				Title:     nil,
-				Content:   "content",
-				MainTag:   "MainA",
-				SubTags:   []string{"SubA", "SubB"},
-				Repo:      service.Forum.Repo,
-				AuthorObj: entity.Author{
-					UserID: user.ID,
+				Author: &entity.Author{
+					Anonymous: true,
+					UserID:    user.ID,
 				},
+				Title:   nil,
+				Content: "content",
+				MainTag: "MainA",
+				SubTags: []string{"SubA", "SubB"},
+				Repo:    service.Forum.Repo,
 			},
 		},
 		{
@@ -785,16 +785,16 @@ func TestService_PubThread(t *testing.T) {
 				},
 			},
 			want: &entity.Thread{
-				Anonymous: false,
-				Title:     nil,
-				Content:   "content",
-				MainTag:   "MainA",
-				SubTags:   []string{"SubA", "SubB", "SubC"},
-				Repo:      service.Forum.Repo,
-				AuthorObj: entity.Author{
-					UserID:   user.ID,
-					UserName: user.Name,
+				Author: &entity.Author{
+					UserID:    user.ID,
+					Anonymous: false,
+					Author:    *user.Name,
 				},
+				Title:   nil,
+				Content: "content",
+				MainTag: "MainA",
+				SubTags: []string{"SubA", "SubB", "SubC"},
+				Repo:    service.Forum.Repo,
 			},
 		},
 	}
@@ -807,7 +807,9 @@ func TestService_PubThread(t *testing.T) {
 			}
 			tt.want.ID = got.ID
 			tt.want.CreatedAt = got.CreatedAt
-			tt.want.AuthorObj.AnonymousID = got.AuthorObj.AnonymousID
+			if tt.want.Author.Anonymous {
+				tt.want.Author.Author = got.Author.Author
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Service.PubThread() = %v, want %v", got, tt.want)
 			}
@@ -992,14 +994,14 @@ func TestService_PubPost(t *testing.T) {
 				},
 			},
 			want: &entity.Post{
-				Anonymous: true,
-				Content:   "content1",
-				Repo:      service.Forum.Repo,
+				Author: &entity.Author{
+					UserID:    user1.ID,
+					Anonymous: true,
+				},
+				Content: "content1",
+				Repo:    service.Forum.Repo,
 				Data: entity.PostData{
-					ThreadID: thread.ID,
-					Author: entity.Author{
-						UserID: user1.ID,
-					},
+					ThreadID:   thread.ID,
 					QuotePosts: []*entity.Post{},
 				},
 			},
@@ -1015,15 +1017,15 @@ func TestService_PubPost(t *testing.T) {
 				},
 			},
 			want: &entity.Post{
-				Anonymous: false,
-				Content:   "content2",
-				Repo:      service.Forum.Repo,
+				Author: &entity.Author{
+					UserID:    user2.ID,
+					Anonymous: false,
+					Author:    *user2.Name,
+				},
+				Content: "content2",
+				Repo:    service.Forum.Repo,
 				Data: entity.PostData{
-					ThreadID: thread.ID,
-					Author: entity.Author{
-						UserID:   user2.ID,
-						UserName: user2.Name,
-					},
+					ThreadID:   thread.ID,
 					QuotePosts: []*entity.Post{},
 				},
 			},
@@ -1040,14 +1042,14 @@ func TestService_PubPost(t *testing.T) {
 				},
 			},
 			want: &entity.Post{
-				Anonymous: true,
-				Content:   "content3",
-				Repo:      service.Forum.Repo,
+				Author: &entity.Author{
+					UserID:    user1.ID,
+					Anonymous: true,
+				},
+				Content: "content3",
+				Repo:    service.Forum.Repo,
 				Data: entity.PostData{
-					ThreadID: thread.ID,
-					Author: entity.Author{
-						UserID: user1.ID,
-					},
+					ThreadID:   thread.ID,
 					QuoteIDs:   []uid.UID{post.ID},
 					QuotePosts: []*entity.Post{post},
 				},
@@ -1064,13 +1066,10 @@ func TestService_PubPost(t *testing.T) {
 			tt.want.ID = got.ID
 			tt.want.CreatedAt = got.CreatedAt
 			if tt.args.post.Anonymous {
-				tt.want.Data.Author.AnonymousID = got.Data.Author.AnonymousID
+				tt.want.Author.Author = got.Author.Author
 			}
 			if diff := cmp.Diff(got, tt.want, forumRepoComp, timeCmp); diff != "" {
 				t.Errorf("Service.PubPost() missmatch %s", diff)
-			}
-			if got.Author() != tt.want.Author() {
-				t.Errorf("Service.PubPost().Author = %s, want = %s", got.Author(), tt.want.Author())
 			}
 			if len(tt.want.Data.QuoteIDs) != 0 {
 				quoted, err := got.Quotes(tt.args.ctx)
@@ -1365,13 +1364,21 @@ func TestService_GetNotification(t *testing.T) {
 					noti.Content = entity.QuotedNoti{
 						ThreadID: thread.ID,
 						QuotedPost: &entity.PostOutline{
-							ID:      q.ID,
-							Author:  q.Author(),
+							ID: q.ID,
+							Author: &entity.Author{
+								// user id won't return to frontend
+								Anonymous: q.Author.Anonymous,
+								Author:    q.Author.Author,
+							},
 							Content: q.Content,
 						},
 						Post: &entity.PostOutline{
-							ID:      p.ID,
-							Author:  p.Author(),
+							ID: p.ID,
+							Author: &entity.Author{
+								// user id won't return to frontend
+								Anonymous: p.Author.Anonymous,
+								Author:    p.Author.Author,
+							},
 							Content: p.Content,
 						},
 					}

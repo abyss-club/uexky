@@ -23,25 +23,21 @@ func (f *ForumRepo) db(ctx context.Context) postgres.Session {
 
 func (f *ForumRepo) toEntityThread(t *Thread) *entity.Thread {
 	thread := &entity.Thread{
-		ID:        uid.UID(t.ID),
+		ID:        t.ID,
 		CreatedAt: t.CreatedAt,
-		Anonymous: t.Anonymous,
-		Title:     t.Title,
-		Content:   t.Content,
-		MainTag:   t.Tags[0],
-		SubTags:   t.Tags[1:],
-		Blocked:   t.Blocked,
-		Locked:    t.Locked,
+		Author: &entity.Author{
+			UserID:    t.UserID,
+			Anonymous: t.Anonymous,
+			Author:    t.Author,
+		},
+		Title:   t.Title,
+		Content: t.Content,
+		MainTag: t.Tags[0],
+		SubTags: t.Tags[1:],
+		Blocked: t.Blocked,
+		Locked:  t.Locked,
 
 		Repo: f,
-		AuthorObj: entity.Author{
-			UserID: t.UserID,
-		},
-	}
-	if t.Anonymous {
-		thread.AuthorObj.AnonymousID = (*uid.UID)(t.AnonymousID)
-	} else {
-		thread.AuthorObj.UserName = t.UserName
 	}
 	if thread.Blocked {
 		thread.Content = entity.BlockedContent
@@ -100,10 +96,10 @@ func (f *ForumRepo) GetThreadSlice(
 	dealSlice := func(i int, isFirst bool, isLast bool) {
 		entities = append(entities, f.toEntityThread(&threads[i]))
 		if isFirst {
-			sliceInfo.FirstCursor = uid.UID(threads[i].LastPostID).ToBase64String()
+			sliceInfo.FirstCursor = threads[i].LastPostID.ToBase64String()
 		}
 		if isLast {
-			sliceInfo.LastCursor = uid.UID(threads[i].LastPostID).ToBase64String()
+			sliceInfo.LastCursor = threads[i].LastPostID.ToBase64String()
 		}
 	}
 	dealSliceResult(dealSlice, &query, len(threads), query.Before != nil)
@@ -122,40 +118,36 @@ func (f *ForumRepo) GetThreadCatalog(ctx context.Context, id uid.UID) ([]*entity
 	var cats []*entity.ThreadCatalogItem
 	for i := range posts {
 		cats = append(cats, &entity.ThreadCatalogItem{
-			PostID:    uid.UID(posts[i].ID).ToBase64String(),
+			PostID:    posts[i].ID.ToBase64String(),
 			CreatedAt: posts[i].CreatedAt,
 		})
 	}
 	return cats, nil
 }
 
-func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int64, threadID uid.UID) (uid.UID, error) {
+func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int64, threadID uid.UID) (string, error) {
 	var posts []Post
-	q := f.db(ctx).Model(&posts).Column("anonymous_id").
+	q := f.db(ctx).Model(&posts).Column("author").
 		Where("thread_id = ?", threadID).Where("anonymous = true").Order("id DESC").Limit(1)
 	if err := q.Select(); err != nil {
-		return uid.UID(0), err
+		return "", err
 	}
 	if len(posts) > 0 {
-		return uid.UID(*posts[0].AnonymousID), nil
+		return posts[0].Author, nil
 	}
-	return uid.NewUID(), nil
+	return uid.NewUID().ToBase64String(), nil
 }
 
 func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) error {
 	log.Infof("InsertThread(%v)", thread)
 	t := Thread{
-		ID:         int64(thread.ID),
-		Anonymous:  thread.Anonymous,
-		UserID:     thread.AuthorObj.UserID,
+		ID:         thread.ID,
+		UserID:     thread.Author.UserID,
+		Anonymous:  thread.Author.Anonymous,
+		Author:     thread.Author.Author,
 		Title:      thread.Title,
 		Content:    thread.Content,
-		LastPostID: int64(thread.ID),
-	}
-	if thread.Anonymous {
-		t.AnonymousID = (*int64)(thread.AuthorObj.AnonymousID)
-	} else {
-		t.UserName = thread.AuthorObj.UserName
+		LastPostID: thread.ID,
 	}
 	t.Tags = []string{thread.MainTag}
 	t.Tags = append(t.Tags, thread.SubTags...)
@@ -182,28 +174,22 @@ func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity
 
 func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 	post := &entity.Post{
-		ID:        uid.UID(p.ID),
+		ID:        p.ID,
 		CreatedAt: p.CreatedAt,
-		Anonymous: p.Anonymous,
-		Content:   p.Content,
+		Author: &entity.Author{
+			UserID:    p.UserID,
+			Anonymous: p.Anonymous,
+			Author:    p.Author,
+		},
+		Content: p.Content,
 
 		Repo: f,
 		Data: entity.PostData{
-			ThreadID: uid.UID(p.ThreadID),
-			Author: entity.Author{
-				UserID:      p.UserID,
-				AnonymousID: (*uid.UID)(p.AnonymousID),
-				UserName:    p.UserName,
-			},
-			QuoteIDs:   make([]uid.UID, 0),
+			ThreadID:   p.ThreadID,
+			QuoteIDs:   p.QuotedIDs,
 			QuotePosts: make([]*entity.Post, 0),
 		},
 	}
-	var qids []uid.UID
-	for _, pqid := range p.QuotedIDs {
-		qids = append(qids, uid.UID(pqid))
-	}
-	post.Data.QuoteIDs = qids
 	if p.Blocked != nil && *p.Blocked {
 		post.Blocked = true
 		post.Content = entity.BlockedContent
@@ -282,10 +268,10 @@ func (f *ForumRepo) GetPostSlice(
 	dealSlice := func(i int, isFirst bool, isLast bool) {
 		entities = append(entities, f.toEntityPost(&posts[i]))
 		if isFirst {
-			sliceInfo.FirstCursor = uid.UID(posts[i].ID).ToBase64String()
+			sliceInfo.FirstCursor = posts[i].ID.ToBase64String()
 		}
 		if isLast {
-			sliceInfo.LastCursor = uid.UID(posts[i].ID).ToBase64String()
+			sliceInfo.LastCursor = posts[i].ID.ToBase64String()
 		}
 	}
 	dealSliceResult(dealSlice, &query, len(posts), query.Before != nil)
@@ -324,22 +310,14 @@ func (f *ForumRepo) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, er
 func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) error {
 	log.Infof("InsertPost(%v)", post)
 	newPost := &Post{
-		ID:        int64(post.ID),
-		ThreadID:  int64(post.Data.ThreadID),
-		Anonymous: post.Anonymous,
-		UserID:    post.Data.Author.UserID,
+		ID:        post.ID,
+		ThreadID:  post.Data.ThreadID,
+		UserID:    post.Author.UserID,
+		Anonymous: post.Author.Anonymous,
+		Author:    post.Author.Author,
 		Content:   post.Content,
+		QuotedIDs: post.Data.QuoteIDs,
 	}
-	if post.Anonymous {
-		newPost.AnonymousID = (*int64)(post.Data.Author.AnonymousID)
-	} else {
-		newPost.UserName = post.Data.Author.UserName
-	}
-	var qids []int64
-	for _, pqid := range post.Data.QuoteIDs {
-		qids = append(qids, int64(pqid))
-	}
-	newPost.QuotedIDs = qids
 	if _, err := f.db(ctx).Model(newPost).Insert(); err != nil {
 		return err
 	}

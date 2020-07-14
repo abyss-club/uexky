@@ -1,4 +1,5 @@
 scalar Time
+
 """ UID type, base64-like string when displayed, 60-bit integer in storage."""
 scalar UID
 
@@ -22,4 +23,12 @@ input SliceQuery {
   after: String
   """ Set the amount of returned items."""
   limit: Int!
+}
+
+""" Author for thread and post """
+type Author {
+  """ Author is anonymous or not."""
+  anonymous: Boolean!
+  """ Author display name. It's UID format if anonymous, user's name otherwise. """
+  author: String!
 }

@@ -20,7 +20,7 @@ type ForumService struct {
 type Thread struct {
 	ID        uid.UID   `json:"id"`
 	CreatedAt time.Time `json:"createdAt"`
-	Anonymous bool      `json:"anonymous"`
+	Author    *Author   `json:"author"`
 	Title     *string   `json:"title"`
 	Content   string    `json:"content"`
 	MainTag   string    `json:"main_tag"`
@@ -28,8 +28,7 @@ type Thread struct {
 	Blocked   bool      `json:"blocked"`
 	Locked    bool      `json:"locked"`
 
-	Repo      ForumRepo `json:"-"`
-	AuthorObj Author    `json:"-"`
+	Repo ForumRepo `json:"-"`
 }
 
 func validateThreadTags(allMainTags []string, mainTag string, subTags []string) ([]string, error) {
@@ -52,25 +51,24 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 	thread := &Thread{
 		ID:        uid.NewUID(),
 		CreatedAt: time.Now(),
-		Anonymous: input.Anonymous,
-		Title:     input.Title,
-		Content:   input.Content,
-		MainTag:   input.MainTag,
-		SubTags:   input.SubTags,
+		Author: &Author{
+			UserID:    user.ID,
+			Anonymous: input.Anonymous,
+		},
+		Title:   input.Title,
+		Content: input.Content,
+		MainTag: input.MainTag,
+		SubTags: input.SubTags,
 
 		Repo: f.Repo,
-		AuthorObj: Author{
-			UserID: user.ID,
-		},
 	}
 	if input.Anonymous {
-		aid := uid.NewUID()
-		thread.AuthorObj.AnonymousID = &aid
+		thread.Author.Author = uid.NewUID().ToBase64String()
 	} else {
 		if user.Name == nil {
 			return nil, errors.New("user name must be set")
 		}
-		thread.AuthorObj.UserName = user.Name
+		thread.Author.Author = *user.Name
 	}
 	allMainTags, err := f.GetMainTags(ctx)
 	if err != nil {
@@ -103,10 +101,6 @@ func (f *ForumService) SearchThreads(
 
 func (n *Thread) String() string {
 	return fmt.Sprintf("<Thread:%v:%s>", n.ID, n.ID.ToBase64String())
-}
-
-func (n *Thread) Author() string {
-	return n.AuthorObj.Name(n.Anonymous)
 }
 
 func (n *Thread) Replies(ctx context.Context, query SliceQuery) (*PostSlice, error) {
@@ -161,7 +155,7 @@ func (n *Thread) Block(ctx context.Context) error {
 type Post struct {
 	ID        uid.UID   `json:"id"`
 	CreatedAt time.Time `json:"createdAt"`
-	Anonymous bool      `json:"anonymous"`
+	Author    *Author   `json:"author"`
 	Content   string    `json:"content"`
 	Blocked   bool      `json:"blocked"`
 
@@ -184,32 +178,34 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 	post := &Post{
 		ID:        uid.NewUID(),
 		CreatedAt: time.Now(),
-		Anonymous: input.Anonymous,
-		Content:   input.Content,
+		Author: &Author{
+			UserID:    user.ID,
+			Anonymous: input.Anonymous,
+		},
+		Content: input.Content,
 
 		Repo: f.Repo,
 		Data: PostData{
-			Author:     Author{UserID: user.ID},
 			ThreadID:   input.ThreadID,
 			QuoteIDs:   input.QuoteIds,
 			QuotePosts: make([]*Post, 0),
 		},
 	}
 	if input.Anonymous {
-		if user.ID == thread.AuthorObj.UserID && thread.Anonymous {
-			post.Data.Author.AnonymousID = thread.AuthorObj.AnonymousID
+		if user.ID == thread.Author.UserID && thread.Author.Anonymous {
+			post.Author.Author = thread.Author.Author
 		} else {
 			aid, err := f.Repo.GetAnonyID(ctx, user.ID, thread.ID)
 			if err != nil {
 				return nil, err
 			}
-			post.Data.Author.AnonymousID = &aid
+			post.Author.Author = aid
 		}
 	} else {
 		if user.Name == nil {
 			return nil, errors.New("user name must be set")
 		}
-		post.Data.Author.UserName = user.Name
+		post.Author.Author = *user.Name
 	}
 	err = f.Repo.InsertPost(ctx, post)
 	return &NewPostResponse{Post: post, Thread: thread}, err
@@ -221,10 +217,6 @@ func (f *ForumService) GetPostByID(ctx context.Context, postID uid.UID) (*Post, 
 
 func (f *ForumService) GetUserPosts(ctx context.Context, user *User, query SliceQuery) (*PostSlice, error) {
 	return f.Repo.GetPostSlice(ctx, &PostsSearch{UserID: &user.ID, DESC: true}, query)
-}
-
-func (p *Post) Author() string {
-	return p.Data.Author.Name(p.Anonymous)
 }
 
 func (p *Post) Quotes(ctx context.Context) ([]*Post, error) {

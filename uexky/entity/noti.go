@@ -57,7 +57,7 @@ func (n *NotiService) NewSystemNoti(ctx context.Context, title, content string, 
 
 func (n *NotiService) NewRepliedNoti(ctx context.Context, user *User, thread *Thread, reply *Post) error {
 	key := fmt.Sprintf("replied:%s", thread.ID.ToBase64String())
-	oldNoti, err := n.Repo.GetNotiByKey(ctx, thread.AuthorObj.UserID, key)
+	oldNoti, err := n.Repo.GetNotiByKey(ctx, thread.Author.UserID, key)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func (n *NotiService) NewRepliedNoti(ctx context.Context, user *User, thread *Th
 		Type:      NotiTypeReplied,
 		Key:       key,
 		SortKey:   reply.ID,
-		Receivers: []Receiver{SendToUser(thread.AuthorObj.UserID)},
+		Receivers: []Receiver{SendToUser(thread.Author.UserID)},
 	}
 	if oldNoti != nil {
 		if !oldNoti.HasRead {
@@ -102,19 +102,19 @@ func (n *NotiService) NewQuotedNoti(ctx context.Context, thread *Thread, post *P
 			ThreadID: thread.ID,
 			QuotedPost: &PostOutline{
 				ID:      quotedPost.ID,
-				Author:  quotedPost.Author(),
+				Author:  quotedPost.Author,
 				Content: quotedPost.Content,
 			},
 			Post: &PostOutline{
 				ID:      post.ID,
-				Author:  post.Author(),
+				Author:  post.Author,
 				Content: post.Content,
 			},
 		},
 
 		Key:       fmt.Sprintf("quoted:%s:%s", quotedPost.ID.ToBase64String(), post.ID.ToBase64String()),
 		SortKey:   uid.NewUID(),
-		Receivers: []Receiver{SendToUser(quotedPost.Data.Author.UserID)},
+		Receivers: []Receiver{SendToUser(quotedPost.Author.UserID)},
 	}
 	log.Infof("NewQuotedNoti, post %v quote post %v, key=%s", post, quotedPost, noti.Key)
 	return n.Repo.InsertNoti(ctx, noti)
@@ -126,7 +126,7 @@ func (n *NotiService) NewNotiOnNewUser(ctx context.Context, user *User) error {
 
 func (n *NotiService) NewNotiOnNewPost(ctx context.Context, user *User, thread *Thread, post *Post) uerr.ErrSlice {
 	var errs uerr.ErrSlice
-	if user.ID != thread.AuthorObj.UserID {
+	if user.ID != thread.Author.UserID {
 		if err := n.NewRepliedNoti(ctx, user, thread, post); err != nil {
 			errs = append(errs, err) // not exist
 		}
@@ -137,7 +137,7 @@ func (n *NotiService) NewNotiOnNewPost(ctx context.Context, user *User, thread *
 		return errs
 	}
 	for _, qp := range quotes {
-		if user.ID != qp.Data.Author.UserID {
+		if user.ID != qp.Author.UserID {
 			if err := n.NewQuotedNoti(ctx, thread, post, qp); err != nil {
 				errs = append(errs, err) // not exist
 			}

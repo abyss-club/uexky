@@ -47,6 +47,11 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	Author struct {
+		Anonymous func(childComplexity int) int
+		Author    func(childComplexity int) int
+	}
+
 	Mutation struct {
 		AddSubbedTag func(childComplexity int, tag string) int
 		Auth         func(childComplexity int, email string) int
@@ -75,7 +80,6 @@ type ComplexityRoot struct {
 	}
 
 	Post struct {
-		Anonymous   func(childComplexity int) int
 		Author      func(childComplexity int) int
 		Blocked     func(childComplexity int) int
 		Content     func(childComplexity int) int
@@ -137,7 +141,6 @@ type ComplexityRoot struct {
 	}
 
 	Thread struct {
-		Anonymous  func(childComplexity int) int
 		Author     func(childComplexity int) int
 		Blocked    func(childComplexity int) int
 		Catalog    func(childComplexity int) int
@@ -224,6 +227,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "Author.anonymous":
+		if e.complexity.Author.Anonymous == nil {
+			break
+		}
+
+		return e.complexity.Author.Anonymous(childComplexity), true
+
+	case "Author.author":
+		if e.complexity.Author.Author == nil {
+			break
+		}
+
+		return e.complexity.Author.Author(childComplexity), true
 
 	case "Mutation.addSubbedTag":
 		if e.complexity.Mutation.AddSubbedTag == nil {
@@ -410,13 +427,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Notification.Type(childComplexity), true
-
-	case "Post.anonymous":
-		if e.complexity.Post.Anonymous == nil {
-			break
-		}
-
-		return e.complexity.Post.Anonymous(childComplexity), true
 
 	case "Post.author":
 		if e.complexity.Post.Author == nil {
@@ -680,13 +690,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Tag.Name(childComplexity), true
-
-	case "Thread.anonymous":
-		if e.complexity.Thread.Anonymous == nil {
-			break
-		}
-
-		return e.complexity.Thread.Anonymous(childComplexity), true
 
 	case "Thread.author":
 		if e.complexity.Thread.Author == nil {
@@ -957,6 +960,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	&ast.Source{Name: "schema/base.gql", Input: `scalar Time
+
 """ UID type, base64-like string when displayed, 60-bit integer in storage."""
 scalar UID
 
@@ -980,6 +984,14 @@ input SliceQuery {
   after: String
   """ Set the amount of returned items."""
   limit: Int!
+}
+
+""" Author for thread and post """
+type Author {
+  """ Author is anonymous or not."""
+  anonymous: Boolean!
+  """ Author display name. It's UID format if anonymous, user's name otherwise. """
+  author: String!
 }
 `, BuiltIn: false},
 	&ast.Source{Name: "schema/notification.gql", Input: `extend type Query {
@@ -1027,7 +1039,9 @@ type SystemNoti {
 
 """ Stripped version of Thread object."""
 type ThreadOutline {
+  """ thread.id """
   id: UID!
+  """ thread.title """
   title: String
   """ Markdown formatted content."""
   content: String!
@@ -1037,9 +1051,10 @@ type ThreadOutline {
 
 """ Stripped version of Post object."""
 type PostOutline {
+  """ post.id """
   id: UID!
-  """ Name if not anonymous, anonymous ID otherwise."""
-  author: String!
+  """ post.author """
+  author: Author!
   """ Markdown formatted content."""
   content: String!
 }
@@ -1090,9 +1105,7 @@ input PostInput {
 type Post {
   id: UID!
   createdAt: Time!
-  anonymous: Boolean!
-  """ Name if not anonymous, anonymous ID otherwise."""
-  author: String!
+  author: Author!
   """ Markdown formatted content."""
   content: String!
   """ Other posts that the post has quoted."""
@@ -1161,11 +1174,7 @@ type Thread {
   """ UUID with 8 chars in length, and will increase to 9 after 30 years."""
   id: UID!
   createdAt: Time!
-  """ Thread was published anonymously or not."""
-  anonymous: Boolean!
-  """ Same format as id if anonymous, name of User otherwise."""
-  author: String!
-  """ Default to '无题'."""
+  author: Author!
   title: String
   """ Markdown formatted content."""
   content: String!
@@ -1626,6 +1635,74 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Author_anonymous(ctx context.Context, field graphql.CollectedField, obj *entity.Author) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Author",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Anonymous, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Author_author(ctx context.Context, field graphql.CollectedField, obj *entity.Author) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Author",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Author, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
 
 func (ec *executionContext) _Mutation_pubPost(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
@@ -2391,7 +2468,7 @@ func (ec *executionContext) _Post_createdAt(ctx context.Context, field graphql.C
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Post_anonymous(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
+func (ec *executionContext) _Post_author(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2408,7 +2485,7 @@ func (ec *executionContext) _Post_anonymous(ctx context.Context, field graphql.C
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Anonymous, nil
+		return obj.Author, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2420,43 +2497,9 @@ func (ec *executionContext) _Post_anonymous(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*entity.Author)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Post_author(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Post",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Author(), nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNAuthor2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐAuthor(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Post_content(ctx context.Context, field graphql.CollectedField, obj *entity.Post) (ret graphql.Marshaler) {
@@ -2655,9 +2698,9 @@ func (ec *executionContext) _PostOutline_author(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*entity.Author)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNAuthor2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐAuthor(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _PostOutline_content(ctx context.Context, field graphql.CollectedField, obj *entity.PostOutline) (ret graphql.Marshaler) {
@@ -3682,7 +3725,7 @@ func (ec *executionContext) _Thread_createdAt(ctx context.Context, field graphql
 	return ec.marshalNTime2timeᚐTime(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Thread_anonymous(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
+func (ec *executionContext) _Thread_author(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3699,7 +3742,7 @@ func (ec *executionContext) _Thread_anonymous(ctx context.Context, field graphql
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Anonymous, nil
+		return obj.Author, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3711,43 +3754,9 @@ func (ec *executionContext) _Thread_anonymous(ctx context.Context, field graphql
 		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*entity.Author)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Thread_author(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Thread",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Author(), nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNAuthor2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐAuthor(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Thread_title(ctx context.Context, field graphql.CollectedField, obj *entity.Thread) (ret graphql.Marshaler) {
@@ -5773,6 +5782,38 @@ func (ec *executionContext) _NotiContent(ctx context.Context, sel ast.SelectionS
 
 // region    **************************** object.gotpl ****************************
 
+var authorImplementors = []string{"Author"}
+
+func (ec *executionContext) _Author(ctx context.Context, sel ast.SelectionSet, obj *entity.Author) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, authorImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Author")
+		case "anonymous":
+			out.Values[i] = ec._Author_anonymous(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "author":
+			out.Values[i] = ec._Author_author(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var mutationImplementors = []string{"Mutation"}
 
 func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
@@ -5951,11 +5992,6 @@ func (ec *executionContext) _Post(ctx context.Context, sel ast.SelectionSet, obj
 			}
 		case "createdAt":
 			out.Values[i] = ec._Post_createdAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
-		case "anonymous":
-			out.Values[i] = ec._Post_anonymous(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
@@ -6428,11 +6464,6 @@ func (ec *executionContext) _Thread(ctx context.Context, sel ast.SelectionSet, o
 			}
 		case "createdAt":
 			out.Values[i] = ec._Thread_createdAt(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&invalids, 1)
-			}
-		case "anonymous":
-			out.Values[i] = ec._Thread_anonymous(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
@@ -6934,6 +6965,20 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 // endregion **************************** object.gotpl ****************************
 
 // region    ***************************** type.gotpl *****************************
+
+func (ec *executionContext) marshalNAuthor2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐAuthor(ctx context.Context, sel ast.SelectionSet, v entity.Author) graphql.Marshaler {
+	return ec._Author(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNAuthor2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐAuthor(ctx context.Context, sel ast.SelectionSet, v *entity.Author) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Author(ctx, sel, v)
+}
 
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	return graphql.UnmarshalBoolean(v)
