@@ -88,6 +88,7 @@ type ComplexityRoot struct {
 	PostOutline struct {
 		Author  func(childComplexity int) int
 		Content func(childComplexity int) int
+		ID      func(childComplexity int) int
 	}
 
 	PostSlice struct {
@@ -479,6 +480,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.PostOutline.Content(childComplexity), true
+
+	case "PostOutline.id":
+		if e.complexity.PostOutline.ID == nil {
+			break
+		}
+
+		return e.complexity.PostOutline.ID(childComplexity), true
 
 	case "PostSlice.posts":
 		if e.complexity.PostSlice.Posts == nil {
@@ -1021,6 +1029,7 @@ type SystemNoti {
 type ThreadOutline {
   id: UID!
   title: String
+  """ Markdown formatted content."""
   content: String!
   mainTag: String!
   subTags: [String!]!
@@ -1028,6 +1037,7 @@ type ThreadOutline {
 
 """ Stripped version of Post object."""
 type PostOutline {
+  id: UID!
   """ Name if not anonymous, anonymous ID otherwise."""
   author: String!
   """ Markdown formatted content."""
@@ -2580,6 +2590,40 @@ func (ec *executionContext) _Post_blocked(ctx context.Context, field graphql.Col
 	res := resTmp.(bool)
 	fc.Result = res
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _PostOutline_id(ctx context.Context, field graphql.CollectedField, obj *entity.PostOutline) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "PostOutline",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(uid.UID)
+	fc.Result = res
+	return ec.marshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _PostOutline_author(ctx context.Context, field graphql.CollectedField, obj *entity.PostOutline) (ret graphql.Marshaler) {
@@ -5977,6 +6021,11 @@ func (ec *executionContext) _PostOutline(ctx context.Context, sel ast.SelectionS
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("PostOutline")
+		case "id":
+			out.Values[i] = ec._PostOutline_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "author":
 			out.Values[i] = ec._PostOutline_author(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

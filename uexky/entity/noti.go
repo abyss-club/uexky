@@ -101,10 +101,12 @@ func (n *NotiService) NewQuotedNoti(ctx context.Context, thread *Thread, post *P
 		Content: QuotedNoti{
 			ThreadID: thread.ID,
 			QuotedPost: &PostOutline{
+				ID:      quotedPost.ID,
 				Author:  quotedPost.Author(),
 				Content: quotedPost.Content,
 			},
 			Post: &PostOutline{
+				ID:      post.ID,
 				Author:  post.Author(),
 				Content: post.Content,
 			},

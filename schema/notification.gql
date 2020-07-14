@@ -45,6 +45,7 @@ type SystemNoti {
 type ThreadOutline {
   id: UID!
   title: String
+  """ Markdown formatted content."""
   content: String!
   mainTag: String!
   subTags: [String!]!
@@ -52,6 +53,7 @@ type ThreadOutline {
 
 """ Stripped version of Post object."""
 type PostOutline {
+  id: UID!
   """ Name if not anonymous, anonymous ID otherwise."""
   author: String!
   """ Markdown formatted content."""

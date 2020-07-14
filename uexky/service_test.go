@@ -1365,10 +1365,12 @@ func TestService_GetNotification(t *testing.T) {
 					noti.Content = entity.QuotedNoti{
 						ThreadID: thread.ID,
 						QuotedPost: &entity.PostOutline{
+							ID:      q.ID,
 							Author:  q.Author(),
 							Content: q.Content,
 						},
 						Post: &entity.PostOutline{
+							ID:      p.ID,
 							Author:  p.Author(),
 							Content: p.Content,
 						},
