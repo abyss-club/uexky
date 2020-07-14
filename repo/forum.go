@@ -141,13 +141,13 @@ func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int64, threadID uid.U
 func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) error {
 	log.Infof("InsertThread(%v)", thread)
 	t := Thread{
-		ID:         int64(thread.ID),
+		ID:         thread.ID,
 		UserID:     thread.Author.UserID,
 		Anonymous:  thread.Author.Anonymous,
 		Author:     thread.Author.Author,
 		Title:      thread.Title,
 		Content:    thread.Content,
-		LastPostID: int64(thread.ID),
+		LastPostID: thread.ID,
 	}
 	t.Tags = []string{thread.MainTag}
 	t.Tags = append(t.Tags, thread.SubTags...)
@@ -315,18 +315,14 @@ func (f *ForumRepo) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, er
 func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) error {
 	log.Infof("InsertPost(%v)", post)
 	newPost := &Post{
-		ID:        int64(post.ID),
-		ThreadID:  int64(post.Data.ThreadID),
+		ID:        post.ID,
+		ThreadID:  post.Data.ThreadID,
 		UserID:    post.Author.UserID,
 		Anonymous: post.Author.Anonymous,
 		Author:    post.Author.Author,
 		Content:   post.Content,
+		QuotedIDs: post.Data.QuoteIDs,
 	}
-	var qids []int64
-	for _, pqid := range post.Data.QuoteIDs {
-		qids = append(qids, int64(pqid))
-	}
-	newPost.QuotedIDs = qids
 	if _, err := f.db(ctx).Model(newPost).Insert(); err != nil {
 		return err
 	}

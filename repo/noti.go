@@ -118,8 +118,8 @@ func (n *NotiRepo) GetNotiSlice(
 func (n *NotiRepo) InsertNoti(ctx context.Context, noti *entity.Notification) error {
 	notification := &Notification{
 		Key:       noti.Key,
-		SortKey:   int64(noti.SortKey),
-		Type:      noti.Type.String(),
+		SortKey:   noti.SortKey,
+		Type:      noti.Type,
 		Receivers: noti.Receivers,
 	}
 	content, err := noti.EncodeContent()

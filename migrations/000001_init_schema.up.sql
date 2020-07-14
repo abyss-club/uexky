@@ -49,11 +49,6 @@ CREATE TABLE public.thread (
     tags text[]
 );
 
-/* TODO:
-    1. use 'sort_id' replace last_post_id
-    2. use 'author' replace 'user_name + anonymous_id'
-*/
-
 CREATE TRIGGER thread_updated_at
     before update on public.thread
     for each row
