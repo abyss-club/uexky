@@ -23,7 +23,7 @@ func (f *ForumRepo) db(ctx context.Context) postgres.Session {
 
 func (f *ForumRepo) toEntityThread(t *Thread) *entity.Thread {
 	thread := &entity.Thread{
-		ID:        uid.UID(t.ID),
+		ID:        t.ID,
 		CreatedAt: t.CreatedAt,
 		Author: &entity.Author{
 			UserID:    t.UserID,
@@ -96,10 +96,10 @@ func (f *ForumRepo) GetThreadSlice(
 	dealSlice := func(i int, isFirst bool, isLast bool) {
 		entities = append(entities, f.toEntityThread(&threads[i]))
 		if isFirst {
-			sliceInfo.FirstCursor = uid.UID(threads[i].LastPostID).ToBase64String()
+			sliceInfo.FirstCursor = threads[i].LastPostID.ToBase64String()
 		}
 		if isLast {
-			sliceInfo.LastCursor = uid.UID(threads[i].LastPostID).ToBase64String()
+			sliceInfo.LastCursor = threads[i].LastPostID.ToBase64String()
 		}
 	}
 	dealSliceResult(dealSlice, &query, len(threads), query.Before != nil)
@@ -118,7 +118,7 @@ func (f *ForumRepo) GetThreadCatalog(ctx context.Context, id uid.UID) ([]*entity
 	var cats []*entity.ThreadCatalogItem
 	for i := range posts {
 		cats = append(cats, &entity.ThreadCatalogItem{
-			PostID:    uid.UID(posts[i].ID).ToBase64String(),
+			PostID:    posts[i].ID.ToBase64String(),
 			CreatedAt: posts[i].CreatedAt,
 		})
 	}
@@ -174,7 +174,7 @@ func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity
 
 func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 	post := &entity.Post{
-		ID:        uid.UID(p.ID),
+		ID:        p.ID,
 		CreatedAt: p.CreatedAt,
 		Author: &entity.Author{
 			UserID:    p.UserID,
@@ -185,16 +185,11 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 
 		Repo: f,
 		Data: entity.PostData{
-			ThreadID:   uid.UID(p.ThreadID),
-			QuoteIDs:   make([]uid.UID, 0),
+			ThreadID:   p.ThreadID,
+			QuoteIDs:   p.QuotedIDs,
 			QuotePosts: make([]*entity.Post, 0),
 		},
 	}
-	var qids []uid.UID
-	for _, pqid := range p.QuotedIDs {
-		qids = append(qids, uid.UID(pqid))
-	}
-	post.Data.QuoteIDs = qids
 	if p.Blocked != nil && *p.Blocked {
 		post.Blocked = true
 		post.Content = entity.BlockedContent
@@ -273,10 +268,10 @@ func (f *ForumRepo) GetPostSlice(
 	dealSlice := func(i int, isFirst bool, isLast bool) {
 		entities = append(entities, f.toEntityPost(&posts[i]))
 		if isFirst {
-			sliceInfo.FirstCursor = uid.UID(posts[i].ID).ToBase64String()
+			sliceInfo.FirstCursor = posts[i].ID.ToBase64String()
 		}
 		if isLast {
-			sliceInfo.LastCursor = uid.UID(posts[i].ID).ToBase64String()
+			sliceInfo.LastCursor = posts[i].ID.ToBase64String()
 		}
 	}
 	dealSliceResult(dealSlice, &query, len(posts), query.Before != nil)
