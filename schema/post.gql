@@ -24,9 +24,7 @@ input PostInput {
 type Post {
   id: UID!
   createdAt: Time!
-  anonymous: Boolean!
-  """ Name if not anonymous, anonymous ID otherwise."""
-  author: String!
+  author: Author!
   """ Markdown formatted content."""
   content: String!
   """ Other posts that the post has quoted."""

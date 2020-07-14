@@ -55,7 +55,7 @@ type ThreadOutline {
 type PostOutline {
   id: UID!
   """ Name if not anonymous, anonymous ID otherwise."""
-  author: String!
+  author: Author!
   """ Markdown formatted content."""
   content: String!
 }

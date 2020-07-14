@@ -28,10 +28,7 @@ type Thread {
   """ UUID with 8 chars in length, and will increase to 9 after 30 years."""
   id: UID!
   createdAt: Time!
-  """ Thread was published anonymously or not."""
-  anonymous: Boolean!
-  """ Same format as id if anonymous, name of User otherwise."""
-  author: String!
+  author: Author!
   """ Default to '无题'."""
   title: String
   """ Markdown formatted content."""
