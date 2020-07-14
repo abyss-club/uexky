@@ -54,7 +54,7 @@ type ForumRepo interface {
 	GetThread(ctx context.Context, search *ThreadSearch) (*Thread, error)
 	GetThreadSlice(ctx context.Context, search *ThreadsSearch, query SliceQuery) (*ThreadSlice, error)
 	GetThreadCatalog(ctx context.Context, id uid.UID) ([]*ThreadCatalogItem, error)
-	GetAnonyID(ctx context.Context, userID int64, threadID uid.UID) (uid.UID, error)
+	GetAnonyID(ctx context.Context, userID int64, threadID uid.UID) (string, error)
 	InsertThread(ctx context.Context, thread *Thread) error
 	UpdateThread(ctx context.Context, id uid.UID, update *ThreadUpdate) error
 
@@ -72,26 +72,14 @@ type ForumRepo interface {
 	SetMainTags(ctx context.Context, tags []string) error
 }
 
-// -- Author
-
 type Author struct {
-	UserID      int64
-	AnonymousID *uid.UID
-	UserName    *string
+	UserID    int64  `json:"-"`
+	Anonymous bool   `json:"anonymous"`
+	Author    string `json:"author"`
 }
-
-func (a Author) Name(anonymous bool) string {
-	if !anonymous {
-		return *a.UserName
-	}
-	return a.AnonymousID.ToBase64String()
-}
-
-// -- Entity Extension
 
 type PostData struct {
 	ThreadID   uid.UID
-	Author     Author
 	QuoteIDs   []uid.UID
 	QuotePosts []*Post
 }

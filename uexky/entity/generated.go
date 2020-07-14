@@ -37,9 +37,10 @@ type PostInput struct {
 
 //  Stripped version of Post object.
 type PostOutline struct {
+	//  post.id
 	ID uid.UID `json:"id"`
-	//  Name if not anonymous, anonymous ID otherwise.
-	Author string `json:"author"`
+	//  post.author
+	Author *Author `json:"author"`
 	//  Markdown formatted content.
 	Content string `json:"content"`
 }
@@ -137,7 +138,9 @@ type ThreadInput struct {
 
 //  Stripped version of Thread object.
 type ThreadOutline struct {
-	ID    uid.UID `json:"id"`
+	//  thread.id
+	ID uid.UID `json:"id"`
+	//  thread.title
 	Title *string `json:"title"`
 	//  Markdown formatted content.
 	Content string   `json:"content"`

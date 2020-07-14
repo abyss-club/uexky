@@ -29,7 +29,6 @@ type Thread {
   id: UID!
   createdAt: Time!
   author: Author!
-  """ Default to '无题'."""
   title: String
   """ Markdown formatted content."""
   content: String!

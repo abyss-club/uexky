@@ -26,36 +26,34 @@ type Thread struct {
 	//nolint: structcheck, unused
 	tableName struct{} `pg:"thread,,discard_unknown_columns"`
 
-	ID          int64     `pg:"id,pk"`
-	LastPostID  int64     `pg:"last_post_id,use_zero"`
-	CreatedAt   time.Time `pg:"created_at"`
-	UpdatedAt   time.Time `pg:"updated_at"`
-	Anonymous   bool      `pg:"anonymous,use_zero"`
-	UserID      int64     `pg:"user_id,use_zero"`
-	UserName    *string   `pg:"user_name"`
-	AnonymousID *int64    `pg:"anonymous_id"`
-	Title       *string   `pg:"title"`
-	Content     string    `pg:"content,use_zero"`
-	Locked      bool      `pg:"locked,use_zero"`
-	Blocked     bool      `pg:"blocked,use_zero"`
-	Tags        []string  `pg:"tags,array"`
+	ID         int64     `pg:"id,pk"`
+	LastPostID int64     `pg:"last_post_id,use_zero"`
+	CreatedAt  time.Time `pg:"created_at"`
+	UpdatedAt  time.Time `pg:"updated_at"`
+	UserID     int64     `pg:"user_id,use_zero"`
+	Anonymous  bool      `pg:"anonymous,use_zero"`
+	Author     string    `pg:"author"`
+	Title      *string   `pg:"title"`
+	Content    string    `pg:"content,use_zero"`
+	Locked     bool      `pg:"locked,use_zero"`
+	Blocked    bool      `pg:"blocked,use_zero"`
+	Tags       []string  `pg:"tags,array"`
 }
 
 type Post struct {
 	//nolint: structcheck, unused
 	tableName struct{} `pg:"post,,discard_unknown_columns"`
 
-	ID          int64     `pg:"id,pk"`
-	CreatedAt   time.Time `pg:"created_at"`
-	UpdatedAt   time.Time `pg:"updated_at"`
-	ThreadID    int64     `pg:"thread_id,use_zero"`
-	Anonymous   bool      `pg:"anonymous,use_zero"`
-	UserID      int64     `pg:"user_id,use_zero"`
-	UserName    *string   `pg:"user_name"`
-	AnonymousID *int64    `pg:"anonymous_id"`
-	Blocked     *bool     `pg:"blocked"`
-	Content     string    `pg:"content,use_zero"`
-	QuotedIDs   []int64   `pg:"quoted_ids,array"`
+	ID        int64     `pg:"id,pk"`
+	CreatedAt time.Time `pg:"created_at"`
+	UpdatedAt time.Time `pg:"updated_at"`
+	ThreadID  int64     `pg:"thread_id,use_zero"`
+	UserID    int64     `pg:"user_id,use_zero"`
+	Anonymous bool      `pg:"anonymous,use_zero"`
+	Author    string    `pg:"author"`
+	Blocked   *bool     `pg:"blocked"`
+	Content   string    `pg:"content,use_zero"`
+	QuotedIDs []int64   `pg:"quoted_ids,array"`
 }
 
 type Tag struct {

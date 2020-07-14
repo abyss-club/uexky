@@ -113,13 +113,13 @@ func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UI
 		if err != nil {
 			return false, err
 		}
-		return s.User.BanUser(ctx, post.Data.Author.UserID)
+		return s.User.BanUser(ctx, post.Author.UserID)
 	} else if threadID != nil {
 		thread, err := s.Forum.GetThreadByID(ctx, *threadID)
 		if err != nil {
 			return false, err
 		}
-		return s.User.BanUser(ctx, thread.AuthorObj.UserID)
+		return s.User.BanUser(ctx, thread.Author.UserID)
 	}
 	return false, errors.New("must specified post id or thread id")
 }
