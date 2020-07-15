@@ -977,11 +977,15 @@ func TestService_PubPost(t *testing.T) {
 		ctx  context.Context
 		post entity.PostInput
 	}
+	type quotedChecker struct {
+		quotedCount int
+	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *entity.Post
-		wantErr bool
+		name        string
+		args        args
+		want        *entity.Post
+		wantErr     bool
+		checkQuoted *quotedChecker
 	}{
 		{
 			name: "anonymous signed in user",
@@ -1054,6 +1058,9 @@ func TestService_PubPost(t *testing.T) {
 					QuotePosts: []*entity.Post{post},
 				},
 			},
+			checkQuoted: &quotedChecker{
+				quotedCount: 1,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -1080,6 +1087,15 @@ func TestService_PubPost(t *testing.T) {
 					t.Error("should have a quoted post")
 				} else if diff := cmp.Diff(quoted[0], post, forumRepoComp, timeCmp); diff != "" {
 					t.Errorf("Service.PubPost().Quotes() missmatch: %s", diff)
+				}
+			}
+			if tt.checkQuoted != nil {
+				gotCount, err := post.QuotedCount(tt.args.ctx)
+				if err != nil {
+					t.Errorf("quotedPost.QuotedCount error: %v", err)
+				}
+				if gotCount != tt.checkQuoted.quotedCount {
+					t.Errorf("quotedPost.QuotedCount()=%v, want=%v", gotCount, tt.checkQuoted.quotedCount)
 				}
 			}
 		})

@@ -62,7 +62,6 @@ type ForumRepo interface {
 	GetPosts(ctx context.Context, search *PostsSearch) ([]*Post, error)
 	GetPostSlice(ctx context.Context, search *PostsSearch, query SliceQuery) (*PostSlice, error)
 	GetPostCount(ctx context.Context, search *PostsSearch) (int, error)
-	GetPostQuotesPosts(ctx context.Context, id uid.UID) ([]*Post, error)
 	GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error)
 	InsertPost(ctx context.Context, post *Post) error
 	UpdatePost(ctx context.Context, id uid.UID, update *PostUpdate) error

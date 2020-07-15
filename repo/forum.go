@@ -287,23 +287,9 @@ func (f *ForumRepo) GetPostCount(ctx context.Context, search *entity.PostsSearch
 	return q.Count()
 }
 
-func (f *ForumRepo) GetPostQuotesPosts(ctx context.Context, id uid.UID) ([]*entity.Post, error) {
-	var posts []Post
-	q := f.db(ctx).Model(&posts).Join("INNER JOIN posts_quotes ON post.id = posts_quotes.quoted_id").
-		Where("posts_quotes.quoter_id = ?", id).Order("post.id")
-	if err := q.Select(); err != nil {
-		return nil, err
-	}
-	var ePosts []*entity.Post
-	for i := range posts {
-		ePosts = append(ePosts, f.toEntityPost(&posts[i]))
-	}
-	return ePosts, nil
-}
-
 func (f *ForumRepo) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error) {
 	var count int
-	_, err := f.db(ctx).Query(orm.Scan(&count), "SELECT count(*) FROM posts_quotes WHERE quoted_id=?", id)
+	_, err := f.db(ctx).Query(orm.Scan(&count), "SELECT count(*) FROM post WHERE ? = ANY(quoted_ids)", id)
 	return count, err
 }
 
