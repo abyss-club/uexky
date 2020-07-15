@@ -61,7 +61,7 @@ func Errorf(t ErrorType, format string, a ...interface{}) *Error {
 	}
 }
 
-func Wrap(t ErrorType, err error, a ...interface{}) *Error {
+func Wrap(t ErrorType, err error, a ...interface{}) error {
 	if err == nil {
 		return nil
 	}
@@ -71,7 +71,7 @@ func Wrap(t ErrorType, err error, a ...interface{}) *Error {
 	}
 }
 
-func Wrapf(t ErrorType, err error, format string, a ...interface{}) *Error {
+func Wrapf(t ErrorType, err error, format string, a ...interface{}) error {
 	if err == nil {
 		return nil
 	}
