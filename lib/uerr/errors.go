@@ -15,9 +15,28 @@ const (
 	AuthError       ErrorType = "AuthError"
 	PermissionError ErrorType = "PermissionError"
 	NotFoundError   ErrorType = "NotFoundError"
+	RateLimitError  ErrorType = "RateLimitError"
 	DBError         ErrorType = "DBError"
 	InternalError   ErrorType = "InternalError"
 )
+
+var errCodes = map[ErrorType]string{
+	ParamsError:     "INVALID_PARAMETER",
+	AuthError:       "NOT_SIGNED_IN",
+	PermissionError: "FORBIDDEN_ACTION",
+	NotFoundError:   "NOT_FOUND",
+	RateLimitError:  "RATE_LIMIT_EXCEEDED",
+	DBError:         "INTERNAL_SREVER_ERROR",
+	InternalError:   "INTERNAL_SERVER_ERROR",
+}
+
+func (t ErrorType) Code() string {
+	code, ok := errCodes[t]
+	if !ok {
+		panic(fmt.Errorf("invalid error type: %s", t))
+	}
+	return code
+}
 
 type Error struct {
 	t ErrorType
