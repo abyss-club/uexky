@@ -75,7 +75,7 @@ func (tx *TxAdapter) Begin(ctx context.Context) error {
 	var err error
 	data.Tx, err = data.DB.Begin()
 	if err != nil {
-		return uerr.Errorf(uerr.DBError, "begin transaction: %w", err)
+		return uerr.Errorf(uerr.PostgresError, "begin transaction: %w", err)
 	}
 	return nil
 }
@@ -90,7 +90,7 @@ func (tx *TxAdapter) Commit(ctx context.Context) error {
 		return nil
 	}
 	if err := data.Tx.Commit(); err != nil {
-		return uerr.Errorf(uerr.DBError, "commit transaction: %w", err)
+		return uerr.Errorf(uerr.PostgresError, "commit transaction: %w", err)
 	}
 	return nil
 }
@@ -107,7 +107,7 @@ func (tx *TxAdapter) Rollback(ctx context.Context, err error) error {
 	rbErr := data.Tx.Rollback()
 	if rbErr != nil {
 		log.Error(err)
-		return uerr.Errorf(uerr.DBError, "rollback transaction: %w", err)
+		return uerr.Errorf(uerr.PostgresError, "rollback transaction: %w", err)
 	}
 	return err
 }

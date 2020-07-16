@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -40,23 +39,8 @@ func (s *Server) GraphQLHandler() http.Handler {
 	server.SetErrorPresenter(func(ctx context.Context, err error) *gqlerror.Error {
 		path := graphql.GetFieldContext(ctx).Path()
 		message := err.Error()
-		var code string
-		switch {
-		case errors.Is(err, uerr.New(uerr.ParamsError)):
-			code = uerr.ParamsError.Code()
-		case errors.Is(err, uerr.New(uerr.AuthError)):
-			code = uerr.AuthError.Code()
-		case errors.Is(err, uerr.New(uerr.PermissionError)):
-			code = uerr.PermissionError.Code()
-		case errors.Is(err, uerr.New(uerr.NotFoundError)):
-			code = uerr.NotFoundError.Code()
-		case errors.Is(err, uerr.New(uerr.DBError)):
-			code = uerr.InternalError.Code()
-		case errors.Is(err, uerr.New(uerr.InternalError)):
-			code = uerr.InternalError.Code()
-		default:
-			code = uerr.InternalError.Code()
-		}
+		code := uerr.ExtractErrorType(err).Code()
+
 		gerr := gqlerror.ErrorPathf(path, message)
 		gerr.Extensions = map[string]interface{}{
 			"code":       code,

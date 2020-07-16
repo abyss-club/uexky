@@ -9,7 +9,7 @@ import (
 )
 
 func dbErrWrap(err error, a ...interface{}) error {
-	errType := uerr.DBError
+	errType := uerr.PostgresError
 	if errors.Is(err, pg.ErrNoRows) {
 		errType = uerr.NotFoundError
 	}
@@ -17,7 +17,7 @@ func dbErrWrap(err error, a ...interface{}) error {
 }
 
 func dbErrWrapf(err error, format string, a ...interface{}) error {
-	errType := uerr.DBError
+	errType := uerr.PostgresError
 	if errors.Is(err, pg.ErrNoRows) {
 		errType = uerr.NotFoundError
 	}
@@ -25,7 +25,7 @@ func dbErrWrapf(err error, format string, a ...interface{}) error {
 }
 
 //func redisErrWrap(err error, a ...interface{}) error {
-//	errType := uerr.DBError
+//	errType := uerr.RedisError
 //	if errors.Is(err, redis.Nil) {
 //		errType = uerr.NotFoundError
 //	}
@@ -33,7 +33,7 @@ func dbErrWrapf(err error, format string, a ...interface{}) error {
 //}
 
 func redisErrWrapf(err error, format string, a ...interface{}) error {
-	errType := uerr.DBError
+	errType := uerr.RedisError
 	if errors.Is(err, redis.Nil) {
 		errType = uerr.NotFoundError
 	}

@@ -11,13 +11,18 @@ import (
 type ErrorType string
 
 const (
+	UnknownError    ErrorType = ""
 	ParamsError     ErrorType = "ParamsError"
 	AuthError       ErrorType = "AuthError"
 	PermissionError ErrorType = "PermissionError"
 	NotFoundError   ErrorType = "NotFoundError"
 	RateLimitError  ErrorType = "RateLimitError"
-	DBError         ErrorType = "DBError"
 	InternalError   ErrorType = "InternalError"
+
+	// External Services
+	PostgresError ErrorType = "PostgresError"
+	RedisError    ErrorType = "RedisError"
+	MailgunError  ErrorType = "MailgunError"
 )
 
 var errCodes = map[ErrorType]string{
@@ -26,8 +31,12 @@ var errCodes = map[ErrorType]string{
 	PermissionError: "FORBIDDEN_ACTION",
 	NotFoundError:   "NOT_FOUND",
 	RateLimitError:  "RATE_LIMIT_EXCEEDED",
-	DBError:         "INTERNAL_SREVER_ERROR",
-	InternalError:   "INTERNAL_SERVER_ERROR",
+
+	UnknownError:  "INTERNAL_SREVER_ERROR",
+	InternalError: "INTERNAL_SERVER_ERROR",
+	PostgresError: "INTERNAL_SREVER_ERROR",
+	RedisError:    "INTERNAL_SREVER_ERROR",
+	MailgunError:  "INTERNAL_SREVER_ERROR",
 }
 
 func (t ErrorType) Code() string {
@@ -96,6 +105,19 @@ func (e *Error) Is(target error) bool {
 func (e *Error) As(target error) bool {
 	_, ok := target.(*Error)
 	return ok
+}
+
+func ExtractErrorType(err error) ErrorType {
+	if err == nil {
+		panic("error can't be nil")
+	}
+	for err != nil {
+		if e, ok := err.(*Error); ok {
+			return e.t
+		}
+		err = errors.Unwrap(err)
+	}
+	return ""
 }
 
 type ErrSlice []error
