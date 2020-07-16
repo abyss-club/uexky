@@ -1,4 +1,8 @@
 // Package err define error type of uexky
+//
+// Use uerr.New and uerr.Errorf to create custom errors. Use uerr.Wrap and uerr.Wrapf to wrap extern errors.
+// To transit error in this project, just use errors.Wrap and errors.Wrapf, the wrapped message is function
+// name and parameters. Follow this guideline, we will get clear error stack.
 package uerr
 
 import (

@@ -6,10 +6,10 @@ import (
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
@@ -70,7 +70,7 @@ func (f *ForumRepo) GetThreadSlice(
 		if cursor != "" {
 			c, err := uid.ParseUID(cursor)
 			if err != nil {
-				return nil, uerr.Wrap(uerr.ParamsError, err, "invalid cursor")
+				return nil, errors.Wrapf(err, "GetThreadSlice(search=%+v) parse cursor", search)
 			}
 			if !isAfter {
 				q = q.Where("last_post_id > ?", c)
@@ -242,7 +242,7 @@ func (f *ForumRepo) GetPostSlice(
 		if cursor != "" {
 			c, err := uid.ParseUID(cursor)
 			if err != nil {
-				return nil, uerr.Wrap(uerr.ParamsError, err, "invalid cursor")
+				return nil, errors.Wrapf(err, "GetPostSlice(search=%+v, query=%+v) parse cursor", search, query)
 			}
 			if isAfter != search.DESC {
 				q = q.Where("id > ?", c)

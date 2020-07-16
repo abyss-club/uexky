@@ -14,7 +14,7 @@ func NewDB() (*pg.DB, error) {
 	opt, err := pg.ParseURL(config.Get().PostgresURI)
 	opt.PoolSize = 16
 	if err != nil {
-		return nil, err
+		return nil, uerr.Wrap(uerr.ParamsError, err, "parse postgres uri")
 	}
 	return pg.Connect(opt), nil
 }
@@ -65,6 +65,8 @@ func (d *PgContextData) GetSession() Session {
 func (tx *TxAdapter) AttachDB(ctx context.Context) context.Context {
 	return context.WithValue(ctx, pgDataKey, &PgContextData{DB: tx.DB})
 }
+
+// TODO: use closure to handle transaction
 
 func (tx *TxAdapter) Begin(ctx context.Context) error {
 	data := getData(ctx)

@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/mailgun/mailgun-go/v4"
-	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/config"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/uexky/adapter"
 )
 
@@ -22,5 +22,5 @@ func (a *Adapter) SendEmail(ctx context.Context, mail *adapter.Mail) error {
 	msg := a.mg.NewMessage(mail.From, mail.Subject, mail.Text, mail.To)
 	msg.SetHtml(mail.HTML)
 	resp, id, err := a.mg.Send(ctx, msg)
-	return errors.Wrapf(err, "mailgun send mail error(%s): %s", id, resp)
+	return uerr.Wrapf(uerr.MailgunError, err, "mailgun send mail error(%s): %s", id, resp)
 }

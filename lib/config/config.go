@@ -1,12 +1,12 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 
 	"github.com/pelletier/go-toml"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 )
 
 type Config struct {
@@ -76,17 +76,17 @@ func Load(filename string) error {
 	if filename != "" {
 		f, err := os.Open(filename)
 		if err != nil {
-			return fmt.Errorf("open config file: %w", err)
+			return uerr.Wrap(uerr.InternalError, err, "open config file")
 		}
 		if err := toml.NewDecoder(f).Decode(&c); err != nil {
-			return fmt.Errorf("read config file: %w", err)
+			return uerr.Wrap(uerr.InternalError, err, "read config file")
 		}
 	}
 	c.filename = filename
 	patchEnv()
 	mf, err := filepath.Abs(c.MigrationFiles)
 	if err != nil {
-		return err
+		return uerr.Wrapf(uerr.InternalError, err, "file migrations file path")
 	}
 	c.MigrationFiles = mf
 	return nil
