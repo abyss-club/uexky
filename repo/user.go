@@ -17,21 +17,22 @@ type UserRepo struct {
 
 func (u *UserRepo) SetCode(ctx context.Context, email string, code string, ex time.Duration) error {
 	_, err := u.Redis.Set(code, email, ex).Result()
-	return err
+	return redisErrWrapf(err, "SetCode(email=%s, code=%s)", email, code)
 }
 
 func (u *UserRepo) GetCodeEmail(ctx context.Context, code string) (string, error) {
-	return u.Redis.Get(code).Result()
+	code, err := u.Redis.Get(code).Result()
+	return code, redisErrWrapf(err, "GetCodeEmail(code=%s)", code)
 }
 
 func (u *UserRepo) DelCode(ctx context.Context, code string) error {
 	_, err := u.Redis.Del(code).Result()
-	return err
+	return redisErrWrapf(err, "DelCode(code=%s)", code)
 }
 
 func (u *UserRepo) SetToken(ctx context.Context, email string, tok string, ex time.Duration) error {
 	_, err := u.Redis.Set(tok, email, ex).Result()
-	return err
+	return redisErrWrapf(err, "SetToken(email=%s, tok=%s, ex=%v)", email, tok, ex)
 }
 
 func (u *UserRepo) GetTokenEmail(ctx context.Context, tok string) (string, error) {
@@ -39,7 +40,7 @@ func (u *UserRepo) GetTokenEmail(ctx context.Context, tok string) (string, error
 	if err == redis.Nil {
 		return "", nil
 	}
-	return tok, err
+	return tok, redisErrWrapf(err, "GetTokenEmail(tok=%s)", tok)
 }
 
 func (u *UserRepo) db(ctx context.Context) postgres.Session {
@@ -70,7 +71,7 @@ func (u *UserRepo) toEntityUser(user *User, mainTags []string) *entity.User {
 func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.User, bool, error) {
 	var users []User
 	if err := u.db(ctx).Model(&users).Where("email = ?", email).Select(); err != nil {
-		return nil, false, err
+		return nil, false, dbErrWrapf(err, "GetOrInsertUser.GetUser(email=%s)", email)
 	}
 	mainTags, err := u.Forum.GetMainTags(ctx)
 	if err != nil {
@@ -83,7 +84,7 @@ func (u *UserRepo) GetOrInsertUser(ctx context.Context, email string) (*entity.U
 		Email: email,
 	}
 	if _, err := u.db(ctx).Model(&user).Returning("*").Insert(); err != nil {
-		return nil, false, err
+		return nil, false, dbErrWrapf(err, "GetOrInsertUser.InsertUser(user=%+v)", user)
 	}
 	return u.toEntityUser(&user, mainTags), true, nil
 }
@@ -101,5 +102,5 @@ func (u *UserRepo) UpdateUser(ctx context.Context, id int64, update *entity.User
 		q.Set("tags = ?", pg.Array(update.Tags))
 	}
 	_, err := q.Update()
-	return err
+	return dbErrWrapf(err, "UpdateUser(id=%v, update=%+v)", id, update)
 }

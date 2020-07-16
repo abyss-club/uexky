@@ -2,25 +2,6 @@ package server
 
 import "net/http"
 
-/*
-function authMiddleware(endpoint) {
-  return async (ctx, next) => {
-    const token = ctx.cookies.get('token') || '';
-    let email;
-    if ((ctx.url === endpoint) && (token !== '')) {
-      email = await Token.getEmailByToken(token, true);
-    }
-    if (email) {
-      ctx.auth = await UserModel.authContext({ email });
-      ctx.response.set({ 'Set-Cookie': genCookie(token) });
-    } else {
-      ctx.auth = await UserModel.authContext({});
-    }
-    await next();
-  };
-}
-*/
-
 // func (s *Server) withLog(next http.Handler) http.Handler {
 // 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 // 	})

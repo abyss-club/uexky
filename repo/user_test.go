@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -80,7 +81,7 @@ func TestUserRepo_SetGetDelCodeEmail(t *testing.T) {
 			if err := u.DelCode(tt.args.ctx, tt.args.code); err != nil {
 				t.Errorf("UserRepo.DelCodeEmail() err = %v", err)
 			}
-			if _, err := u.GetCodeEmail(tt.args.ctx, tt.args.code); err != red.Nil {
+			if _, err := u.GetCodeEmail(tt.args.ctx, tt.args.code); !errors.Is(err, red.Nil) {
 				t.Errorf("UserRepo get email after delCode err = %v", err)
 			}
 		})

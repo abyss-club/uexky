@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 )
 
 type UID int64
@@ -33,7 +34,7 @@ func base64charsToInt64(b byte) (int64, error) {
 	case b == 95:
 		return int64(63), nil
 	default:
-		return 0, errors.Errorf("invalid char: %v", b)
+		return 0, uerr.Errorf(uerr.ParamsError, "invalid char: %v", b)
 	}
 }
 
@@ -41,7 +42,7 @@ func ParseUID(s string) (UID, error) {
 	chars := []byte(s)
 	length := len(chars)
 	if len(chars) < minStrLen {
-		return 0, errors.Errorf("invalid uid base64 string: %s", s)
+		return 0, uerr.Errorf(uerr.ParamsError, "invalid uid base64 string: %s", s)
 	}
 	chars[0], chars[1] = chars[1], chars[0]
 	for i := 2; i < length/2+1; i++ {
@@ -56,7 +57,7 @@ func ParseUID(s string) (UID, error) {
 	for i := length - 1; i >= 0; i-- {
 		i, err := base64charsToInt64(chars[i])
 		if err != nil {
-			return UID(0), err
+			return UID(0), errors.Wrapf(err, "ParseUID(s=%s)", s)
 		}
 		uid = uid*64 + UID(i)
 	}
@@ -109,12 +110,12 @@ func NewUID() UID {
 func (u *UID) UnmarshalGQL(v interface{}) error {
 	uidStr, ok := v.(string)
 	if !ok {
-		return errors.Errorf("uid in graphql must be strings")
+		return uerr.New(uerr.ParamsError, "uid in graphql must be strings")
 	}
 	var err error
 	*u, err = ParseUID(uidStr)
 	if err != nil {
-		return errors.Wrap(err, "parse uid")
+		return errors.Wrapf(err, "UnmarshalGQL(v=%+v)", v)
 	}
 	return nil
 }

@@ -33,12 +33,12 @@ type Thread struct {
 
 func validateThreadTags(allMainTags []string, mainTag string, subTags []string) ([]string, error) {
 	if !algo.InStrSlice(allMainTags, mainTag) {
-		return nil, errors.Errorf("invalid main tag: %s", mainTag)
+		return nil, uerr.Errorf(uerr.ParamsError, "invalid main tag: %s", mainTag)
 	}
 	var subTagSet []string
 	for _, st := range subTags {
 		if algo.InStrSlice(allMainTags, st) {
-			return nil, errors.New("must specify only one main tag")
+			return nil, uerr.New(uerr.ParamsError, "must specify only one main tag")
 		}
 		if !algo.InStrSlice(subTagSet, st) {
 			subTagSet = append(subTagSet, st)
@@ -66,23 +66,23 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		thread.Author.Author = uid.NewUID().ToBase64String()
 	} else {
 		if user.Name == nil {
-			return nil, errors.New("user name must be set")
+			return nil, uerr.New(uerr.ParamsError, "user name must be set")
 		}
 		thread.Author.Author = *user.Name
 	}
 	allMainTags, err := f.GetMainTags(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "NewThread(uerr=%+v, input=%+v)", user, input)
 	}
 	subTags, err := validateThreadTags(allMainTags, input.MainTag, input.SubTags)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "NewThread(uerr=%+v, input=%+v)", user, input)
 	}
 	thread.SubTags = subTags
 	if err := f.Repo.InsertThread(ctx, thread); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "NewThread(uerr=%+v, input=%+v)", user, input)
 	}
-	return thread, err
+	return thread, nil
 }
 
 func (f *ForumService) GetThreadByID(ctx context.Context, threadID uid.UID) (*Thread, error) {
@@ -118,15 +118,15 @@ func (n *Thread) Catalog(ctx context.Context) ([]*ThreadCatalogItem, error) {
 func (n *Thread) EditTags(ctx context.Context, mainTag string, subTags []string) error {
 	allMainTags, err := n.Repo.GetMainTags(ctx)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "EditTags(mainTag=%s, subTags=%v)", mainTag, subTags)
 	}
 	subTagSet, err := validateThreadTags(allMainTags, mainTag, subTags)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "EditTags(mainTag=%s, subTags=%v)", mainTag, subTags)
 	}
 	update := &ThreadUpdate{MainTag: &mainTag, SubTags: subTagSet}
 	if err := n.Repo.UpdateThread(ctx, n.ID, update); err != nil {
-		return err
+		return errors.Wrapf(err, "EditTags(mainTag=%s, subTags=%v)", mainTag, subTags)
 	}
 	n.MainTag = mainTag
 	n.SubTags = subTagSet
@@ -136,7 +136,7 @@ func (n *Thread) EditTags(ctx context.Context, mainTag string, subTags []string)
 func (n *Thread) Lock(ctx context.Context) error {
 	locked := true
 	if err := n.Repo.UpdateThread(ctx, n.ID, &ThreadUpdate{Locked: &locked}); err != nil {
-		return err
+		return errors.Wrap(err, "Lock()")
 	}
 	n.Locked = true
 	return nil
@@ -145,7 +145,7 @@ func (n *Thread) Lock(ctx context.Context) error {
 func (n *Thread) Block(ctx context.Context) error {
 	blocked := true
 	if err := n.Repo.UpdateThread(ctx, n.ID, &ThreadUpdate{Blocked: &blocked}); err != nil {
-		return err
+		return errors.Wrap(err, "Block()")
 	}
 	n.Blocked = true
 	n.Content = BlockedContent
@@ -170,7 +170,7 @@ func (p Post) String() string {
 func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput) (*NewPostResponse, error) {
 	thread, err := f.Repo.GetThread(ctx, &ThreadSearch{ID: &input.ThreadID})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "NewPost(user=%+v, input=%+v)", user, input)
 	}
 	if thread.Locked {
 		return nil, uerr.New(uerr.ParamsError, "thread has been locked")
@@ -197,17 +197,18 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 		} else {
 			aid, err := f.Repo.GetAnonyID(ctx, user.ID, thread.ID)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "NewPost(user=%+v, input=%+v)", user, input)
 			}
 			post.Author.Author = aid
 		}
 	} else {
 		if user.Name == nil {
-			return nil, errors.New("user name must be set")
+			return nil, uerr.New(uerr.ParamsError, "user name must be set")
 		}
 		post.Author.Author = *user.Name
 	}
 	err = f.Repo.InsertPost(ctx, post)
+	err = errors.Wrapf(err, "NewPost(user=%+v, input=%+v)", user, input)
 	return &NewPostResponse{Post: post, Thread: thread}, err
 }
 
@@ -223,7 +224,7 @@ func (p *Post) Quotes(ctx context.Context) ([]*Post, error) {
 	if len(p.Data.QuoteIDs) != 0 && len(p.Data.QuotePosts) == 0 {
 		quotedPosts, err := p.Repo.GetPosts(ctx, &PostsSearch{IDs: p.Data.QuoteIDs})
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Quotes()")
 		}
 		p.Data.QuotePosts = quotedPosts
 	}
@@ -237,7 +238,7 @@ func (p *Post) QuotedCount(ctx context.Context) (int, error) {
 func (p *Post) Block(ctx context.Context) error {
 	blocked := true
 	if err := p.Repo.UpdatePost(ctx, p.ID, &PostUpdate{Blocked: &blocked}); err != nil {
-		return err
+		return errors.Wrap(err, "Block()")
 	}
 	p.Blocked = true
 	p.Content = BlockedContent
@@ -251,7 +252,7 @@ func (f *ForumService) GetMainTags(ctx context.Context) ([]string, error) {
 func (f *ForumService) SetMainTags(ctx context.Context, tags []string) error {
 	mainTags, err := f.GetMainTags(ctx)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "SetMainTags(tags=%v)", tags)
 	}
 	if len(mainTags) != 0 {
 		return uerr.Errorf(uerr.ParamsError, "already have main tags, can't modify it")

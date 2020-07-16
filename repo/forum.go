@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
@@ -49,7 +50,7 @@ func (f *ForumRepo) GetThread(ctx context.Context, search *entity.ThreadSearch) 
 	thread := Thread{}
 	q := f.db(ctx).Model(&thread).Where("id = ?", search.ID)
 	if err := q.Select(); err != nil {
-		return nil, err
+		return nil, dbErrWrapf(err, "GetThread(search=%+v)", search)
 	}
 	return f.toEntityThread(&thread), nil
 }
@@ -69,7 +70,7 @@ func (f *ForumRepo) GetThreadSlice(
 		if cursor != "" {
 			c, err := uid.ParseUID(cursor)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "GetThreadSlice(search=%+v) parse cursor", search)
 			}
 			if !isAfter {
 				q = q.Where("last_post_id > ?", c)
@@ -88,7 +89,7 @@ func (f *ForumRepo) GetThreadSlice(
 		return nil, err
 	}
 	if err := q.Select(); err != nil {
-		return nil, err
+		return nil, dbErrWrapf(err, "GetThreadSlice(search=%+v, query=%+v)", search, query)
 	}
 
 	sliceInfo := &entity.SliceInfo{HasNext: len(threads) > query.Limit}
@@ -113,7 +114,7 @@ func (f *ForumRepo) GetThreadCatalog(ctx context.Context, id uid.UID) ([]*entity
 	var posts []Post
 	q := f.db(ctx).Model(&posts).Column("id", "created_at").Where("thread_id=?", id).Order("id")
 	if err := q.Select(); err != nil {
-		return nil, err
+		return nil, dbErrWrapf(err, "GetThreadCatalog(id=%v)", id)
 	}
 	var cats []*entity.ThreadCatalogItem
 	for i := range posts {
@@ -130,7 +131,7 @@ func (f *ForumRepo) GetAnonyID(ctx context.Context, userID int64, threadID uid.U
 	q := f.db(ctx).Model(&posts).Column("author").
 		Where("thread_id = ?", threadID).Where("anonymous = true").Order("id DESC").Limit(1)
 	if err := q.Select(); err != nil {
-		return "", err
+		return "", dbErrWrapf(err, "GetAnonyID(userID=%v, threadID=%v", userID, threadID)
 	}
 	if len(posts) > 0 {
 		return posts[0].Author, nil
@@ -169,7 +170,7 @@ func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity
 		q.Set("tags = ?", pg.Array(tags))
 	}
 	_, err := q.Update()
-	return err
+	return dbErrWrapf(err, "UpdateThread(id=%v, update=%+v)", id, update)
 }
 
 func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
@@ -200,7 +201,7 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 func (f *ForumRepo) GetPost(ctx context.Context, search *entity.PostSearch) (*entity.Post, error) {
 	var post Post
 	if err := f.db(ctx).Model(&post).Where("id = ?", search.ID).Select(); err != nil {
-		return nil, err
+		return nil, dbErrWrapf(err, "GetPost(search=%+v)", search)
 	}
 	return f.toEntityPost(&post), nil
 }
@@ -223,7 +224,7 @@ func (f *ForumRepo) GetPosts(ctx context.Context, search *entity.PostsSearch) ([
 	var posts []Post
 	q := f.searchPostsQuery(ctx, search, &posts)
 	if err := q.Select(); err != nil {
-		return nil, err
+		return nil, dbErrWrapf(err, "GetPosts(search=%+v)", search)
 	}
 	var ePosts []*entity.Post
 	for i := range posts {
@@ -241,7 +242,7 @@ func (f *ForumRepo) GetPostSlice(
 		if cursor != "" {
 			c, err := uid.ParseUID(cursor)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(err, "GetPostSlice(search=%+v, query=%+v) parse cursor", search, query)
 			}
 			if isAfter != search.DESC {
 				q = q.Where("id > ?", c)
@@ -260,7 +261,7 @@ func (f *ForumRepo) GetPostSlice(
 		return nil, err
 	}
 	if err := q.Select(); err != nil {
-		return nil, err
+		return nil, dbErrWrapf(err, "GetPostSlice(search=%+v, query=%+v)", search, query)
 	}
 
 	sliceInfo := &entity.SliceInfo{HasNext: len(posts) > query.Limit}
@@ -290,7 +291,7 @@ func (f *ForumRepo) GetPostCount(ctx context.Context, search *entity.PostsSearch
 func (f *ForumRepo) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error) {
 	var count int
 	_, err := f.db(ctx).Query(orm.Scan(&count), "SELECT count(*) FROM post WHERE ? = ANY(quoted_ids)", id)
-	return count, err
+	return count, dbErrWrapf(err, "GetPostQuotedCount(id=%v)", id)
 }
 
 func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) error {
@@ -305,11 +306,11 @@ func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) error {
 		QuotedIDs: post.Data.QuoteIDs,
 	}
 	if _, err := f.db(ctx).Model(newPost).Insert(); err != nil {
-		return err
+		return dbErrWrapf(err, "InsertPost.Insert(post=%+v)", post)
 	}
 	if _, err := f.db(ctx).Model((*Thread)(nil)).Set("last_post_id=?", post.ID).
 		Where("id = ?", post.Data.ThreadID).Update(); err != nil {
-		return err
+		return dbErrWrapf(err, "InsertPost.UpdateThread(post=%+v)", post)
 	}
 	return nil
 }
@@ -322,7 +323,7 @@ func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.P
 	}
 	_, err := q.Update()
 	if err != nil {
-		return err
+		return dbErrWrapf(err, "UpdatePost(id=%v, update=%+v)", id, update)
 	}
 	return nil
 }
@@ -344,7 +345,7 @@ func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*e
 		FROM thread group by tag
 	) as tags %s ORDER BY updated_at DESC %s`, where, limit)
 	if _, err := f.db(ctx).Query(&tags, sql); err != nil {
-		return nil, err
+		return nil, dbErrWrapf(err, "GetTags(search=%+v)", search)
 	}
 	mainTags, err := f.GetMainTags(ctx)
 	if err != nil {
@@ -366,7 +367,7 @@ func (f *ForumRepo) GetMainTags(ctx context.Context) ([]string, error) {
 	}
 	var tags []Tag
 	if err := f.db(ctx).Model(&tags).Where("type = ?", "main").Select(); err != nil {
-		return nil, dbErrWrap(err, "get main tags")
+		return nil, dbErrWrap(err, "GetMainTags()")
 	}
 	var mainTags []string
 	for i := range tags {
@@ -386,5 +387,5 @@ func (f *ForumRepo) SetMainTags(ctx context.Context, tags []string) error {
 		})
 	}
 	_, err := f.db(ctx).Model(&mainTags).Insert()
-	return dbErrWrap(err, "insert main tags")
+	return dbErrWrapf(err, "SetMainTags(tags=%v)", tags)
 }

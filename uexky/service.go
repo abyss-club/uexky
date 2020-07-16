@@ -2,8 +2,8 @@ package uexky
 
 import (
 	"context"
-	"errors"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/adapter"
@@ -84,7 +84,7 @@ func (s *Service) SyncUserTags(ctx context.Context, tags []string) (*entity.User
 	if err != nil {
 		return nil, err
 	}
-	return user, user.SyncTags(ctx, user, tags)
+	return user, user.SyncTags(ctx, tags)
 }
 
 func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
@@ -92,7 +92,7 @@ func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 	if err != nil {
 		return nil, err
 	}
-	return user, user.AddSubbedTag(ctx, user, tag)
+	return user, user.AddSubbedTag(ctx, tag)
 }
 
 func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
@@ -100,7 +100,7 @@ func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 	if err != nil {
 		return nil, err
 	}
-	return user, user.DelSubbedTag(ctx, user, tag)
+	return user, user.DelSubbedTag(ctx, tag)
 }
 
 func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error) {
@@ -175,18 +175,20 @@ func (s *Service) EditTags(
 }
 
 func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {
-	if err := s.TxAdapter.Begin(ctx); err != nil {
-		return nil, err
-	}
-	user, err := s.User.RequirePermission(ctx, entity.ActionPubThread)
-	if err != nil {
-		return nil, s.TxAdapter.Rollback(ctx, err)
-	}
-	newThread, err := s.Forum.NewThread(ctx, user, thread)
-	if err != nil {
-		return nil, s.TxAdapter.Rollback(ctx, err)
-	}
-	return newThread, s.TxAdapter.Commit(ctx)
+	var newThread *entity.Thread
+	err := s.TxAdapter.WithTx(ctx, func() error {
+		user, err := s.User.RequirePermission(ctx, entity.ActionPubThread)
+		if err != nil {
+			return errors.Wrapf(err, "PubThread(thread=%+v)", thread)
+		}
+		t, err := s.Forum.NewThread(ctx, user, thread)
+		if err != nil {
+			return errors.Wrapf(err, "PubThread(thread=%+v)", thread)
+		}
+		newThread = t
+		return nil
+	})
+	return newThread, err
 }
 
 func (s *Service) SearchThreads(
@@ -200,21 +202,27 @@ func (s *Service) GetThreadByID(ctx context.Context, id uid.UID) (*entity.Thread
 }
 
 func (s *Service) PubPost(ctx context.Context, post entity.PostInput) (*entity.Post, error) {
-	if err := s.TxAdapter.Begin(ctx); err != nil {
+	var user *entity.User
+	var res *entity.NewPostResponse
+	err := s.TxAdapter.WithTx(ctx, func() error {
+		var err error
+		user, err = s.User.RequirePermission(ctx, entity.ActionPubPost)
+		if err != nil {
+			return errors.Wrapf(err, "PubPost(post=%+v)", post)
+		}
+		res, err = s.Forum.NewPost(ctx, user, post)
+		if err != nil {
+			return errors.Wrapf(err, "PubPost(post=%+v)", post)
+		}
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
-	user, err := s.User.RequirePermission(ctx, entity.ActionPubPost)
-	if err != nil {
-		return nil, s.TxAdapter.Rollback(ctx, err)
-	}
-	res, err := s.Forum.NewPost(ctx, user, post)
-	if err != nil {
-		return nil, s.TxAdapter.Rollback(ctx, err)
-	}
 	if err := s.Noti.NewNotiOnNewPost(ctx, user, res.Thread, res.Post); err != nil {
-		return res.Post, s.TxAdapter.Rollback(ctx, err)
+		return nil, err
 	}
-	return res.Post, s.TxAdapter.Commit(ctx)
+	return res.Post, nil
 }
 
 func (s *Service) GetPostByID(ctx context.Context, id uid.UID) (*entity.Post, error) {

@@ -41,7 +41,7 @@ func (n *NotiRepo) GetUserUnreadCount(ctx context.Context, user *entity.User) (i
 		AND n.receivers && ?`,
 		user.ID, pg.Array(user.NotiReceivers()),
 	)
-	return count, err
+	return count, dbErrWrapf(err, "GetUserUnreadCount(user=%+v)", user)
 }
 
 func (n *NotiRepo) GetNotiByKey(ctx context.Context, userID int64, key string) (*entity.Notification, error) {
@@ -55,9 +55,9 @@ func (n *NotiRepo) GetNotiByKey(ctx context.Context, userID int64, key string) (
 		if err == pg.ErrNoRows {
 			return nil, nil
 		}
-		return nil, err
+		return nil, dbErrWrapf(err, "GetNotiByKey(userID=%v, key=%s)", userID, key)
 	}
-	return n.ToEntityNoti(&notification), err
+	return n.ToEntityNoti(&notification), nil
 }
 
 func (n *NotiRepo) GetNotiSlice(
@@ -74,7 +74,7 @@ func (n *NotiRepo) GetNotiSlice(
 		if cursor != "" {
 			c, err := uid.ParseUID(cursor)
 			if err != nil {
-				return nil, err
+				return nil, uerr.Wrap(uerr.ParamsError, err, "invalid cursor")
 			}
 			if !isAfter {
 				q = q.Where("sort_key > ?", c)
@@ -94,7 +94,7 @@ func (n *NotiRepo) GetNotiSlice(
 		return nil, err
 	}
 	if err := q.Select(); err != nil {
-		return nil, err
+		return nil, dbErrWrapf(err, "GetNotiSlice(user=%+v, query=%+v)", user, query)
 	}
 
 	sliceInfo := &entity.SliceInfo{HasNext: len(notifications) > query.Limit}
@@ -128,7 +128,7 @@ func (n *NotiRepo) InsertNoti(ctx context.Context, noti *entity.Notification) er
 	}
 	notification.Content = content
 	_, err = n.db(ctx).Model(notification).Insert()
-	return err
+	return dbErrWrapf(err, "InsertNoti(noti=%+v)", noti)
 }
 
 func (n *NotiRepo) UpdateNotiContent(ctx context.Context, noti *entity.Notification) error {
@@ -141,12 +141,12 @@ func (n *NotiRepo) UpdateNotiContent(ctx context.Context, noti *entity.Notificat
 		Set("content = ?", content).
 		Set("sort_key = ?", noti.SortKey).
 		Where("key = ?", noti.Key).Update()
-	return err
+	return dbErrWrapf(err, "UpdateNotiContent(noti=%+v)", noti)
 }
 
 func (n *NotiRepo) UpdateReadID(ctx context.Context, userID int64, id uid.UID) error {
 	user := &User{}
 	_, err := n.db(ctx).Model(user).
 		Set("last_read_noti = ?", id).Where("id = ?", userID).Update()
-	return err
+	return dbErrWrapf(err, "UpdateReadID(userID=%v, id=%v)", userID, id)
 }
