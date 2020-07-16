@@ -1,9 +1,8 @@
 package repo
 
 import (
-	"errors"
-
 	"github.com/go-pg/pg/v9/orm"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
@@ -12,10 +11,10 @@ type DealSliceResultFunc func(i int, isFirst bool, isLast bool)
 
 func applySliceQuery(fn AppleWhereAndOrderFunc, q *orm.Query, sq *entity.SliceQuery) (*orm.Query, error) {
 	if (sq.After == nil && sq.Before == nil) || (sq.After != nil && sq.Before != nil) {
-		return nil, errors.New("one and only one of before or after must be specified")
+		return nil, uerr.New(uerr.ParamsError, "one and only one of before or after must be specified")
 	}
 	if sq.Limit == 0 {
-		return nil, errors.New("limit must be specified")
+		return nil, uerr.New(uerr.ParamsError, "limit must be specified")
 	}
 	nq := q.Limit(sq.Limit + 1) // limit+1 for "hasNext"
 	if sq.After != nil {

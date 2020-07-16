@@ -175,7 +175,7 @@ func (n *Notification) DecodeContent(m map[string]interface{}) error {
 	default:
 		err = fmt.Errorf("can't marshal noti content, invalid type '%s'", n.Type)
 	}
-	return err
+	return uerr.Wrap(uerr.InternalError, err, "DecodeContent")
 }
 
 func (n *Notification) EncodeContent() (map[string]interface{}, error) {
@@ -189,10 +189,10 @@ func (n *Notification) EncodeContent() (map[string]interface{}, error) {
 	case NotiTypeQuoted:
 		err = mapstructure.Decode(n.Content.(QuotedNoti), &m)
 	default:
-		err = uerr.Errorf(uerr.ParamsError, "invalid noti type '%s'", n.Type)
+		err = fmt.Errorf("invalid noti type '%s'", n.Type)
 	}
 	if err != nil {
-		return nil, err
+		return nil, uerr.Wrap(uerr.ParamsError, err, "EncodeContent")
 	}
 	return m, nil
 }

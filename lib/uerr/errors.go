@@ -61,6 +61,26 @@ func Errorf(t ErrorType, format string, a ...interface{}) *Error {
 	}
 }
 
+func Wrap(t ErrorType, err error, a ...interface{}) *Error {
+	if err == nil {
+		return nil
+	}
+	return &Error{
+		t: t,
+		e: errors.Wrap(err, fmt.Sprint(a...)),
+	}
+}
+
+func Wrapf(t ErrorType, err error, format string, a ...interface{}) *Error {
+	if err == nil {
+		return nil
+	}
+	return &Error{
+		t: t,
+		e: errors.Wrapf(err, format, a...),
+	}
+}
+
 func (e *Error) Unwrap() error {
 	return errors.Unwrap(e.e)
 }
@@ -71,6 +91,11 @@ func (e *Error) Is(target error) bool {
 		return false
 	}
 	return ue.t == e.t
+}
+
+func (e *Error) As(target error) bool {
+	_, ok := target.(*Error)
+	return ok
 }
 
 type ErrSlice []error
