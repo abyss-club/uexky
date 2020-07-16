@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/pkg/errors"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
@@ -24,7 +24,7 @@ type NotiRepo interface {
 func ParseNotiType(s string) (NotiType, error) {
 	t := NotiType(s)
 	if !t.IsValid() {
-		return NotiType(""), errors.Errorf("invalid noti type: %s", s)
+		return NotiType(""), uerr.Errorf(uerr.ParamsError, "invalid noti type: %s", s)
 	}
 	return t, nil
 }

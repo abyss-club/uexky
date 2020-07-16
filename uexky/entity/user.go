@@ -4,9 +4,9 @@ package entity
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/config"
@@ -23,10 +23,10 @@ type UserService struct {
 func (s *UserService) RequirePermission(ctx context.Context, action Action) (*User, error) {
 	user, ok := ctx.Value(userKey).(*User)
 	if !ok {
-		return nil, errors.New("permission denied, no user found")
+		return nil, uerr.New(uerr.AuthError, "permission denied, no user found")
 	}
 	if err := user.RequirePermission(action); err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "RequirePermission(action=%v)", action)
 	}
 	return user, nil
 }
@@ -47,11 +47,11 @@ func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (Code,
 	// TODO: validate email
 	code := Code(uid.RandomBase64Str(codeLength))
 	if err := s.Repo.SetCode(ctx, email, string(code), codeExpire); err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "TrySignInByEmail(email=%s)", email)
 	}
 	mail := newAuthMail(email, code)
 	if err := s.Mail.SendEmail(ctx, mail); err != nil {
-		return "", err
+		return "", errors.Wrapf(err, "TrySignInByEmail(email=%s)", email)
 	}
 	return code, nil
 }
@@ -59,11 +59,11 @@ func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (Code,
 func (s *UserService) SignInByCode(ctx context.Context, code string) (Token, error) {
 	email, err := s.Repo.GetCodeEmail(ctx, code)
 	if err != nil {
-		return Token{}, err
+		return Token{}, errors.Wrapf(err, "SignInByCode(code=%s)", code)
 	}
 	tok := uid.RandomBase64Str(tokenLength)
 	if err := s.Repo.SetToken(ctx, email, tok, tokenExpire); err != nil {
-		return Token{}, err
+		return Token{}, errors.Wrapf(err, "SignInByCode(code=%s)", code)
 	}
 	if err := s.Repo.DelCode(ctx, code); err != nil {
 		log.Error(err)
@@ -74,7 +74,7 @@ func (s *UserService) SignInByCode(ctx context.Context, code string) (Token, err
 func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (ct context.Context, isNew bool, err error) {
 	email, err := s.Repo.GetTokenEmail(ctx, tok)
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.Wrapf(err, "CtxWithUserByToken(tok=%s)", tok)
 	}
 	if email == "" {
 		user := &User{
@@ -84,14 +84,14 @@ func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (ct co
 	}
 	user, isNew, err := s.Repo.GetOrInsertUser(ctx, email)
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.Wrapf(err, "CtxWithUserByToken(tok=%s)", tok)
 	}
 	return context.WithValue(ctx, userKey, user), isNew, nil
 }
 
 func (s *UserService) BanUser(ctx context.Context, id int64) (bool, error) {
 	if err := s.Repo.UpdateUser(ctx, id, &UserUpdate{Role: (*Role)(algo.NullString(string(RoleBanned)))}); err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "BanUser(id=%v)", id)
 	}
 	return true, nil
 }
@@ -110,7 +110,7 @@ type User struct {
 func (u *User) RequirePermission(action Action) error {
 	needRole := ActionRole[action]
 	if u.Role.Value() < needRole.Value() {
-		return errors.New("permission denied")
+		return uerr.New(uerr.PermissionError, "permission denied")
 	}
 	return nil
 }
@@ -120,7 +120,7 @@ func (u *User) SetName(ctx context.Context, name string) error {
 		return uerr.New(uerr.ParamsError, "already have a name")
 	}
 	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Name: &name}); err != nil {
-		return err
+		return errors.Wrapf(err, "SetName(name=%s)", name)
 	}
 	u.Name = &name
 	return nil
@@ -138,27 +138,25 @@ func purifyTags(includes []string, exclude string) []string {
 	return tags
 }
 
-func (u *User) SyncTags(ctx context.Context, user *User, tags []string) error {
+func (u *User) SyncTags(ctx context.Context, tags []string) error {
 	tagSet := purifyTags(tags, "")
 	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Tags: tagSet}); err != nil {
-		return err
+		return errors.Wrapf(err, "SyncTags(user=%+v, tags=%v)", u, tags)
 	}
 	u.Tags = tagSet
 	return nil
 }
 
-func (u *User) AddSubbedTag(ctx context.Context, user *User, tag string) error {
+func (u *User) AddSubbedTag(ctx context.Context, tag string) error {
 	tags := append(u.Tags, tag)
-	return u.SyncTags(ctx, u, tags)
+	err := u.SyncTags(ctx, tags)
+	return errors.Wrapf(err, "AddSubbedTag(user=%+v, tag=%v)", u, tag)
 }
 
-func (u *User) DelSubbedTag(ctx context.Context, user *User, tag string) error {
+func (u *User) DelSubbedTag(ctx context.Context, tag string) error {
 	tagSet := purifyTags(u.Tags, tag)
-	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Tags: tagSet}); err != nil {
-		return err
-	}
-	u.Tags = tagSet
-	return nil
+	err := u.SyncTags(ctx, tagSet)
+	return errors.Wrapf(err, "DelSubbedTag(user=%+v, tag=%v)", u, tag)
 }
 
 func (u *User) NotiReceivers() []Receiver {

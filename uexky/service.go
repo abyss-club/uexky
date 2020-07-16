@@ -84,7 +84,7 @@ func (s *Service) SyncUserTags(ctx context.Context, tags []string) (*entity.User
 	if err != nil {
 		return nil, err
 	}
-	return user, user.SyncTags(ctx, user, tags)
+	return user, user.SyncTags(ctx, tags)
 }
 
 func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
@@ -92,7 +92,7 @@ func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 	if err != nil {
 		return nil, err
 	}
-	return user, user.AddSubbedTag(ctx, user, tag)
+	return user, user.AddSubbedTag(ctx, tag)
 }
 
 func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
@@ -100,7 +100,7 @@ func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 	if err != nil {
 		return nil, err
 	}
-	return user, user.DelSubbedTag(ctx, user, tag)
+	return user, user.DelSubbedTag(ctx, tag)
 }
 
 func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error) {

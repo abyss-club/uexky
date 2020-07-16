@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
@@ -24,16 +25,16 @@ func (n *NotiService) GetUnreadNotiCount(ctx context.Context, user *User) (int, 
 func (n *NotiService) GetNotification(ctx context.Context, user *User, query SliceQuery) (*NotiSlice, error) {
 	slice, err := n.Repo.GetNotiSlice(ctx, user, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "GetNotification(user=%+v, query=%+v)", user, query)
 	}
 	if len(slice.Notifications) > 0 {
 		lastRead := slice.Notifications[0].SortKey
 		if err := n.Repo.UpdateReadID(ctx, user.ID, lastRead); err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "GetNotification(user=%+v, query=%+v)", user, query)
 		}
 		user.LastReadNoti = lastRead
 	}
-	return slice, err
+	return slice, nil
 }
 
 func (n *NotiService) NewSystemNoti(ctx context.Context, title, content string, receivers ...Receiver) error {
@@ -59,7 +60,7 @@ func (n *NotiService) NewRepliedNoti(ctx context.Context, user *User, thread *Th
 	key := fmt.Sprintf("replied:%s", thread.ID.ToBase64String())
 	oldNoti, err := n.Repo.GetNotiByKey(ctx, thread.Author.UserID, key)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "NewRepliedNoti(user=%+v, thread=%+v, reply=%+v)", user, thread, reply)
 	}
 	log.Infof("NewRepliedNoti, User = %#v GetNotiByKey = %#v", user, oldNoti)
 	content := RepliedNoti{
@@ -91,7 +92,8 @@ func (n *NotiService) NewRepliedNoti(ctx context.Context, user *User, thread *Th
 	}
 	noti.Content = content
 	log.Infof("InsertNoti(%#v), key=%s", noti, key)
-	return n.Repo.InsertNoti(ctx, noti)
+	err = n.Repo.InsertNoti(ctx, noti)
+	return errors.Wrapf(err, "NewRepliedNoti(user=%+v, thread=%+v, reply=%+v)", user, thread, reply)
 }
 
 func (n *NotiService) NewQuotedNoti(ctx context.Context, thread *Thread, post *Post, quotedPost *Post) error {
@@ -117,7 +119,8 @@ func (n *NotiService) NewQuotedNoti(ctx context.Context, thread *Thread, post *P
 		Receivers: []Receiver{SendToUser(quotedPost.Author.UserID)},
 	}
 	log.Infof("NewQuotedNoti, post %v quote post %v, key=%s", post, quotedPost, noti.Key)
-	return n.Repo.InsertNoti(ctx, noti)
+	err := n.Repo.InsertNoti(ctx, noti)
+	return errors.Wrapf(err, "NewQuotedNoti(thread=%+v, post=%+v, quotedPost=%+v)", thread, post, quotedPost)
 }
 
 func (n *NotiService) NewNotiOnNewUser(ctx context.Context, user *User) error {
