@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
@@ -66,50 +67,30 @@ func (tx *TxAdapter) AttachDB(ctx context.Context) context.Context {
 	return context.WithValue(ctx, pgDataKey, &PgContextData{DB: tx.DB})
 }
 
-// TODO: use closure to handle transaction
-
-func (tx *TxAdapter) Begin(ctx context.Context) error {
+func (tx *TxAdapter) WithTx(ctx context.Context, fn func() error) error {
 	data := getData(ctx)
-	data.Layer++
-	if data.Layer > 1 {
-		return nil
+	if data.Tx != nil {
+		// already inside transaction, do nothing
+		return fn()
 	}
-	var err error
-	data.Tx, err = data.DB.Begin()
+
+	transaction, err := data.DB.Begin()
 	if err != nil {
-		return uerr.Errorf(uerr.PostgresError, "begin transaction: %w", err)
+		return uerr.Wrap(uerr.PostgresError, err, "begin transaction")
 	}
-	return nil
-}
+	data.Tx = transaction
 
-func (tx *TxAdapter) Commit(ctx context.Context) error {
-	data := getData(ctx)
-	if data.Tx == nil || data.Layer < 1 {
-		return nil
-	}
-	data.Layer--
-	if data.Layer > 0 {
-		return nil
-	}
-	if err := data.Tx.Commit(); err != nil {
-		return uerr.Errorf(uerr.PostgresError, "commit transaction: %w", err)
-	}
-	return nil
-}
-
-func (tx *TxAdapter) Rollback(ctx context.Context, err error) error {
-	data := getData(ctx)
-	if err == nil {
-		return nil
-	}
-	if data.Layer < 1 {
+	if err := fn(); err != nil {
+		rbErr := data.Tx.Rollback()
+		if rbErr != nil {
+			log.Error(rbErr)
+			return errors.Wrapf(err, "rollback failed: %v", rbErr)
+		}
 		return err
 	}
-	data.Layer = 0
-	rbErr := data.Tx.Rollback()
-	if rbErr != nil {
-		log.Error(err)
-		return uerr.Errorf(uerr.PostgresError, "rollback transaction: %w", err)
+
+	if err := data.Tx.Commit(); err != nil {
+		return uerr.Wrap(uerr.PostgresError, err, "commit transaction")
 	}
-	return err
+	return nil
 }
