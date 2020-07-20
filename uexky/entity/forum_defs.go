@@ -13,7 +13,7 @@ type ThreadSearch struct {
 }
 
 type ThreadsSearch struct {
-	UserID *int64
+	UserID *uid.UID
 	Tags   []string
 }
 
@@ -29,7 +29,7 @@ type PostSearch struct {
 }
 type PostsSearch struct {
 	IDs      []uid.UID
-	UserID   *int64
+	UserID   *uid.UID
 	ThreadID *uid.UID
 	DESC     bool
 }
@@ -54,7 +54,7 @@ type ForumRepo interface {
 	GetThread(ctx context.Context, search *ThreadSearch) (*Thread, error)
 	GetThreadSlice(ctx context.Context, search *ThreadsSearch, query SliceQuery) (*ThreadSlice, error)
 	GetThreadCatalog(ctx context.Context, id uid.UID) ([]*ThreadCatalogItem, error)
-	GetAnonyID(ctx context.Context, userID int64, threadID uid.UID) (string, error)
+	GetAnonyID(ctx context.Context, userID uid.UID, threadID uid.UID) (string, error)
 	InsertThread(ctx context.Context, thread *Thread) error
 	UpdateThread(ctx context.Context, id uid.UID, update *ThreadUpdate) error
 
@@ -72,9 +72,10 @@ type ForumRepo interface {
 }
 
 type Author struct {
-	UserID    int64  `json:"-"`
-	Anonymous bool   `json:"anonymous"`
-	Author    string `json:"author"`
+	UserID    uid.UID `json:"-"`
+	Guest     bool    `json:"-"`
+	Anonymous bool    `json:"anonymous"`
+	Author    string  `json:"author"`
 }
 
 type PostData struct {

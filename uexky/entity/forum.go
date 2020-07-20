@@ -53,6 +53,7 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		CreatedAt: time.Now(),
 		Author: &Author{
 			UserID:    user.ID,
+			Guest:     user.Role == RoleGuest,
 			Anonymous: input.Anonymous,
 		},
 		Title:   input.Title,
@@ -180,6 +181,7 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 		CreatedAt: time.Now(),
 		Author: &Author{
 			UserID:    user.ID,
+			Guest:     user.Role == RoleGuest,
 			Anonymous: input.Anonymous,
 		},
 		Content: input.Content,

@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
@@ -30,6 +29,8 @@ func (s *UserService) RequirePermission(ctx context.Context, action Action) (*Us
 	}
 	return user, nil
 }
+
+// -- sign in/up by email
 
 func newAuthMail(email string, code Code) *adapter.Mail {
 	srvCfg := &(config.Get().Server)
@@ -56,40 +57,39 @@ func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (Code,
 	return code, nil
 }
 
-func (s *UserService) SignInByCode(ctx context.Context, code string) (Token, error) {
+func (s *UserService) SignInByCode(ctx context.Context, code string) (*User, string, error) {
 	email, err := s.Repo.GetCodeEmail(ctx, code)
 	if err != nil {
-		return Token{}, errors.Wrapf(err, "SignInByCode(code=%s)", code)
+		return nil, "", errors.Wrapf(err, "SignInByCode(code=%s)", code)
 	}
-	tok := uid.RandomBase64Str(tokenLength)
-	if err := s.Repo.SetToken(ctx, email, tok, tokenExpire); err != nil {
-		return Token{}, errors.Wrapf(err, "SignInByCode(code=%s)", code)
-	}
-	if err := s.Repo.DelCode(ctx, code); err != nil {
-		log.Error(err)
-	}
-	return Token{Tok: tok, Expire: tokenExpire}, nil
-}
-
-func (s *UserService) CtxWithUserByToken(ctx context.Context, tok string) (ct context.Context, isNew bool, err error) {
-	email, err := s.Repo.GetTokenEmail(ctx, tok)
+	user, err := s.Repo.GetUserByAuthInfo(ctx, AuthInfo{Email: email, IsGuest: false})
 	if err != nil {
-		return nil, false, errors.Wrapf(err, "CtxWithUserByToken(tok=%s)", tok)
-	}
-	if email == "" {
-		user := &User{
-			Role: RoleGuest,
+		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
+			return nil, email, nil
 		}
-		return context.WithValue(ctx, userKey, user), false, nil
+		return nil, "", errors.Wrapf(err, "SignInByCode(code=%s)", code)
 	}
-	user, isNew, err := s.Repo.GetOrInsertUser(ctx, email)
-	if err != nil {
-		return nil, false, errors.Wrapf(err, "CtxWithUserByToken(tok=%s)", tok)
-	}
-	return context.WithValue(ctx, userKey, user), isNew, nil
+	return user, email, nil
 }
 
-func (s *UserService) BanUser(ctx context.Context, id int64) (bool, error) {
+func (s *UserService) SignInByToken(ctx context.Context, tok string) (*User, error) {
+	token, err := s.Repo.GetToken(ctx, tok)
+	if err != nil {
+		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
+			return nil, nil
+		}
+		return nil, errors.Wrapf(err, "SignInByToken(tok=%s)", tok)
+	}
+	user, err := s.Repo.GetUserByAuthInfo(ctx, AuthInfo{UserID: token.UserID, IsGuest: token.UserRole == RoleGuest})
+	return user, errors.Wrapf(err, "SignInByToken(tok=%s)", tok)
+}
+
+func (s *UserService) NewUser(ctx context.Context, user *User) (*User, error) {
+	user, err := s.Repo.InsertUser(ctx, user, tokenExpire)
+	return user, errors.Wrapf(err, "InsertUser(user=%+v)", user)
+}
+
+func (s *UserService) BanUser(ctx context.Context, id uid.UID) (bool, error) {
 	if err := s.Repo.UpdateUser(ctx, id, &UserUpdate{Role: (*Role)(algo.NullString(string(RoleBanned)))}); err != nil {
 		return false, errors.Wrapf(err, "BanUser(id=%v)", id)
 	}
@@ -97,13 +97,13 @@ func (s *UserService) BanUser(ctx context.Context, id int64) (bool, error) {
 }
 
 type User struct {
-	Email string   `json:"email"`
+	Email *string  `json:"email"`
 	Name  *string  `json:"name"`
 	Role  Role     `json:"role"`
 	Tags  []string `json:"tags"`
 
 	Repo         UserRepo `json:"-"`
-	ID           int64    `json:"-"`
+	ID           uid.UID  `json:"-"`
 	LastReadNoti uid.UID  `json:"-"`
 }
 
@@ -161,4 +161,19 @@ func (u *User) DelSubbedTag(ctx context.Context, tag string) error {
 
 func (u *User) NotiReceivers() []Receiver {
 	return []Receiver{SendToUser(u.ID), SendToGroup(AllUser)}
+}
+
+func (u *User) SetToken(ctx context.Context) (*Token, error) {
+	token := Token{
+		Tok:      uid.RandomBase64Str(tokenLength),
+		Expire:   tokenExpire,
+		UserID:   u.ID,
+		UserRole: u.Role,
+	}
+	err := u.Repo.SetToken(ctx, &token)
+	return &token, errors.Wrap(err, "SetToken")
+}
+
+func (u *User) AttachContext(ctx context.Context) context.Context {
+	return context.WithValue(ctx, userKey, u)
 }

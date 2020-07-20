@@ -18,9 +18,9 @@ CREATE TABLE public."user" (
     id bigint PRIMARY KEY DEFAULT nextval('user_id_seq'),
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    email text NOT NULL UNIQUE,
+    email text UNIQUE,
     name text,
-    role text DEFAULT ''::text NOT NULL,
+    role text NOT NULL,
     last_read_noti bigint NOT NULL,
     tags text[]
 );
@@ -41,6 +41,7 @@ CREATE TABLE public.thread (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     user_id integer NOT NULL,
     anonymous boolean NOT NULL,
+    guest boolean NOT NULL,
     author character varying(16) NOT NULL,
     title text DEFAULT ''::text,
     content text NOT NULL,
@@ -69,6 +70,7 @@ CREATE TABLE public.post (
     thread_id bigint NOT NULL,
     user_id integer NOT NULL,
     anonymous boolean NOT NULL,
+    guest boolean NOT NULL,
     author character varying(16) NOT NULL,
     blocked boolean DEFAULT false,
     content text NOT NULL,

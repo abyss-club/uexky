@@ -12,11 +12,11 @@ import (
 
 type NotiRepo interface {
 	GetUserUnreadCount(ctx context.Context, user *User) (int, error)
-	GetNotiByKey(ctx context.Context, userID int64, key string) (*Notification, error)
+	GetNotiByKey(ctx context.Context, userID uid.UID, key string) (*Notification, error)
 	GetNotiSlice(ctx context.Context, user *User, query SliceQuery) (*NotiSlice, error)
 	InsertNoti(ctx context.Context, notification *Notification) error
 	UpdateNotiContent(ctx context.Context, noti *Notification) error
-	UpdateReadID(ctx context.Context, userID int64, id uid.UID) error
+	UpdateReadID(ctx context.Context, userID uid.UID, id uid.UID) error
 }
 
 // -- NotiType
@@ -37,7 +37,7 @@ const AllUser SendGroup = "all_user"
 
 type Receiver string
 
-func SendToUser(userID int64) Receiver {
+func SendToUser(userID uid.UID) Receiver {
 	return Receiver(fmt.Sprintf("u:%v", userID))
 }
 
