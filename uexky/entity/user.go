@@ -73,6 +73,9 @@ func (s *UserService) SignInByCode(ctx context.Context, code string) (*User, str
 }
 
 func (s *UserService) SignInByToken(ctx context.Context, tok string) (*User, error) {
+	if tok == "" {
+		return nil, nil
+	}
 	token, err := s.Repo.GetToken(ctx, tok)
 	if err != nil {
 		if errors.Is(err, uerr.New(uerr.NotFoundError)) {

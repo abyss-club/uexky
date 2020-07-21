@@ -23,7 +23,7 @@ func TestService_LoginByEmail(t *testing.T) {
 	}
 	user, _ := loginUser(t, service, testUser{email: email})
 	wantUser := &entity.User{
-		Email: email,
+		Email: &email,
 		Role:  entity.RoleNormal,
 		Repo:  service.User.Repo,
 		ID:    1,
@@ -1261,7 +1261,7 @@ func TestService_GetUnreadNotiCount(t *testing.T) {
 				ctx: userCtx,
 			},
 			beforeTest: func(t *testing.T) {
-				thread, _ := pubThread(t, service, testUser{email: user.Email})
+				thread, _ := pubThread(t, service, testUser{email: *user.Email})
 				pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
 				time.Sleep(100 * time.Millisecond)
 			},
@@ -1295,7 +1295,7 @@ func TestService_GetNotification(t *testing.T) {
 		t.Fatal(err)
 	}
 	user, _ := loginUser(t, service, testUser{email: "t@example.com"}) // One Welcome Noti
-	thread, _ := pubThread(t, service, testUser{email: user.Email})
+	thread, _ := pubThread(t, service, testUser{email: *user.Email})
 
 	type args struct {
 		email string
@@ -1311,7 +1311,7 @@ func TestService_GetNotification(t *testing.T) {
 		{
 			name: "2 system noti 1 replied noti",
 			args: args{
-				email: user.Email,
+				email: *user.Email,
 				query: entity.SliceQuery{After: algo.NullString(""), Limit: 5},
 			},
 			beforeTest: func(t *testing.T, want *entity.NotiSlice) {
@@ -1368,12 +1368,12 @@ func TestService_GetNotification(t *testing.T) {
 		{
 			name: "3 quoted noti, 1 replied",
 			args: args{
-				email: user.Email,
+				email: *user.Email,
 				query: entity.SliceQuery{After: algo.NullString(""), Limit: 4},
 			},
 			beforeTest: func(t *testing.T, want *entity.NotiSlice) {
-				qp1, _ := pubPost(t, service, testUser{email: user.Email}, thread.ID)
-				qp2, _ := pubPost(t, service, testUser{email: user.Email}, thread.ID)
+				qp1, _ := pubPost(t, service, testUser{email: *user.Email}, thread.ID)
+				qp2, _ := pubPost(t, service, testUser{email: *user.Email}, thread.ID)
 				p1, _ := pubPost(t, service, testUser{email: "p1@example.com"}, thread.ID, qp1.ID)
 				p2, _ := pubPost(t, service, testUser{email: "p1@example.com"}, thread.ID, qp1.ID, qp2.ID)
 				writeWant := func(noti *entity.Notification, q, p *entity.Post) {

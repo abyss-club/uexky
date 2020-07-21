@@ -49,10 +49,15 @@ func (u *UserRepo) GetUserByAuthInfo(ctx context.Context, ai entity.AuthInfo) (*
 			return nil, uerr.Wrapf(uerr.InternalError, err, "unmarshal user: %s", data)
 		}
 	} else {
-		if ai.Email == "" {
-			return nil, uerr.New(uerr.ParamsError, "cannot get signed user without email")
+		q := u.db(ctx).Model(&user)
+		if ai.UserID != 0 {
+			q = q.Where("id = ?", ai.UserID)
+		} else if ai.Email != "" {
+			q = q.Where("email = ?", ai.Email)
+		} else {
+			return nil, uerr.New(uerr.ParamsError, "cannot get signed user without id and email")
 		}
-		if err := u.db(ctx).Model(&user).Where("email = ?", ai.Email).Select(); err != nil {
+		if err := q.Select(); err != nil {
 			return nil, dbErrWrapf(err, "GetOrInsertUser.GetUser(ai=%+v)", ai)
 		}
 	}
