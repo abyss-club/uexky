@@ -25,7 +25,7 @@ var devFlags struct {
 func init() {
 	signInUserCmd.PersistentFlags().StringVar(&devFlags.email, "email", "", "user email")
 	signInUserCmd.PersistentFlags().StringVar(&devFlags.method, "method", "url", "user email")
-	Command.AddCommand(signInUserCmd, setMainTagsCmd, rebuildCmd, mockDataCmd)
+	Command.AddCommand(signInUserCmd, SetMainTagsCmd, rebuildCmd, mockDataCmd)
 }
 
 func mapArgs(vs []string, f func(string) string) []string {
@@ -77,7 +77,7 @@ var signInUserCmd = &cobra.Command{
 	},
 }
 
-var setMainTagsCmd = &cobra.Command{
+var SetMainTagsCmd = &cobra.Command{
 	Use:   "settags anime,game",
 	Short: "set main tags, separated by comma",
 	Args:  cobra.MinimumNArgs(1),

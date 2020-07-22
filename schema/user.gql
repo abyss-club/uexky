@@ -29,20 +29,26 @@ extend type Mutation {
 }
 
 enum Role {
+  """ Administrators """
   admin
+  """ Moderators """
   mod
+  """ Normal role, default value for signed up user """
   normal
+  """ For not signed up user """
   guest
+  """ Banned user """
   banned
 }
 
 type User {
+  """ Only exists when the user has signed up via email. """
   email: String
-  # The Name of user. Required when not posting anonymously.
+  """ The Name of user. Required when not posting anonymously."""
   name: String
-  # Tags saved by user.
+  """ Tags subscribed by the user."""
   tags: [String!]
-  # user roles:
+  """ Current role of the user."""
   role: Role!
 
   # Threads published by the user.

@@ -199,10 +199,15 @@ func (e NotiType) MarshalGQL(w io.Writer) {
 type Role string
 
 const (
-	RoleAdmin  Role = "admin"
-	RoleMod    Role = "mod"
+	//  Administrators
+	RoleAdmin Role = "admin"
+	//  Moderators
+	RoleMod Role = "mod"
+	//  Normal role, default value for signed up user
 	RoleNormal Role = "normal"
-	RoleGuest  Role = "guest"
+	//  For not signed up user
+	RoleGuest Role = "guest"
+	//  Banned user
 	RoleBanned Role = "banned"
 )
 
