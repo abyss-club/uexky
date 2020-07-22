@@ -50,11 +50,12 @@ func (u *UserRepo) GetUserByAuthInfo(ctx context.Context, ai entity.AuthInfo) (*
 		}
 	} else {
 		q := u.db(ctx).Model(&user)
-		if ai.UserID != 0 {
+		switch {
+		case ai.UserID != 0:
 			q = q.Where("id = ?", ai.UserID)
-		} else if ai.Email != "" {
+		case ai.Email != "":
 			q = q.Where("email = ?", ai.Email)
-		} else {
+		default:
 			return nil, uerr.New(uerr.ParamsError, "cannot get signed user without id and email")
 		}
 		if err := q.Select(); err != nil {

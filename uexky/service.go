@@ -28,7 +28,7 @@ func (s *Service) SignInByCode(ctx context.Context, code string) (*entity.Token,
 		return nil, err
 	}
 	if user == nil {
-		user, err = s.User.NewUser(ctx, &entity.User{Email: &email, Role: entity.RoleNormal})
+		user, err = s.User.NewUser(ctx, &entity.User{Email: &email, Role: entity.RoleNormal, ID: uid.NewUID()})
 		if err != nil {
 			return nil, err
 		}
@@ -36,12 +36,12 @@ func (s *Service) SignInByCode(ctx context.Context, code string) (*entity.Token,
 			log.Errorf("%+v", err)
 		}
 	}
-	return user.SetToken(ctx)
+	return user.SetToken(ctx, nil)
 }
 
 // CtxWithUserByToken add user to context by tok is for both signed user and guest user.
 func (s *Service) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, *entity.Token, error) {
-	user, err := s.User.SignInByToken(ctx, tok)
+	user, token, err := s.User.SignInByToken(ctx, tok)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -52,7 +52,9 @@ func (s *Service) CtxWithUserByToken(ctx context.Context, tok string) (context.C
 			return nil, nil, err
 		}
 	}
-	token, err := user.SetToken(ctx)
+	// no need check token is nil
+	// if cannot find user or token, token here is nil, and will make a new one.
+	token, err = user.SetToken(ctx, token)
 	if err != nil {
 		return nil, nil, err
 	}

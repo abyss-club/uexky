@@ -72,19 +72,19 @@ func (s *UserService) SignInByCode(ctx context.Context, code string) (*User, str
 	return user, email, nil
 }
 
-func (s *UserService) SignInByToken(ctx context.Context, tok string) (*User, error) {
+func (s *UserService) SignInByToken(ctx context.Context, tok string) (*User, *Token, error) {
 	if tok == "" {
-		return nil, nil
+		return nil, nil, nil
 	}
 	token, err := s.Repo.GetToken(ctx, tok)
 	if err != nil {
 		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
-			return nil, nil
+			return nil, nil, nil
 		}
-		return nil, errors.Wrapf(err, "SignInByToken(tok=%s)", tok)
+		return nil, nil, errors.Wrapf(err, "SignInByToken(tok=%s)", tok)
 	}
 	user, err := s.Repo.GetUserByAuthInfo(ctx, AuthInfo{UserID: token.UserID, IsGuest: token.UserRole == RoleGuest})
-	return user, errors.Wrapf(err, "SignInByToken(tok=%s)", tok)
+	return user, token, errors.Wrapf(err, "SignInByToken(tok=%s)", tok)
 }
 
 func (s *UserService) NewUser(ctx context.Context, user *User) (*User, error) {
@@ -166,15 +166,20 @@ func (u *User) NotiReceivers() []Receiver {
 	return []Receiver{SendToUser(u.ID), SendToGroup(AllUser)}
 }
 
-func (u *User) SetToken(ctx context.Context) (*Token, error) {
-	token := Token{
-		Tok:      uid.RandomBase64Str(tokenLength),
-		Expire:   tokenExpire,
-		UserID:   u.ID,
-		UserRole: u.Role,
+func (u *User) SetToken(ctx context.Context, prev *Token) (*Token, error) {
+	var token *Token
+	if prev != nil {
+		token = prev
+	} else {
+		token = &Token{
+			Tok:      uid.RandomBase64Str(tokenLength),
+			Expire:   tokenExpire,
+			UserID:   u.ID,
+			UserRole: u.Role,
+		}
 	}
-	err := u.Repo.SetToken(ctx, &token)
-	return &token, errors.Wrap(err, "SetToken")
+	err := u.Repo.SetToken(ctx, token)
+	return token, errors.Wrap(err, "SetToken")
 }
 
 func (u *User) AttachContext(ctx context.Context) context.Context {

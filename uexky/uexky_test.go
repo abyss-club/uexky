@@ -46,6 +46,13 @@ type testUser struct {
 }
 
 func loginUser(t *testing.T, service *Service, u testUser) (*entity.User, context.Context) {
+	if u.email != "" {
+		return signedInUser(t, service, u)
+	}
+	return guestUser(t, service)
+}
+
+func signedInUser(t *testing.T, service *Service, u testUser) (*entity.User, context.Context) {
 	ctx := service.TxAdapter.AttachDB(context.Background())
 	code, err := service.TrySignInByEmail(ctx, u.email)
 	if err != nil {
@@ -88,11 +95,7 @@ func guestUser(t *testing.T, service *Service) (*entity.User, context.Context) {
 func pubThread(t *testing.T, service *Service, u testUser) (*entity.Thread, context.Context) {
 	var user *entity.User
 	var ctx context.Context
-	if u.email == "" {
-		user, ctx = guestUser(t, service)
-	} else {
-		user, ctx = loginUser(t, service, u)
-	}
+	user, ctx = loginUser(t, service, u)
 	mainTags, err := service.GetMainTags(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -140,11 +143,7 @@ func pubThreadWithTags(t *testing.T, service *Service, u testUser, mainTag strin
 func pubPost(t *testing.T, service *Service, u testUser, threadID uid.UID, quotedIds ...uid.UID) (*entity.Post, context.Context) {
 	var user *entity.User
 	var ctx context.Context
-	if u.email == "" {
-		user, ctx = guestUser(t, service)
-	} else {
-		user, ctx = loginUser(t, service, u)
-	}
+	user, ctx = loginUser(t, service, u)
 	input := entity.PostInput{
 		ThreadID:  threadID,
 		Anonymous: rand.Intn(2) == 0,
