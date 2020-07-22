@@ -25,7 +25,6 @@ input ThreadInput {
 }
 
 type Thread {
-  """ UUID with 8 chars in length, and will increase to 9 after 30 years."""
   id: UID!
   createdAt: Time!
   author: Author!

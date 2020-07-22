@@ -14,7 +14,7 @@ import (
 func init() {
 	cobra.OnInitialize(initLog, initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file")
-	rootCmd.AddCommand(migrateCmd, devtools.Command, uidCmd)
+	rootCmd.AddCommand(migrateCmd, devtools.Command, uidCmd, adminCmd)
 }
 
 func initLog() {
