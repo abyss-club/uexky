@@ -59,7 +59,7 @@ func createUser(s *uexky.Service) (*mockUser, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "sign in by code")
 	}
-	ctx, err = s.CtxWithUserByToken(ctx, token.Tok)
+	ctx, _, err = s.CtxWithUserByToken(ctx, token.Tok)
 	if err != nil {
 		return nil, errors.Wrap(err, "login user")
 	}
@@ -147,7 +147,7 @@ func makeThread(
 	user := users[rand.Intn(len(users))]
 	var err error
 	ctx := service.TxAdapter.AttachDB(context.Background())
-	ctx, err = service.CtxWithUserByToken(ctx, user.Token)
+	ctx, _, err = service.CtxWithUserByToken(ctx, user.Token)
 	if err != nil {
 		return errors.Wrap(err, "ctx with user by token")
 	}
@@ -198,7 +198,7 @@ func makePost(
 	user := users[rand.Intn(len(users))]
 	var err error
 	ctx := service.TxAdapter.AttachDB(context.Background())
-	ctx, err = service.CtxWithUserByToken(ctx, user.Token)
+	ctx, _, err = service.CtxWithUserByToken(ctx, user.Token)
 	if err != nil {
 		return nil, errors.Wrap(err, "ctx with user by token")
 	}

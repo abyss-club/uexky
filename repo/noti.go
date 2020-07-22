@@ -44,7 +44,7 @@ func (n *NotiRepo) GetUserUnreadCount(ctx context.Context, user *entity.User) (i
 	return count, dbErrWrapf(err, "GetUserUnreadCount(user=%+v)", user)
 }
 
-func (n *NotiRepo) GetNotiByKey(ctx context.Context, userID int64, key string) (*entity.Notification, error) {
+func (n *NotiRepo) GetNotiByKey(ctx context.Context, userID uid.UID, key string) (*entity.Notification, error) {
 	var notification NotificationQuery
 	err := n.db(ctx).Model(&notification).
 		Column("notification.*").
@@ -144,7 +144,7 @@ func (n *NotiRepo) UpdateNotiContent(ctx context.Context, noti *entity.Notificat
 	return dbErrWrapf(err, "UpdateNotiContent(noti=%+v)", noti)
 }
 
-func (n *NotiRepo) UpdateReadID(ctx context.Context, userID int64, id uid.UID) error {
+func (n *NotiRepo) UpdateReadID(ctx context.Context, userID uid.UID, id uid.UID) error {
 	user := &User{}
 	_, err := n.db(ctx).Model(user).
 		Set("last_read_noti = ?", id).Where("id = ?", userID).Update()

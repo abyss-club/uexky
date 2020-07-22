@@ -37,7 +37,7 @@ enum Role {
 }
 
 type User {
-  email: String!
+  email: String
   # The Name of user. Required when not posting anonymously.
   name: String
   # Tags saved by user.

@@ -21,25 +21,44 @@ func (s *Service) TrySignInByEmail(ctx context.Context, email string) (entity.Co
 	return s.User.TrySignInByEmail(ctx, email)
 }
 
-func (s *Service) SignInByCode(ctx context.Context, code string) (entity.Token, error) {
-	return s.User.SignInByCode(ctx, code)
-}
-
-func (s *Service) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, error) {
-	ctx, isNew, err := s.User.CtxWithUserByToken(ctx, tok)
+// SignInByCode is only for signed in user
+func (s *Service) SignInByCode(ctx context.Context, code string) (*entity.Token, error) {
+	user, email, err := s.User.SignInByCode(ctx, code)
 	if err != nil {
 		return nil, err
 	}
-	if isNew {
-		user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
+	if user == nil {
+		user, err = s.User.NewUser(ctx, &entity.User{Email: &email, Role: entity.RoleNormal, ID: uid.NewUID()})
 		if err != nil {
 			return nil, err
 		}
 		if err := s.Noti.NewNotiOnNewUser(ctx, user); err != nil {
-			log.Error(err)
+			log.Errorf("%+v", err)
 		}
 	}
-	return ctx, err
+	return user.SetToken(ctx, nil)
+}
+
+// CtxWithUserByToken add user to context by tok is for both signed user and guest user.
+func (s *Service) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, *entity.Token, error) {
+	user, token, err := s.User.SignInByToken(ctx, tok)
+	if err != nil {
+		return nil, nil, err
+	}
+	if user == nil {
+		// must be unsigned user
+		user, err = s.User.NewUser(ctx, &entity.User{Role: entity.RoleGuest, ID: uid.NewUID()})
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	// no need check token is nil
+	// if cannot find user or token, token here is nil, and will make a new one.
+	token, err = user.SetToken(ctx, token)
+	if err != nil {
+		return nil, nil, err
+	}
+	return user.AttachContext(ctx), token, err
 }
 
 func (s *Service) Profile(ctx context.Context) (*entity.User, error) {

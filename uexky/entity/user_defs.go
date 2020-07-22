@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"gitlab.com/abyss.club/uexky/lib/config"
+	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
 type UserUpdate struct {
@@ -15,15 +16,22 @@ type UserUpdate struct {
 	Tags []string
 }
 
+type AuthInfo struct {
+	UserID  uid.UID
+	Email   string
+	IsGuest bool
+}
+
 type UserRepo interface {
 	SetCode(ctx context.Context, email string, code string, ex time.Duration) error
 	GetCodeEmail(ctx context.Context, code string) (string, error)
 	DelCode(ctx context.Context, code string) error
-	SetToken(ctx context.Context, email string, tok string, ex time.Duration) error
-	GetTokenEmail(ctx context.Context, tok string) (string, error)
 
-	GetOrInsertUser(ctx context.Context, email string) (user *User, isNew bool, err error)
-	UpdateUser(ctx context.Context, id int64, update *UserUpdate) error
+	GetUserByAuthInfo(ctx context.Context, ai AuthInfo) (*User, error)
+	SetToken(ctx context.Context, token *Token) error
+	GetToken(ctx context.Context, tok string) (*Token, error)
+	InsertUser(ctx context.Context, user *User, ex time.Duration) (*User, error)
+	UpdateUser(ctx context.Context, id uid.UID, update *UserUpdate) error
 }
 
 const (
@@ -52,8 +60,10 @@ func (c Code) SignInURL() string {
 }
 
 type Token struct {
-	Tok    string
-	Expire time.Duration
+	Tok      string        `json:"tok,omitempty"`
+	Expire   time.Duration `json:"expire,omitempty"`
+	UserID   uid.UID       `json:"user_id,omitempty"`
+	UserRole Role          `json:"user_role,omitempty"`
 }
 
 func (t Token) Cookie() *http.Cookie {
@@ -69,6 +79,11 @@ func (t Token) Cookie() *http.Cookie {
 		cookie.Secure = true
 	}
 	return cookie
+}
+
+type TokenMsg struct {
+	Email      *string `json:"email,omitempty"`
+	UnsignedID *int64  `json:"unsigned_id,omitempty"`
 }
 
 type contextKey int
@@ -129,4 +144,6 @@ var ActionRole = map[Action]Role{
 	ActionBlockThread: RoleMod,
 	ActionEditTag:     RoleMod,
 	ActionEditSetting: RoleAdmin,
+	ActionPubPost:     RoleGuest,
+	ActionPubThread:   RoleGuest,
 }

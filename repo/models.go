@@ -11,14 +11,14 @@ type User struct {
 	//nolint: structcheck, unused
 	tableName struct{} `pg:"user,,discard_unknown_columns"`
 
-	ID           int64       `pg:"id,pk"`
-	CreatedAt    time.Time   `pg:"created_at"`
-	UpdatedAt    time.Time   `pg:"updated_at"`
-	Email        string      `pg:"email,use_zero"`
-	Name         *string     `pg:"name"`
-	Role         entity.Role `pg:"role,use_zero"`
-	LastReadNoti uid.UID     `pg:"last_read_noti,use_zero"`
-	Tags         []string    `pg:"tags,array"`
+	ID           uid.UID     `pg:"id,pk" json:"id"`
+	CreatedAt    time.Time   `pg:"created_at" json:"created_at"`
+	UpdatedAt    time.Time   `pg:"updated_at" json:"-"`
+	Email        *string     `pg:"email,use_zero" json:"-"`
+	Name         *string     `pg:"name" json:"-"`
+	Role         entity.Role `pg:"role,use_zero" json:"role"`
+	LastReadNoti uid.UID     `pg:"last_read_noti,use_zero" json:"-"`
+	Tags         []string    `pg:"tags,array" json:"tags"`
 }
 
 type Thread struct {
@@ -29,8 +29,9 @@ type Thread struct {
 	LastPostID uid.UID   `pg:"last_post_id,use_zero"`
 	CreatedAt  time.Time `pg:"created_at"`
 	UpdatedAt  time.Time `pg:"updated_at"`
-	UserID     int64     `pg:"user_id,use_zero"`
+	UserID     uid.UID   `pg:"user_id,use_zero"`
 	Anonymous  bool      `pg:"anonymous,use_zero"`
+	Guest      bool      `pg:"guest,use_zero"`
 	Author     string    `pg:"author"`
 	Title      *string   `pg:"title"`
 	Content    string    `pg:"content,use_zero"`
@@ -47,8 +48,9 @@ type Post struct {
 	CreatedAt time.Time `pg:"created_at"`
 	UpdatedAt time.Time `pg:"updated_at"`
 	ThreadID  uid.UID   `pg:"thread_id,use_zero"`
-	UserID    int64     `pg:"user_id,use_zero"`
+	UserID    uid.UID   `pg:"user_id,use_zero"`
 	Anonymous bool      `pg:"anonymous,use_zero"`
+	Guest     bool      `pg:"guest,use_zero"`
 	Author    string    `pg:"author"`
 	Blocked   *bool     `pg:"blocked"`
 	Content   string    `pg:"content,use_zero"`

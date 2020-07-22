@@ -10,17 +10,13 @@ $$ language 'plpgsql';
 -- user
 
 
-CREATE SEQUENCE IF NOT EXISTS user_id_seq
-    AS bigint
-    INCREMENT BY 1 START WITH 1 CACHE 1;
-
 CREATE TABLE public."user" (
-    id bigint PRIMARY KEY DEFAULT nextval('user_id_seq'),
+    id bigint PRIMARY KEY,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    email text NOT NULL UNIQUE,
+    email text UNIQUE,
     name text,
-    role text DEFAULT ''::text NOT NULL,
+    role text NOT NULL,
     last_read_noti bigint NOT NULL,
     tags text[]
 );
@@ -39,8 +35,9 @@ CREATE TABLE public.thread (
     last_post_id bigint NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    user_id integer NOT NULL,
+    user_id bigint NOT NULL,
     anonymous boolean NOT NULL,
+    guest boolean NOT NULL,
     author character varying(16) NOT NULL,
     title text DEFAULT ''::text,
     content text NOT NULL,
@@ -67,8 +64,9 @@ CREATE TABLE public.post (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     thread_id bigint NOT NULL,
-    user_id integer NOT NULL,
+    user_id bigint NOT NULL,
     anonymous boolean NOT NULL,
+    guest boolean NOT NULL,
     author character varying(16) NOT NULL,
     blocked boolean DEFAULT false,
     content text NOT NULL,

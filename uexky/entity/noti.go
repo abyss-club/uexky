@@ -57,6 +57,9 @@ func (n *NotiService) NewSystemNoti(ctx context.Context, title, content string, 
 }
 
 func (n *NotiService) NewRepliedNoti(ctx context.Context, user *User, thread *Thread, reply *Post) error {
+	if thread.Author.Guest {
+		return nil
+	}
 	key := fmt.Sprintf("replied:%s", thread.ID.ToBase64String())
 	oldNoti, err := n.Repo.GetNotiByKey(ctx, thread.Author.UserID, key)
 	if err != nil {
@@ -97,6 +100,9 @@ func (n *NotiService) NewRepliedNoti(ctx context.Context, user *User, thread *Th
 }
 
 func (n *NotiService) NewQuotedNoti(ctx context.Context, thread *Thread, post *Post, quotedPost *Post) error {
+	if quotedPost.Author.Guest {
+		return nil
+	}
 	noti := &Notification{
 		Type:      NotiTypeQuoted,
 		EventTime: time.Now(),

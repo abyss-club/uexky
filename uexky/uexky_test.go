@@ -46,6 +46,13 @@ type testUser struct {
 }
 
 func loginUser(t *testing.T, service *Service, u testUser) (*entity.User, context.Context) {
+	if u.email != "" {
+		return signedInUser(t, service, u)
+	}
+	return guestUser(t, service)
+}
+
+func signedInUser(t *testing.T, service *Service, u testUser) (*entity.User, context.Context) {
 	ctx := service.TxAdapter.AttachDB(context.Background())
 	code, err := service.TrySignInByEmail(ctx, u.email)
 	if err != nil {
@@ -55,7 +62,7 @@ func loginUser(t *testing.T, service *Service, u testUser) (*entity.User, contex
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "SignInByCode"))
 	}
-	userCtx, err := service.CtxWithUserByToken(ctx, token.Tok)
+	userCtx, _, err := service.CtxWithUserByToken(ctx, token.Tok)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "CtxWithUserByToken"))
 	}
@@ -72,8 +79,23 @@ func loginUser(t *testing.T, service *Service, u testUser) (*entity.User, contex
 	return user, userCtx
 }
 
+func guestUser(t *testing.T, service *Service) (*entity.User, context.Context) {
+	ctx := service.TxAdapter.AttachDB(context.Background())
+	ctx, _, err := service.CtxWithUserByToken(ctx, "")
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "CtxWithUserByToken"))
+	}
+	user, err := service.Profile(ctx)
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "Profile"))
+	}
+	return user, ctx
+}
+
 func pubThread(t *testing.T, service *Service, u testUser) (*entity.Thread, context.Context) {
-	user, ctx := loginUser(t, service, u)
+	var user *entity.User
+	var ctx context.Context
+	user, ctx = loginUser(t, service, u)
 	mainTags, err := service.GetMainTags(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +141,9 @@ func pubThreadWithTags(t *testing.T, service *Service, u testUser, mainTag strin
 }
 
 func pubPost(t *testing.T, service *Service, u testUser, threadID uid.UID, quotedIds ...uid.UID) (*entity.Post, context.Context) {
-	user, ctx := loginUser(t, service, u)
+	var user *entity.User
+	var ctx context.Context
+	user, ctx = loginUser(t, service, u)
 	input := entity.PostInput{
 		ThreadID:  threadID,
 		Anonymous: rand.Intn(2) == 0,

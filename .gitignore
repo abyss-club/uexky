@@ -16,6 +16,7 @@ vendor/
 # ide or editor
 .vscode/
 *.swp
+.idea/
 
 # config
 config.json

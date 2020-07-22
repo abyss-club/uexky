@@ -18,12 +18,14 @@ func (s *Server) withUser(next http.Handler) http.Handler {
 		if tokenCookie != nil {
 			tok = tokenCookie.Value
 		}
-		ctx, err := s.Service.CtxWithUserByToken(r.Context(), tok)
+		ctx, token, err := s.Service.CtxWithUserByToken(r.Context(), tok)
 		if err != nil {
 			writeError(w, err)
 			return
 		}
 		r = r.WithContext(ctx)
+
+		http.SetCookie(w, token.Cookie())
 
 		next.ServeHTTP(w, r)
 	})

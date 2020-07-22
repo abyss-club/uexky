@@ -23,14 +23,52 @@ func TestService_LoginByEmail(t *testing.T) {
 	}
 	user, _ := loginUser(t, service, testUser{email: email})
 	wantUser := &entity.User{
-		Email: email,
+		Email: &email,
 		Role:  entity.RoleNormal,
 		Repo:  service.User.Repo,
-		ID:    1,
+		ID:    user.ID,
 	}
 	if !reflect.DeepEqual(user, wantUser) {
 		t.Errorf("want user %+v, bug got %+v", wantUser, user)
 	}
+}
+
+func TestService_LoginGuestUser(t *testing.T) {
+	service, err := InitDevService()
+	ctx := getNewDBCtx(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var user *entity.User
+	var token *entity.Token
+	t.Run("guest user first login", func(t *testing.T) {
+		ctx, token, err = service.CtxWithUserByToken(ctx, "")
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "CtxWithUserByToken"))
+		}
+		user, err = service.Profile(ctx)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "Profile"))
+		}
+	})
+
+	t.Run("guest user login by token", func(t *testing.T) {
+		ctx, gotToken, err := service.CtxWithUserByToken(ctx, token.Tok)
+		if err != nil {
+			t.Fatal(err)
+		}
+		gotUser, err := service.Profile(ctx)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "Profile"))
+		}
+		if !reflect.DeepEqual(user, gotUser) {
+			t.Errorf("want user=%+v, bug got %+v", user, gotUser)
+		}
+		if !reflect.DeepEqual(token, gotToken) {
+			t.Errorf("want token=%+v, bug got %+v", token, gotToken)
+		}
+	})
 }
 
 func TestService_SetUserName(t *testing.T) {
@@ -737,6 +775,7 @@ func TestService_PubThread(t *testing.T) {
 	}
 	getNewDBCtx(t)
 	user, ctx := loginUser(t, service, testUser{email: "a@example.com", name: "a"})
+	gUser, gCtx := loginUser(t, service, testUser{})
 	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
 		t.Fatal(err)
 	}
@@ -765,6 +804,7 @@ func TestService_PubThread(t *testing.T) {
 				Author: &entity.Author{
 					Anonymous: true,
 					UserID:    user.ID,
+					Author:    user.ID.ToBase64String(),
 				},
 				Title:   nil,
 				Content: "content",
@@ -789,6 +829,31 @@ func TestService_PubThread(t *testing.T) {
 					UserID:    user.ID,
 					Anonymous: false,
 					Author:    *user.Name,
+				},
+				Title:   nil,
+				Content: "content",
+				MainTag: "MainA",
+				SubTags: []string{"SubA", "SubB", "SubC"},
+				Repo:    service.Forum.Repo,
+			},
+		},
+		{
+			name: "guest user",
+			args: args{
+				gCtx,
+				entity.ThreadInput{
+					Anonymous: true,
+					Content:   "content",
+					MainTag:   "MainA",
+					SubTags:   []string{"SubA", "SubB", "SubC"},
+				},
+			},
+			want: &entity.Thread{
+				Author: &entity.Author{
+					UserID:    gUser.ID,
+					Guest:     true,
+					Anonymous: true,
+					Author:    gUser.ID.ToBase64String(),
 				},
 				Title:   nil,
 				Content: "content",
@@ -973,6 +1038,7 @@ func TestService_PubPost(t *testing.T) {
 	post, _ := pubPost(t, service, testUser{email: "a@example.com", name: "a"}, thread.ID)
 	user1, userCtx1 := loginUser(t, service, testUser{email: "p1@example.com"})
 	user2, userCtx2 := loginUser(t, service, testUser{email: "p2@example.com", name: "p2"})
+	userG, userCtxG := loginUser(t, service, testUser{})
 	type args struct {
 		ctx  context.Context
 		post entity.PostInput
@@ -1001,6 +1067,7 @@ func TestService_PubPost(t *testing.T) {
 				Author: &entity.Author{
 					UserID:    user1.ID,
 					Anonymous: true,
+					Author:    user1.ID.ToBase64String(),
 				},
 				Content: "content1",
 				Repo:    service.Forum.Repo,
@@ -1049,6 +1116,7 @@ func TestService_PubPost(t *testing.T) {
 				Author: &entity.Author{
 					UserID:    user1.ID,
 					Anonymous: true,
+					Author:    user1.ID.ToBase64String(),
 				},
 				Content: "content3",
 				Repo:    service.Forum.Repo,
@@ -1060,6 +1128,31 @@ func TestService_PubPost(t *testing.T) {
 			},
 			checkQuoted: &quotedChecker{
 				quotedCount: 1,
+			},
+		},
+		{
+			name: "pub post with guest user",
+			args: args{
+				ctx: userCtxG,
+				post: entity.PostInput{
+					ThreadID:  thread.ID,
+					Anonymous: true,
+					Content:   "contentG",
+				},
+			},
+			want: &entity.Post{
+				Author: &entity.Author{
+					UserID:    userG.ID,
+					Guest:     true,
+					Anonymous: true,
+					Author:    userG.ID.ToBase64String(),
+				},
+				Content: "contentG",
+				Repo:    service.Forum.Repo,
+				Data: entity.PostData{
+					ThreadID:   thread.ID,
+					QuotePosts: []*entity.Post{},
+				},
 			},
 		},
 	}
@@ -1261,7 +1354,7 @@ func TestService_GetUnreadNotiCount(t *testing.T) {
 				ctx: userCtx,
 			},
 			beforeTest: func(t *testing.T) {
-				thread, _ := pubThread(t, service, testUser{email: user.Email})
+				thread, _ := pubThread(t, service, testUser{email: *user.Email})
 				pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
 				time.Sleep(100 * time.Millisecond)
 			},
@@ -1295,7 +1388,7 @@ func TestService_GetNotification(t *testing.T) {
 		t.Fatal(err)
 	}
 	user, _ := loginUser(t, service, testUser{email: "t@example.com"}) // One Welcome Noti
-	thread, _ := pubThread(t, service, testUser{email: user.Email})
+	thread, _ := pubThread(t, service, testUser{email: *user.Email})
 
 	type args struct {
 		email string
@@ -1311,7 +1404,7 @@ func TestService_GetNotification(t *testing.T) {
 		{
 			name: "2 system noti 1 replied noti",
 			args: args{
-				email: user.Email,
+				email: *user.Email,
 				query: entity.SliceQuery{After: algo.NullString(""), Limit: 5},
 			},
 			beforeTest: func(t *testing.T, want *entity.NotiSlice) {
@@ -1368,12 +1461,12 @@ func TestService_GetNotification(t *testing.T) {
 		{
 			name: "3 quoted noti, 1 replied",
 			args: args{
-				email: user.Email,
+				email: *user.Email,
 				query: entity.SliceQuery{After: algo.NullString(""), Limit: 4},
 			},
 			beforeTest: func(t *testing.T, want *entity.NotiSlice) {
-				qp1, _ := pubPost(t, service, testUser{email: user.Email}, thread.ID)
-				qp2, _ := pubPost(t, service, testUser{email: user.Email}, thread.ID)
+				qp1, _ := pubPost(t, service, testUser{email: *user.Email}, thread.ID)
+				qp2, _ := pubPost(t, service, testUser{email: *user.Email}, thread.ID)
 				p1, _ := pubPost(t, service, testUser{email: "p1@example.com"}, thread.ID, qp1.ID)
 				p2, _ := pubPost(t, service, testUser{email: "p1@example.com"}, thread.ID, qp1.ID, qp2.ID)
 				writeWant := func(noti *entity.Notification, q, p *entity.Post) {
