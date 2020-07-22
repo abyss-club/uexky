@@ -107,7 +107,8 @@ func (u *UserRepo) InsertUser(ctx context.Context, user *entity.User, ex time.Du
 			return nil, redisErrWrapf(err, "InsertUser(user=%+v)", user)
 		}
 	} else {
-		if _, err := u.db(ctx).Model(&dbUser).Returning("*").Insert(); err != nil {
+		_, err := u.db(ctx).Model(&dbUser).Returning("*").Insert()
+		if err != nil {
 			return nil, dbErrWrapf(err, "InsertUser(user=%+v)", user)
 		}
 	}
