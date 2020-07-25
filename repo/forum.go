@@ -2,19 +2,26 @@ package repo
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
+	"github.com/go-redis/redis/v7"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 type ForumRepo struct {
+	Redis *redis.Client
+
 	mainTags []string `wire:"-"`
 }
 
@@ -388,4 +395,21 @@ func (f *ForumRepo) SetMainTags(ctx context.Context, tags []string) error {
 	}
 	_, err := f.db(ctx).Model(&mainTags).Insert()
 	return dbErrWrapf(err, "SetMainTags(tags=%v)", tags)
+}
+
+func (f *ForumRepo) CheckDuplicate(ctx context.Context, userID uid.UID, title, content string) error {
+	msg := fmt.Sprintf("%s:%s:%s", userID.ToBase64String(), title, content)
+	key := fmt.Sprintf("%x", sha256.Sum256([]byte(msg)))
+	value := fmt.Sprintf("%v", rand.Int63())
+	if _, err := f.Redis.SetNX(key, value, 5*time.Minute).Result(); err != nil {
+		return redisErrWrapf(err, "CheckDuplicate, SetNX(%s, %s)", key, value)
+	}
+	got, err := f.Redis.Get(key).Result()
+	if err != nil {
+		return redisErrWrapf(err, "CheckDuplicate, Get(%s)", key)
+	}
+	if got != value { // value already exist
+		return uerr.New(uerr.DuplicatedError, "content is duplicated in 5 minutes")
+	}
+	return nil
 }
