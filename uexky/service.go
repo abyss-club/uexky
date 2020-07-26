@@ -62,10 +62,16 @@ func (s *Service) CtxWithUserByToken(ctx context.Context, tok string) (context.C
 }
 
 func (s *Service) Profile(ctx context.Context) (*entity.User, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	return s.User.RequirePermission(ctx, entity.ActionProfile)
 }
 
 func (s *Service) SetUserName(ctx context.Context, name string) (*entity.User, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
 	if err != nil {
 		return nil, err
@@ -77,6 +83,9 @@ func (s *Service) SetUserName(ctx context.Context, name string) (*entity.User, e
 func (s *Service) GetUserThreads(
 	ctx context.Context, obj *entity.User, query entity.SliceQuery,
 ) (*entity.ThreadSlice, error) {
+	if err := Cost(ctx, query.Limit); err != nil {
+		return nil, err
+	}
 	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
 	if err != nil {
 		return nil, err
@@ -88,6 +97,9 @@ func (s *Service) GetUserThreads(
 }
 
 func (s *Service) GetUserPosts(ctx context.Context, obj *entity.User, query entity.SliceQuery) (*entity.PostSlice, error) {
+	if err := Cost(ctx, query.Limit); err != nil {
+		return nil, err
+	}
 	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
 	if err != nil {
 		return nil, err
@@ -99,6 +111,9 @@ func (s *Service) GetUserPosts(ctx context.Context, obj *entity.User, query enti
 }
 
 func (s *Service) SyncUserTags(ctx context.Context, tags []string) (*entity.User, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
 	if err != nil {
 		return nil, err
@@ -107,6 +122,9 @@ func (s *Service) SyncUserTags(ctx context.Context, tags []string) (*entity.User
 }
 
 func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
 	if err != nil {
 		return nil, err
@@ -115,6 +133,9 @@ func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 }
 
 func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
 	if err != nil {
 		return nil, err
@@ -144,6 +165,9 @@ func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UI
 }
 
 func (s *Service) BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	_, err := s.User.RequirePermission(ctx, entity.ActionBlockPost)
 	if err != nil {
 		return nil, err
@@ -156,6 +180,9 @@ func (s *Service) BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, 
 }
 
 func (s *Service) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	_, err := s.User.RequirePermission(ctx, entity.ActionLockThread)
 	if err != nil {
 		return nil, err
@@ -168,6 +195,9 @@ func (s *Service) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thr
 }
 
 func (s *Service) BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	_, err := s.User.RequirePermission(ctx, entity.ActionBlockThread)
 	if err != nil {
 		return nil, err
@@ -182,6 +212,9 @@ func (s *Service) BlockThread(ctx context.Context, threadID uid.UID) (*entity.Th
 func (s *Service) EditTags(
 	ctx context.Context, threadID uid.UID, mainTag string, subTags []string,
 ) (*entity.Thread, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	_, err := s.User.RequirePermission(ctx, entity.ActionEditTag)
 	if err != nil {
 		return nil, err
@@ -194,6 +227,9 @@ func (s *Service) EditTags(
 }
 
 func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	var newThread *entity.Thread
 	err := s.TxAdapter.WithTx(ctx, func() error {
 		user, err := s.User.RequirePermission(ctx, entity.ActionPubThread)
@@ -213,14 +249,23 @@ func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*en
 func (s *Service) SearchThreads(
 	ctx context.Context, tags []string, query entity.SliceQuery,
 ) (*entity.ThreadSlice, error) {
+	if err := Cost(ctx, query.Limit); err != nil {
+		return nil, err
+	}
 	return s.Forum.SearchThreads(ctx, tags, query)
 }
 
 func (s *Service) GetThreadByID(ctx context.Context, id uid.UID) (*entity.Thread, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	return s.Forum.GetThreadByID(ctx, id)
 }
 
 func (s *Service) PubPost(ctx context.Context, post entity.PostInput) (*entity.Post, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	var user *entity.User
 	var res *entity.NewPostResponse
 	err := s.TxAdapter.WithTx(ctx, func() error {
@@ -245,6 +290,9 @@ func (s *Service) PubPost(ctx context.Context, post entity.PostInput) (*entity.P
 }
 
 func (s *Service) GetPostByID(ctx context.Context, id uid.UID) (*entity.Post, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
 	return s.Forum.GetPostByID(ctx, id)
 }
 
@@ -261,6 +309,11 @@ func (s *Service) GetRecommendedTags(ctx context.Context) ([]string, error) {
 }
 
 func (s *Service) SearchTags(ctx context.Context, query *string, limit *int) ([]*entity.Tag, error) {
+	if limit != nil {
+		if err := Cost(ctx, *limit); err != nil {
+			return nil, err
+		}
+	}
 	return s.Forum.SearchTags(ctx, query, limit)
 }
 
@@ -273,6 +326,9 @@ func (s *Service) GetUnreadNotiCount(ctx context.Context) (int, error) {
 }
 
 func (s *Service) GetNotification(ctx context.Context, query entity.SliceQuery) (*entity.NotiSlice, error) {
+	if err := Cost(ctx, query.Limit); err != nil {
+		return nil, err
+	}
 	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
 	if err != nil {
 		return nil, err

@@ -23,7 +23,9 @@ func InitProdService() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	forumRepo := &repo.ForumRepo{}
+	forumRepo := &repo.ForumRepo{
+		Redis: client,
+	}
 	userRepo := &repo.UserRepo{
 		Redis: client,
 		Forum: forumRepo,
@@ -61,7 +63,9 @@ func InitDevService() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	forumRepo := &repo.ForumRepo{}
+	forumRepo := &repo.ForumRepo{
+		Redis: client,
+	}
 	userRepo := &repo.UserRepo{
 		Redis: client,
 		Forum: forumRepo,

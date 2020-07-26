@@ -20,7 +20,8 @@ const (
 	AuthError       ErrorType = "AuthError"
 	PermissionError ErrorType = "PermissionError"
 	NotFoundError   ErrorType = "NotFoundError"
-	RateLimitError  ErrorType = "RateLimitError"
+	ComplexityError ErrorType = "ComplexityLimitError"
+	DuplicatedError ErrorType = "DuplicatedError"
 	InternalError   ErrorType = "InternalError"
 
 	// External Services
@@ -34,7 +35,8 @@ var errCodes = map[ErrorType]string{
 	AuthError:       "NOT_SIGNED_IN",
 	PermissionError: "FORBIDDEN_ACTION",
 	NotFoundError:   "NOT_FOUND",
-	RateLimitError:  "RATE_LIMIT_EXCEEDED",
+	ComplexityError: "COMPLEXITY_LIMIT_EXCEEDED",
+	DuplicatedError: "DUPLICATED_CONTENT",
 
 	UnknownError:  "INTERNAL_SREVER_ERROR",
 	InternalError: "INTERNAL_SERVER_ERROR",

@@ -2,6 +2,7 @@ package entity
 
 import (
 	"context"
+	"time"
 
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
@@ -48,7 +49,10 @@ type UserTagUpdate struct {
 	DelTags []string
 }
 
-const BlockedContent = "[此内容已被管理员屏蔽]"
+const (
+	BlockedContent       = "[此内容已被管理员屏蔽]"
+	DuplicatedCheckRange = 3 * time.Minute
+)
 
 type ForumRepo interface {
 	GetThread(ctx context.Context, search *ThreadSearch) (*Thread, error)
@@ -69,6 +73,8 @@ type ForumRepo interface {
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)
 	GetMainTags(ctx context.Context) ([]string, error)
 	SetMainTags(ctx context.Context, tags []string) error
+
+	CheckDuplicate(ctx context.Context, userID uid.UID, title, content string) error
 }
 
 type Author struct {

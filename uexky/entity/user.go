@@ -46,8 +46,8 @@ func newAuthMail(email string, code Code) *adapter.Mail {
 
 func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (Code, error) {
 	// TODO: validate email
-	code := Code(uid.RandomBase64Str(codeLength))
-	if err := s.Repo.SetCode(ctx, email, string(code), codeExpire); err != nil {
+	code := Code(uid.RandomBase64Str(CodeLength))
+	if err := s.Repo.SetCode(ctx, email, string(code)); err != nil {
 		return "", errors.Wrapf(err, "TrySignInByEmail(email=%s)", email)
 	}
 	mail := newAuthMail(email, code)
@@ -88,7 +88,7 @@ func (s *UserService) SignInByToken(ctx context.Context, tok string) (*User, *To
 }
 
 func (s *UserService) NewUser(ctx context.Context, user *User) (*User, error) {
-	user, err := s.Repo.InsertUser(ctx, user, tokenExpire)
+	user, err := s.Repo.InsertUser(ctx, user)
 	return user, errors.Wrapf(err, "InsertUser(user=%+v)", user)
 }
 
@@ -172,8 +172,8 @@ func (u *User) SetToken(ctx context.Context, prev *Token) (*Token, error) {
 		token = prev
 	} else {
 		token = &Token{
-			Tok:      uid.RandomBase64Str(tokenLength),
-			Expire:   tokenExpire,
+			Tok:      uid.RandomBase64Str(TokenLength),
+			Expire:   TokenExpire,
 			UserID:   u.ID,
 			UserRole: u.Role,
 		}

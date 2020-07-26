@@ -23,22 +23,22 @@ type AuthInfo struct {
 }
 
 type UserRepo interface {
-	SetCode(ctx context.Context, email string, code string, ex time.Duration) error
+	SetCode(ctx context.Context, email string, code string) error
 	GetCodeEmail(ctx context.Context, code string) (string, error)
 	DelCode(ctx context.Context, code string) error
 
 	GetUserByAuthInfo(ctx context.Context, ai AuthInfo) (*User, error)
 	SetToken(ctx context.Context, token *Token) error
 	GetToken(ctx context.Context, tok string) (*Token, error)
-	InsertUser(ctx context.Context, user *User, ex time.Duration) (*User, error)
+	InsertUser(ctx context.Context, user *User) (*User, error)
 	UpdateUser(ctx context.Context, id uid.UID, update *UserUpdate) error
 }
 
 const (
-	codeLength  = 36
-	codeExpire  = 20 * time.Minute
-	tokenLength = 24
-	tokenExpire = 30 * time.Hour * 24
+	CodeLength  = 36
+	CodeExpire  = 20 * time.Minute
+	TokenLength = 24
+	TokenExpire = 30 * time.Hour * 24
 )
 
 const authEmailHTML = `<html>
