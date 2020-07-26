@@ -45,7 +45,7 @@ func (s *Server) withDB(next http.Handler) http.Handler {
 
 func (s *Server) withLimiter(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := uexky.AttachLimiter(r.Context(), 10)
+		ctx := uexky.AttachLimiter(r.Context(), 50)
 		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
