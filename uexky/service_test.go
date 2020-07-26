@@ -10,65 +10,100 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/algo"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
-func TestService_LoginByEmail(t *testing.T) {
-	email := "user1@example.com"
+func TestService_CtxWithUserByToken(t *testing.T) {
 	service, err := InitDevService()
-	getNewDBCtx(t)
 	if err != nil {
 		t.Fatal(err)
 	}
-	user, _ := loginUser(t, service, testUser{email: email})
-	wantUser := &entity.User{
-		Email: &email,
-		Role:  entity.RoleNormal,
-		Repo:  service.User.Repo,
-		ID:    user.ID,
-	}
-	if !reflect.DeepEqual(user, wantUser) {
-		t.Errorf("want user %+v, bug got %+v", wantUser, user)
-	}
-}
-
-func TestService_LoginGuestUser(t *testing.T) {
-	service, err := InitDevService()
 	ctx := getNewDBCtx(t)
-	if err != nil {
-		t.Fatal(err)
+	type args struct {
+		ctx   context.Context
+		email string
 	}
-
-	var user *entity.User
-	var token *entity.Token
-	t.Run("guest user first login", func(t *testing.T) {
-		ctx, token, err = service.CtxWithUserByToken(ctx, "")
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "CtxWithUserByToken"))
-		}
-		user, err = service.Profile(ctx)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "Profile"))
-		}
-	})
-
-	t.Run("guest user login by token", func(t *testing.T) {
-		ctx, gotToken, err := service.CtxWithUserByToken(ctx, token.Tok)
-		if err != nil {
-			t.Fatal(err)
-		}
-		gotUser, err := service.Profile(ctx)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "Profile"))
-		}
-		if !reflect.DeepEqual(user, gotUser) {
-			t.Errorf("want user=%+v, bug got %+v", user, gotUser)
-		}
-		if !reflect.DeepEqual(token, gotToken) {
-			t.Errorf("want token=%+v, bug got %+v", token, gotToken)
-		}
-	})
+	tests := []struct {
+		name    string
+		args    args
+		want    *entity.User
+		wantErr bool
+	}{
+		{
+			name: "signed in user",
+			args: args{
+				ctx:   ctx,
+				email: "user1@example.com",
+			},
+			want: &entity.User{
+				Email: algo.NullString("user1@example.com"),
+				Role:  entity.RoleNormal,
+				Repo:  service.User.Repo,
+			},
+		},
+		{
+			name: "guest user first login",
+			args: args{
+				ctx: ctx,
+			},
+			want: &entity.User{
+				Role: entity.RoleGuest,
+				Repo: service.User.Repo,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var signUpToken *entity.Token
+			var signUpUser *entity.User
+			var gotCtx context.Context
+			var gotToken *entity.Token
+			if tt.args.email != "" {
+				code, err := service.TrySignInByEmail(tt.args.ctx, tt.args.email)
+				if err != nil {
+					t.Fatal(errors.Wrap(err, "TrySignInByEmail"))
+				}
+				signUpToken, err = service.SignInByCode(ctx, string(code))
+				if err != nil {
+					t.Fatal(errors.Wrap(err, "SignInByCode"))
+				}
+			} else {
+				var err error
+				var signUpCtx context.Context
+				signUpCtx, signUpToken, err = service.CtxWithUserByToken(ctx, "")
+				if err != nil {
+					t.Fatal(errors.Wrap(err, "CtxWithUserByToken"))
+				}
+				signUpUser, err = service.Profile(signUpCtx)
+				if err != nil {
+					t.Fatal(errors.Wrap(err, "Profile"))
+				}
+			}
+			gotCtx, gotToken, err = service.CtxWithUserByToken(tt.args.ctx, signUpToken.Tok)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Service.CtxWithUserByToken() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			gotUser, err := service.Profile(gotCtx)
+			if err != nil {
+				t.Fatal(errors.Wrap(err, "Profile"))
+			}
+			tt.want.ID = gotUser.ID
+			if !reflect.DeepEqual(gotUser, tt.want) {
+				t.Errorf("want user %+v, bug got %+v", tt.want, gotUser)
+			}
+			if !reflect.DeepEqual(signUpToken, gotToken) {
+				t.Errorf("token when signed up is %+v, bug got %+v", signUpToken, gotToken)
+			}
+			if tt.args.email == "" {
+				if !reflect.DeepEqual(signUpUser, gotUser) {
+					t.Errorf("guest user, 2nd time login = %+v, want equal to first time: %+v", gotUser, signUpUser)
+				}
+			}
+		})
+	}
 }
 
 func TestService_SetUserName(t *testing.T) {
@@ -784,10 +819,10 @@ func TestService_PubThread(t *testing.T) {
 		thread entity.ThreadInput
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    *entity.Thread
-		wantErr bool
+		name      string
+		args      args
+		want      *entity.Thread
+		wantErrIs error
 	}{
 		{
 			name: "anonymous signed in user",
@@ -798,6 +833,7 @@ func TestService_PubThread(t *testing.T) {
 					Content:   "content",
 					MainTag:   "MainA",
 					SubTags:   []string{"SubA", "SubB"},
+					Title:     algo.NullString("title"),
 				},
 			},
 			want: &entity.Thread{
@@ -806,7 +842,7 @@ func TestService_PubThread(t *testing.T) {
 					UserID:    user.ID,
 					Author:    user.ID.ToBase64String(),
 				},
-				Title:   nil,
+				Title:   algo.NullString("title"),
 				Content: "content",
 				MainTag: "MainA",
 				SubTags: []string{"SubA", "SubB"},
@@ -819,7 +855,7 @@ func TestService_PubThread(t *testing.T) {
 				ctx,
 				entity.ThreadInput{
 					Anonymous: false,
-					Content:   "content",
+					Content:   "content1",
 					MainTag:   "MainA",
 					SubTags:   []string{"SubA", "SubB", "SubC"},
 				},
@@ -831,11 +867,24 @@ func TestService_PubThread(t *testing.T) {
 					Author:    *user.Name,
 				},
 				Title:   nil,
-				Content: "content",
+				Content: "content1",
 				MainTag: "MainA",
 				SubTags: []string{"SubA", "SubB", "SubC"},
 				Repo:    service.Forum.Repo,
 			},
+		},
+		{
+			name: "pub duplicated thread",
+			args: args{
+				ctx,
+				entity.ThreadInput{
+					Anonymous: false,
+					Content:   "content1",
+					MainTag:   "MainA",
+					SubTags:   []string{"SubA", "SubB", "SubC"},
+				},
+			},
+			wantErrIs: uerr.New(uerr.DuplicatedError),
 		},
 		{
 			name: "guest user",
@@ -866,8 +915,10 @@ func TestService_PubThread(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := service.PubThread(tt.args.ctx, tt.args.thread)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.PubThread() error = %v, wantErr %v", err, tt.wantErr)
+			if (tt.wantErrIs == nil && err != nil) || (tt.wantErrIs != nil && !errors.Is(err, tt.wantErrIs)) {
+				t.Errorf("Service.PubThread() error = %v, wantErr %v", err, tt.wantErrIs)
+			}
+			if err != nil {
 				return
 			}
 			tt.want.ID = got.ID
@@ -1050,7 +1101,7 @@ func TestService_PubPost(t *testing.T) {
 		name        string
 		args        args
 		want        *entity.Post
-		wantErr     bool
+		wantErrIs   error
 		checkQuoted *quotedChecker
 	}{
 		{
@@ -1100,6 +1151,18 @@ func TestService_PubPost(t *testing.T) {
 					QuotePosts: []*entity.Post{},
 				},
 			},
+		},
+		{
+			name: "check duplicated",
+			args: args{
+				ctx: userCtx2,
+				post: entity.PostInput{
+					ThreadID:  thread.ID,
+					Anonymous: false,
+					Content:   "content2",
+				},
+			},
+			wantErrIs: uerr.New(uerr.DuplicatedError),
 		},
 		{
 			name: "pub post with quoted post",
@@ -1159,8 +1222,10 @@ func TestService_PubPost(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := service.PubPost(tt.args.ctx, tt.args.post)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.PubPost() error = %v, wantErr %v", err, tt.wantErr)
+			if (tt.wantErrIs == nil && err != nil) || (tt.wantErrIs != nil && !errors.Is(err, tt.wantErrIs)) {
+				t.Errorf("Service.PubThread() error = %v, wantErr %v", err, tt.wantErrIs)
+			}
+			if err != nil {
 				return
 			}
 			tt.want.ID = got.ID

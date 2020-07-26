@@ -48,6 +48,9 @@ func validateThreadTags(allMainTags []string, mainTag string, subTags []string) 
 }
 
 func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadInput) (*Thread, error) {
+	if err := f.Repo.CheckDuplicate(ctx, user.ID, algo.NullToString(input.Title), input.Content); err != nil {
+		return nil, errors.Wrapf(err, "NewThread(uerr=%+v, input=%+v)", user, input)
+	}
 	thread := &Thread{
 		ID:        uid.NewUID(),
 		CreatedAt: time.Now(),
@@ -169,6 +172,9 @@ func (p Post) String() string {
 }
 
 func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput) (*NewPostResponse, error) {
+	if err := f.Repo.CheckDuplicate(ctx, user.ID, "", input.Content); err != nil {
+		return nil, errors.Wrapf(err, "NewThread(uerr=%+v, input=%+v)", user, input)
+	}
 	thread, err := f.Repo.GetThread(ctx, &ThreadSearch{ID: &input.ThreadID})
 	if err != nil {
 		return nil, errors.Wrapf(err, "NewPost(user=%+v, input=%+v)", user, input)

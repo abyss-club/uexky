@@ -20,8 +20,8 @@ type UserRepo struct {
 	Forum *ForumRepo
 }
 
-func (u *UserRepo) SetCode(ctx context.Context, email string, code string, ex time.Duration) error {
-	_, err := u.Redis.Set(code, email, ex).Result()
+func (u *UserRepo) SetCode(ctx context.Context, email string, code string) error {
+	_, err := u.Redis.Set(code, email, entity.CodeExpire).Result()
 	return redisErrWrapf(err, "SetCode(email=%s, code=%s)", email, code)
 }
 
@@ -91,7 +91,7 @@ func (u *UserRepo) GetToken(ctx context.Context, tok string) (*entity.Token, err
 	return &token, nil
 }
 
-func (u *UserRepo) InsertUser(ctx context.Context, user *entity.User, ex time.Duration) (*entity.User, error) {
+func (u *UserRepo) InsertUser(ctx context.Context, user *entity.User) (*entity.User, error) {
 	dbUser := User{
 		ID:    user.ID,
 		Email: user.Email,
@@ -103,7 +103,7 @@ func (u *UserRepo) InsertUser(ctx context.Context, user *entity.User, ex time.Du
 		if err != nil {
 			return nil, uerr.Wrapf(uerr.ParamsError, err, "InsertUser(user=%+v)", user)
 		}
-		if _, err := u.Redis.Set(u.userRedisKey(user.ID), data, ex).Result(); err != nil {
+		if _, err := u.Redis.Set(u.userRedisKey(user.ID), data, entity.TokenExpire).Result(); err != nil {
 			return nil, redisErrWrapf(err, "InsertUser(user=%+v)", user)
 		}
 	} else {

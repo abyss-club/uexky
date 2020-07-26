@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/rand"
-	"time"
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
@@ -401,7 +400,7 @@ func (f *ForumRepo) CheckDuplicate(ctx context.Context, userID uid.UID, title, c
 	msg := fmt.Sprintf("%s:%s:%s", userID.ToBase64String(), title, content)
 	key := fmt.Sprintf("%x", sha256.Sum256([]byte(msg)))
 	value := fmt.Sprintf("%v", rand.Int63())
-	if _, err := f.Redis.SetNX(key, value, 5*time.Minute).Result(); err != nil {
+	if _, err := f.Redis.SetNX(key, value, entity.DuplicatedCheckRange).Result(); err != nil {
 		return redisErrWrapf(err, "CheckDuplicate, SetNX(%s, %s)", key, value)
 	}
 	got, err := f.Redis.Get(key).Result()
