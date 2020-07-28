@@ -10,11 +10,11 @@ import (
 )
 
 func (r *queryResolver) MainTags(ctx context.Context) ([]string, error) {
-	return r.Service.GetMainTags(ctx)
+	return r.Service.GetMainTags(ctx), nil
 }
 
 func (r *queryResolver) Recommended(ctx context.Context) ([]string, error) {
-	return r.Service.GetRecommendedTags(ctx)
+	return r.Service.GetRecommendedTags(ctx), nil
 }
 
 func (r *queryResolver) Tags(ctx context.Context, query *string, limit *int) ([]*entity.Tag, error) {

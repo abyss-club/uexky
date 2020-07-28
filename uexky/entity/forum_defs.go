@@ -71,7 +71,7 @@ type ForumRepo interface {
 	UpdatePost(ctx context.Context, id uid.UID, update *PostUpdate) error
 
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)
-	GetMainTags(ctx context.Context) ([]string, error)
+	GetMainTags(ctx context.Context) []string
 	SetMainTags(ctx context.Context, tags []string) error
 
 	CheckDuplicate(ctx context.Context, userID uid.UID, title, content string) error

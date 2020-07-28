@@ -23,17 +23,29 @@ func InitProdService() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	forumRepo := &repo.ForumRepo{
-		Redis: client,
+	db, err := postgres.NewDB()
+	if err != nil {
+		return nil, err
+	}
+	txAdapter := &postgres.TxAdapter{
+		DB: db,
+	}
+	mainTag, err := repo.NewMainTag(txAdapter)
+	if err != nil {
+		return nil, err
 	}
 	userRepo := &repo.UserRepo{
-		Redis: client,
-		Forum: forumRepo,
+		Redis:    client,
+		MainTags: mainTag,
 	}
 	adapter := mail.NewAdapter()
 	userService := &entity.UserService{
 		Repo: userRepo,
 		Mail: adapter,
+	}
+	forumRepo := &repo.ForumRepo{
+		Redis:    client,
+		MainTags: mainTag,
 	}
 	forumService := &entity.ForumService{
 		Repo: forumRepo,
@@ -41,13 +53,6 @@ func InitProdService() (*Service, error) {
 	notiRepo := &repo.NotiRepo{}
 	notiService := &entity.NotiService{
 		Repo: notiRepo,
-	}
-	db, err := postgres.NewDB()
-	if err != nil {
-		return nil, err
-	}
-	txAdapter := &postgres.TxAdapter{
-		DB: db,
 	}
 	service := &Service{
 		User:      userService,
@@ -63,17 +68,29 @@ func InitDevService() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	forumRepo := &repo.ForumRepo{
-		Redis: client,
+	db, err := postgres.NewDB()
+	if err != nil {
+		return nil, err
+	}
+	txAdapter := &postgres.TxAdapter{
+		DB: db,
+	}
+	mainTag, err := repo.NewMainTag(txAdapter)
+	if err != nil {
+		return nil, err
 	}
 	userRepo := &repo.UserRepo{
-		Redis: client,
-		Forum: forumRepo,
+		Redis:    client,
+		MainTags: mainTag,
 	}
 	mailAdapter := &mocks.MailAdapter{}
 	userService := &entity.UserService{
 		Repo: userRepo,
 		Mail: mailAdapter,
+	}
+	forumRepo := &repo.ForumRepo{
+		Redis:    client,
+		MainTags: mainTag,
 	}
 	forumService := &entity.ForumService{
 		Repo: forumRepo,
@@ -81,13 +98,6 @@ func InitDevService() (*Service, error) {
 	notiRepo := &repo.NotiRepo{}
 	notiService := &entity.NotiService{
 		Repo: notiRepo,
-	}
-	db, err := postgres.NewDB()
-	if err != nil {
-		return nil, err
-	}
-	txAdapter := &postgres.TxAdapter{
-		DB: db,
 	}
 	service := &Service{
 		User:      userService,
@@ -104,7 +114,7 @@ var serviceSet = wire.NewSet(wire.Struct(new(Service), "*"), wire.Struct(new(ent
 
 var mailSet = wire.NewSet(wire.Bind(new(adapter.MailAdapter), new(*mail.Adapter)), mail.NewAdapter)
 
-var repoSet = wire.NewSet(wire.Struct(new(postgres.TxAdapter), "*"), wire.Bind(new(adapter.Tx), new(*postgres.TxAdapter)), postgres.NewDB, redis.NewClient, wire.Struct(new(repo.ForumRepo), "*"), wire.Struct(new(repo.UserRepo), "*"), wire.Struct(new(repo.NotiRepo), "*"), wire.Bind(new(entity.ForumRepo), new(*repo.ForumRepo)), wire.Bind(new(entity.UserRepo), new(*repo.UserRepo)), wire.Bind(new(entity.NotiRepo), new(*repo.NotiRepo)))
+var repoSet = wire.NewSet(wire.Struct(new(postgres.TxAdapter), "*"), wire.Bind(new(adapter.Tx), new(*postgres.TxAdapter)), postgres.NewDB, repo.NewMainTag, redis.NewClient, wire.Struct(new(repo.ForumRepo), "*"), wire.Struct(new(repo.UserRepo), "*"), wire.Struct(new(repo.NotiRepo), "*"), wire.Bind(new(entity.ForumRepo), new(*repo.ForumRepo)), wire.Bind(new(entity.UserRepo), new(*repo.UserRepo)), wire.Bind(new(entity.NotiRepo), new(*repo.NotiRepo)))
 
 var mockMailSet = wire.NewSet(wire.Bind(new(adapter.MailAdapter), new(*mocks.MailAdapter)), wire.Struct(new(mocks.MailAdapter), "*"))
 

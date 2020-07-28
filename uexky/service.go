@@ -301,11 +301,11 @@ func (s *Service) SetMainTags(ctx context.Context, tags []string) error {
 	return s.Forum.SetMainTags(ctx, tags)
 }
 
-func (s *Service) GetMainTags(ctx context.Context) ([]string, error) {
+func (s *Service) GetMainTags(ctx context.Context) []string {
 	return s.Forum.GetMainTags(ctx)
 }
 
-func (s *Service) GetRecommendedTags(ctx context.Context) ([]string, error) {
+func (s *Service) GetRecommendedTags(ctx context.Context) []string {
 	return s.Forum.GetMainTags(ctx)
 }
 

@@ -74,11 +74,7 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		}
 		thread.Author.Author = *user.Name
 	}
-	allMainTags, err := f.GetMainTags(ctx)
-	if err != nil {
-		return nil, errors.Wrapf(err, "NewThread(uerr=%+v, input=%+v)", user, input)
-	}
-	subTags, err := validateThreadTags(allMainTags, input.MainTag, input.SubTags)
+	subTags, err := validateThreadTags(f.GetMainTags(ctx), input.MainTag, input.SubTags)
 	if err != nil {
 		return nil, errors.Wrapf(err, "NewThread(uerr=%+v, input=%+v)", user, input)
 	}
@@ -120,10 +116,7 @@ func (n *Thread) Catalog(ctx context.Context) ([]*ThreadCatalogItem, error) {
 }
 
 func (n *Thread) EditTags(ctx context.Context, mainTag string, subTags []string) error {
-	allMainTags, err := n.Repo.GetMainTags(ctx)
-	if err != nil {
-		return errors.Wrapf(err, "EditTags(mainTag=%s, subTags=%v)", mainTag, subTags)
-	}
+	allMainTags := n.Repo.GetMainTags(ctx)
 	subTagSet, err := validateThreadTags(allMainTags, mainTag, subTags)
 	if err != nil {
 		return errors.Wrapf(err, "EditTags(mainTag=%s, subTags=%v)", mainTag, subTags)
@@ -253,15 +246,12 @@ func (p *Post) Block(ctx context.Context) error {
 	return nil
 }
 
-func (f *ForumService) GetMainTags(ctx context.Context) ([]string, error) {
+func (f *ForumService) GetMainTags(ctx context.Context) []string {
 	return f.Repo.GetMainTags(ctx)
 }
 
 func (f *ForumService) SetMainTags(ctx context.Context, tags []string) error {
-	mainTags, err := f.GetMainTags(ctx)
-	if err != nil {
-		return errors.Wrapf(err, "SetMainTags(tags=%v)", tags)
-	}
+	mainTags := f.GetMainTags(ctx)
 	if len(mainTags) != 0 {
 		return uerr.Errorf(uerr.ParamsError, "already have main tags, can't modify it")
 	}

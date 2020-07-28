@@ -19,9 +19,8 @@ import (
 )
 
 type ForumRepo struct {
-	Redis *redis.Client
-
-	mainTags []string `wire:"-"`
+	Redis    *redis.Client
+	MainTags *MainTag
 }
 
 func (f *ForumRepo) db(ctx context.Context) postgres.Session {
@@ -353,34 +352,18 @@ func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*e
 	if _, err := f.db(ctx).Query(&tags, sql); err != nil {
 		return nil, dbErrWrapf(err, "GetTags(search=%+v)", search)
 	}
-	mainTags, err := f.GetMainTags(ctx)
-	if err != nil {
-		return nil, err
-	}
 	var entities []*entity.Tag
 	for _, t := range tags {
 		entities = append(entities, &entity.Tag{
 			Name:   t.Tag,
-			IsMain: algo.InStrSlice(mainTags, t.Tag),
+			IsMain: algo.InStrSlice(f.MainTags.Tags, t.Tag),
 		})
 	}
 	return entities, nil
 }
 
-func (f *ForumRepo) GetMainTags(ctx context.Context) ([]string, error) {
-	if f.mainTags != nil {
-		return f.mainTags, nil
-	}
-	var tags []Tag
-	if err := f.db(ctx).Model(&tags).Where("type = ?", "main").Select(); err != nil {
-		return nil, dbErrWrap(err, "GetMainTags()")
-	}
-	var mainTags []string
-	for i := range tags {
-		mainTags = append(mainTags, tags[i].Name)
-	}
-	f.mainTags = mainTags
-	return mainTags, nil
+func (f *ForumRepo) GetMainTags(ctx context.Context) []string {
+	return f.MainTags.Tags
 }
 
 func (f *ForumRepo) SetMainTags(ctx context.Context, tags []string) error {
@@ -410,5 +393,38 @@ func (f *ForumRepo) CheckDuplicate(ctx context.Context, userID uid.UID, title, c
 	if got != value { // value already exist
 		return uerr.New(uerr.DuplicatedError, "content is duplicated in 5 minutes")
 	}
+	return nil
+}
+
+type MainTag struct {
+	Tags []string
+}
+
+func NewMainTag(tx *postgres.TxAdapter) (*MainTag, error) {
+	var tags []Tag
+	if err := tx.DB.Model(&tags).Where("type = ?", "main").Select(); err != nil {
+		return nil, dbErrWrap(err, "NewMainTag()")
+	}
+	var mainTags []string
+	for i := range tags {
+		mainTags = append(mainTags, tags[i].Name)
+	}
+	return &MainTag{Tags: mainTags}, nil
+}
+
+func (mt *MainTag) SetMainTags(ctx context.Context, tags []string) error {
+	var mainTags []Tag
+	tagType := "main"
+	for _, t := range tags {
+		mainTags = append(mainTags, Tag{
+			Name:    t,
+			TagType: &tagType,
+		})
+	}
+	db := postgres.GetSessionFromContext(ctx)
+	if _, err := db.Model(&mainTags).Insert(); err != nil {
+		return dbErrWrapf(err, "SetMainTags(tags=%v)", tags)
+	}
+	mt.Tags = tags
 	return nil
 }

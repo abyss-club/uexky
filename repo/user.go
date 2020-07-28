@@ -15,8 +15,8 @@ import (
 )
 
 type UserRepo struct {
-	Redis *redis.Client
-	Forum *ForumRepo
+	Redis    *redis.Client
+	MainTags *MainTag
 }
 
 func (u *UserRepo) SetCode(ctx context.Context, email string, code string) error {
@@ -35,11 +35,6 @@ func (u *UserRepo) DelCode(ctx context.Context, code string) error {
 }
 
 func (u *UserRepo) GetUserByID(ctx context.Context, id uid.UID) (*entity.User, error) {
-	mainTags, err := u.Forum.GetMainTags(ctx)
-	if err != nil {
-		return nil, errors.Wrapf(err, "GetUserByID(id=%+v)", id)
-	}
-
 	var user User
 	data, err := u.Redis.Get(u.userRedisKey(id)).Result()
 	if err != nil && !errors.Is(err, redis.Nil) {
@@ -49,14 +44,14 @@ func (u *UserRepo) GetUserByID(ctx context.Context, id uid.UID) (*entity.User, e
 		if err := json.Unmarshal([]byte(data), &user); err != nil {
 			return nil, uerr.Wrapf(uerr.InternalError, err, "unmarshal user: %s", data)
 		}
-		return u.toEntityUser(&user, mainTags), nil
+		return u.toEntityUser(&user), nil
 	}
 
 	// err is redis.Nil, find in database
 	if err := u.db(ctx).Model(&user).Where("id = ?", id).Select(); err != nil {
 		return nil, dbErrWrapf(err, "GetUserByID(id=%v)", id)
 	}
-	return u.toEntityUser(&user, mainTags), nil
+	return u.toEntityUser(&user), nil
 
 }
 
@@ -87,11 +82,7 @@ func (u *UserRepo) GetUserByAuthInfo(ctx context.Context, ai entity.AuthInfo) (*
 			return nil, dbErrWrapf(err, "GetOrInsertUser.GetUser(ai=%+v)", ai)
 		}
 	}
-	mainTags, err := u.Forum.GetMainTags(ctx)
-	if err != nil {
-		return nil, errors.Wrapf(err, "GetUserByAuthInfo(ai=%+v)", ai)
-	}
-	return u.toEntityUser(&user, mainTags), nil
+	return u.toEntityUser(&user), nil
 
 }
 
@@ -137,11 +128,7 @@ func (u *UserRepo) InsertUser(ctx context.Context, user *entity.User) (*entity.U
 			return nil, dbErrWrapf(err, "InsertUser(user=%+v)", user)
 		}
 	}
-	mainTags, err := u.Forum.GetMainTags(ctx)
-	if err != nil {
-		return nil, errors.Wrapf(err, "InsertUser(user=%+v)", user)
-	}
-	return u.toEntityUser(&dbUser, mainTags), nil
+	return u.toEntityUser(&dbUser), nil
 }
 
 func (u *UserRepo) UpdateUser(ctx context.Context, user *entity.User) (*entity.User, error) {
@@ -169,11 +156,7 @@ func (u *UserRepo) UpdateUser(ctx context.Context, user *entity.User) (*entity.U
 	if err != nil {
 		return nil, errors.Wrapf(err, "InsertUser(user=%+v)", user)
 	}
-	mainTags, err := u.Forum.GetMainTags(ctx)
-	if err != nil {
-		return nil, errors.Wrapf(err, "InsertUser(user=%+v)", user)
-	}
-	return u.toEntityUser(&rUser, mainTags), dbErrWrapf(err, "UpdateUser(user=%+v)", user)
+	return u.toEntityUser(&rUser), dbErrWrapf(err, "UpdateUser(user=%+v)", user)
 }
 
 func (u *UserRepo) db(ctx context.Context) postgres.Session {
@@ -184,7 +167,7 @@ func (u *UserRepo) userRedisKey(id uid.UID) string {
 	return fmt.Sprintf("uid:%s", id.ToBase64String())
 }
 
-func (u *UserRepo) toEntityUser(user *User, mainTags []string) *entity.User {
+func (u *UserRepo) toEntityUser(user *User) *entity.User {
 	e := &entity.User{
 		Email: user.Email,
 		Name:  user.Name,
@@ -197,7 +180,7 @@ func (u *UserRepo) toEntityUser(user *User, mainTags []string) *entity.User {
 	}
 	// TODO: should in service level?
 	if len(user.Tags) == 0 {
-		e.Tags = mainTags
+		e.Tags = u.MainTags.Tags
 	}
 	if e.Role == "" {
 		e.Role = entity.RoleNormal

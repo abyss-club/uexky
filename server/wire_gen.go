@@ -22,15 +22,29 @@ func InitProdServer() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	forumRepo := &repo.ForumRepo{}
+	db, err := postgres.NewDB()
+	if err != nil {
+		return nil, err
+	}
+	txAdapter := &postgres.TxAdapter{
+		DB: db,
+	}
+	mainTag, err := repo.NewMainTag(txAdapter)
+	if err != nil {
+		return nil, err
+	}
 	userRepo := &repo.UserRepo{
-		Redis: client,
-		Forum: forumRepo,
+		Redis:    client,
+		MainTags: mainTag,
 	}
 	adapter := mail.NewAdapter()
 	userService := &entity.UserService{
 		Repo: userRepo,
 		Mail: adapter,
+	}
+	forumRepo := &repo.ForumRepo{
+		Redis:    client,
+		MainTags: mainTag,
 	}
 	forumService := &entity.ForumService{
 		Repo: forumRepo,
@@ -38,13 +52,6 @@ func InitProdServer() (*Server, error) {
 	notiRepo := &repo.NotiRepo{}
 	notiService := &entity.NotiService{
 		Repo: notiRepo,
-	}
-	db, err := postgres.NewDB()
-	if err != nil {
-		return nil, err
-	}
-	txAdapter := &postgres.TxAdapter{
-		DB: db,
 	}
 	service := &uexky.Service{
 		User:      userService,
