@@ -27,11 +27,12 @@ type UserRepo interface {
 	GetCodeEmail(ctx context.Context, code string) (string, error)
 	DelCode(ctx context.Context, code string) error
 
+	GetUserByID(ctx context.Context, id uid.UID) (*User, error)
 	GetUserByAuthInfo(ctx context.Context, ai AuthInfo) (*User, error)
 	SetToken(ctx context.Context, token *Token) error
 	GetToken(ctx context.Context, tok string) (*Token, error)
 	InsertUser(ctx context.Context, user *User) (*User, error)
-	UpdateUser(ctx context.Context, id uid.UID, update *UserUpdate) error
+	UpdateUser(ctx context.Context, user *User) (*User, error)
 }
 
 const (

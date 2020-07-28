@@ -92,11 +92,20 @@ func (s *UserService) NewUser(ctx context.Context, user *User) (*User, error) {
 	return user, errors.Wrapf(err, "InsertUser(user=%+v)", user)
 }
 
-func (s *UserService) BanUser(ctx context.Context, id uid.UID) (bool, error) {
-	if err := s.Repo.UpdateUser(ctx, id, &UserUpdate{Role: (*Role)(algo.NullString(string(RoleBanned)))}); err != nil {
-		return false, errors.Wrapf(err, "BanUser(id=%v)", id)
+func (s *UserService) BanUser(ctx context.Context, id uid.UID) (*User, error) {
+	user, err := s.Repo.GetUserByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
+			return nil, nil // guest user is expired
+		}
+		return nil, errors.Wrapf(err, "BanUser(id=%v)", id)
 	}
-	return true, nil
+	user.Role = RoleBanned
+	user, err = s.Repo.UpdateUser(ctx, user)
+	if err != nil {
+		return nil, errors.Wrapf(err, "BanUser(id=%v)", id)
+	}
+	return user, nil
 }
 
 type User struct {
@@ -118,15 +127,16 @@ func (u *User) RequirePermission(action Action) error {
 	return nil
 }
 
-func (u *User) SetName(ctx context.Context, name string) error {
+func (u *User) SetName(ctx context.Context, name string) (*User, error) {
 	if u.Name != nil {
-		return uerr.New(uerr.ParamsError, "already have a name")
+		return nil, uerr.New(uerr.ParamsError, "already have a name")
 	}
-	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Name: &name}); err != nil {
-		return errors.Wrapf(err, "SetName(name=%s)", name)
+	u.Name = algo.NullString(name)
+	user, err := u.Repo.UpdateUser(ctx, u)
+	if err != nil {
+		return nil, errors.Wrapf(err, "SetName(name=%s)", name)
 	}
-	u.Name = &name
-	return nil
+	return user, nil
 }
 
 func purifyTags(includes []string, exclude string) []string {
@@ -141,25 +151,25 @@ func purifyTags(includes []string, exclude string) []string {
 	return tags
 }
 
-func (u *User) SyncTags(ctx context.Context, tags []string) error {
-	tagSet := purifyTags(tags, "")
-	if err := u.Repo.UpdateUser(ctx, u.ID, &UserUpdate{Tags: tagSet}); err != nil {
-		return errors.Wrapf(err, "SyncTags(user=%+v, tags=%v)", u, tags)
+func (u *User) SyncTags(ctx context.Context, tags []string) (*User, error) {
+	u.Tags = purifyTags(tags, "")
+	user, err := u.Repo.UpdateUser(ctx, u)
+	if err != nil {
+		return nil, errors.Wrapf(err, "SyncTags(user=%+v, tags=%v)", u, tags)
 	}
-	u.Tags = tagSet
-	return nil
+	return user, nil
 }
 
-func (u *User) AddSubbedTag(ctx context.Context, tag string) error {
+func (u *User) AddSubbedTag(ctx context.Context, tag string) (*User, error) {
 	tags := append(u.Tags, tag)
-	err := u.SyncTags(ctx, tags)
-	return errors.Wrapf(err, "AddSubbedTag(user=%+v, tag=%v)", u, tag)
+	user, err := u.SyncTags(ctx, tags)
+	return user, errors.Wrapf(err, "AddSubbedTag(user=%+v, tag=%v)", u, tag)
 }
 
-func (u *User) DelSubbedTag(ctx context.Context, tag string) error {
+func (u *User) DelSubbedTag(ctx context.Context, tag string) (*User, error) {
 	tagSet := purifyTags(u.Tags, tag)
-	err := u.SyncTags(ctx, tagSet)
-	return errors.Wrapf(err, "DelSubbedTag(user=%+v, tag=%v)", u, tag)
+	user, err := u.SyncTags(ctx, tagSet)
+	return user, errors.Wrapf(err, "DelSubbedTag(user=%+v, tag=%v)", u, tag)
 }
 
 func (u *User) NotiReceivers() []Receiver {

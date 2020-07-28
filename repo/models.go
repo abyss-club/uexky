@@ -12,7 +12,7 @@ type User struct {
 	tableName struct{} `pg:"user,,discard_unknown_columns"`
 
 	ID           uid.UID     `pg:"id,pk" json:"id"`
-	CreatedAt    time.Time   `pg:"created_at" json:"created_at"`
+	CreatedAt    time.Time   `pg:"created_at" json:"-"`
 	UpdatedAt    time.Time   `pg:"updated_at" json:"-"`
 	Email        *string     `pg:"email,use_zero" json:"-"`
 	Name         *string     `pg:"name" json:"-"`

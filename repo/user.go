@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-pg/pg/v9"
 	"github.com/go-redis/redis/v7"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
@@ -33,6 +32,32 @@ func (u *UserRepo) GetCodeEmail(ctx context.Context, code string) (string, error
 func (u *UserRepo) DelCode(ctx context.Context, code string) error {
 	_, err := u.Redis.Del(code).Result()
 	return redisErrWrapf(err, "DelCode(code=%s)", code)
+}
+
+func (u *UserRepo) GetUserByID(ctx context.Context, id uid.UID) (*entity.User, error) {
+	mainTags, err := u.Forum.GetMainTags(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "GetUserByID(id=%+v)", id)
+	}
+
+	var user User
+	data, err := u.Redis.Get(u.userRedisKey(id)).Result()
+	if err != nil && !errors.Is(err, redis.Nil) {
+		return nil, redisErrWrapf(err, "GetUserByID(id=%v)", id)
+	}
+	if err == nil {
+		if err := json.Unmarshal([]byte(data), &user); err != nil {
+			return nil, uerr.Wrapf(uerr.InternalError, err, "unmarshal user: %s", data)
+		}
+		return u.toEntityUser(&user, mainTags), nil
+	}
+
+	// err is redis.Nil, find in database
+	if err := u.db(ctx).Model(&user).Where("id = ?", id).Select(); err != nil {
+		return nil, dbErrWrapf(err, "GetUserByID(id=%v)", id)
+	}
+	return u.toEntityUser(&user, mainTags), nil
+
 }
 
 func (u *UserRepo) GetUserByAuthInfo(ctx context.Context, ai entity.AuthInfo) (*entity.User, error) {
@@ -119,20 +144,36 @@ func (u *UserRepo) InsertUser(ctx context.Context, user *entity.User) (*entity.U
 	return u.toEntityUser(&dbUser, mainTags), nil
 }
 
-func (u *UserRepo) UpdateUser(ctx context.Context, id uid.UID, update *entity.UserUpdate) error {
-	user := User{}
-	q := u.db(ctx).Model(&user).Where("id = ?", id)
-	if update.Name != nil {
-		q.Set("name = ?", update.Name)
+func (u *UserRepo) UpdateUser(ctx context.Context, user *entity.User) (*entity.User, error) {
+	if user.Role == entity.RoleGuest {
+		rUser := &User{
+			ID:   user.ID,
+			Role: entity.RoleGuest,
+			Tags: user.Tags,
+		}
+		data, err := json.Marshal(&rUser)
+		if err != nil {
+			return nil, uerr.Wrapf(uerr.ParamsError, err, "InsertUser(user=%+v)", user)
+		}
+		if _, err := u.Redis.Set(u.userRedisKey(user.ID), data, entity.TokenExpire).Result(); err != nil {
+			return nil, redisErrWrapf(err, "InsertUser(user=%+v)", user)
+		}
 	}
-	if update.Role != nil {
-		q.Set("role = ?", update.Role)
-	}
-	if update.Tags != nil {
-		q.Set("tags = ?", pg.Array(update.Tags))
-	}
+	var rUser User
+	q := u.db(ctx).Model(&rUser).Where("id = ?", user.ID).
+		Set("name = ?", user.Name).
+		Set("role = ?", user.Role).
+		Set("tags = ?", user.Tags).
+		Returning("*")
 	_, err := q.Update()
-	return dbErrWrapf(err, "UpdateUser(id=%v, update=%+v)", id, update)
+	if err != nil {
+		return nil, errors.Wrapf(err, "InsertUser(user=%+v)", user)
+	}
+	mainTags, err := u.Forum.GetMainTags(ctx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "InsertUser(user=%+v)", user)
+	}
+	return u.toEntityUser(&rUser, mainTags), dbErrWrapf(err, "UpdateUser(user=%+v)", user)
 }
 
 func (u *UserRepo) db(ctx context.Context) postgres.Session {
