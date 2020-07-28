@@ -79,7 +79,8 @@ func (f *ForumService) NewThread(ctx context.Context, user *User, input ThreadIn
 		return nil, errors.Wrapf(err, "NewThread(uerr=%+v, input=%+v)", user, input)
 	}
 	thread.SubTags = subTags
-	if err := f.Repo.InsertThread(ctx, thread); err != nil {
+	thread, err = f.Repo.InsertThread(ctx, thread)
+	if err != nil {
 		return nil, errors.Wrapf(err, "NewThread(uerr=%+v, input=%+v)", user, input)
 	}
 	return thread, nil
@@ -208,7 +209,7 @@ func (f *ForumService) NewPost(ctx context.Context, user *User, input PostInput)
 		}
 		post.Author.Author = *user.Name
 	}
-	err = f.Repo.InsertPost(ctx, post)
+	post, err = f.Repo.InsertPost(ctx, post)
 	err = errors.Wrapf(err, "NewPost(user=%+v, input=%+v)", user, input)
 	return &NewPostResponse{Post: post, Thread: thread}, err
 }

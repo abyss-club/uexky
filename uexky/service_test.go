@@ -16,11 +16,7 @@ import (
 )
 
 func TestService_CtxWithUserByToken(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
+	service, ctx := initEnv(t)
 	type args struct {
 		ctx   context.Context
 		email string
@@ -60,6 +56,7 @@ func TestService_CtxWithUserByToken(t *testing.T) {
 			var signUpUser *entity.User
 			var gotCtx context.Context
 			var gotToken *entity.Token
+			var err error
 			if tt.args.email != "" {
 				code, err := service.TrySignInByEmail(tt.args.ctx, tt.args.email)
 				if err != nil {
@@ -107,10 +104,7 @@ func TestService_CtxWithUserByToken(t *testing.T) {
 }
 
 func TestService_SetUserName(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
+	service, ctx := initEnv(t)
 	type args struct {
 		ctx   context.Context
 		name  string
@@ -125,7 +119,7 @@ func TestService_SetUserName(t *testing.T) {
 		{
 			name: "normal",
 			args: args{
-				ctx:   getNewDBCtx(t),
+				ctx:   ctx,
 				name:  "tom",
 				email: "tom@example.com",
 			},
@@ -135,7 +129,7 @@ func TestService_SetUserName(t *testing.T) {
 		{
 			name: "already has name",
 			args: args{
-				ctx:   getNewDBCtx(t),
+				ctx:   ctx,
 				name:  "tom2",
 				email: "tom@example.com",
 			},
@@ -145,32 +139,25 @@ func TestService_SetUserName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			user, ctx := loginUser(t, service, testUser{email: tt.args.email})
+			_, ctx := loginUser(t, service, testUser{email: tt.args.email})
 			gotUser, err := service.SetUserName(ctx, tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Service.SetUserName() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil {
 				return
 			}
-			if gotUser.Name == nil || *gotUser.Name != tt.wantName {
-				t.Errorf("Service.SetUserName() = %v, want %v", gotUser.Name, tt.wantName)
-			}
-			if user.Name != gotUser.Name {
-				t.Errorf("user name not sync origin object")
+			if gotUser == nil || gotUser.Name == nil || *gotUser.Name != tt.wantName {
+				t.Errorf("Service.SetUserName() = %+v, want user.name=%v", gotUser, tt.wantName)
 			}
 		})
 	}
 }
 
 func TestService_GetUserThreads(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
 	mainTags := []string{"MainA", "MainB", "MainC"}
-	if err := service.SetMainTags(ctx, mainTags); err != nil {
-		t.Fatal(err)
-	}
+	service, _ := initEnv(t, mainTags...)
+
 	var threads []*entity.Thread
 	tu := testUser{email: "a@example.com", name: "a"}
 	for i := 0; i < 10; i++ {
@@ -277,21 +264,12 @@ func TestService_GetUserThreads(t *testing.T) {
 }
 
 func TestService_GetUserPosts(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
 	mainTags := []string{"MainA", "MainB", "MainC"}
-	if err := service.SetMainTags(ctx, mainTags); err != nil {
-		t.Fatal(err)
-	}
+	service, _ := initEnv(t, mainTags...)
+
 	var threads []*entity.Thread
 	for i := 0; i < 2; i++ {
 		thread, _ := pubThread(t, service, testUser{email: "thread@example.com"})
-		if err != nil {
-			t.Fatal(err)
-		}
 		threads = append(threads, thread)
 	}
 	tu := testUser{email: "post@example.com", name: " post"}
@@ -400,15 +378,10 @@ func TestService_GetUserPosts(t *testing.T) {
 }
 
 func TestService_SyncUserTags(t *testing.T) {
-	ctx := getNewDBCtx(t)
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
-	_, ctx = loginUser(t, service, testUser{name: "a", email: "a@example.com"})
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, _ := initEnv(t, mainTags...)
+
+	_, ctx := loginUser(t, service, testUser{name: "a", email: "a@example.com"})
 	type args struct {
 		ctx  context.Context
 		tags []string
@@ -453,15 +426,10 @@ func TestService_SyncUserTags(t *testing.T) {
 }
 
 func TestService_AddUserSubbedTag(t *testing.T) {
-	ctx := getNewDBCtx(t)
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
-	_, ctx = loginUser(t, service, testUser{name: "a", email: "a@example.com"})
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, _ := initEnv(t, mainTags...)
+
+	_, ctx := loginUser(t, service, testUser{name: "a", email: "a@example.com"})
 	type args struct {
 		ctx context.Context
 		tag string
@@ -500,15 +468,10 @@ func TestService_AddUserSubbedTag(t *testing.T) {
 }
 
 func TestService_DelUserSubbedTag(t *testing.T) {
-	ctx := getNewDBCtx(t)
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
-	_, ctx = loginUser(t, service, testUser{name: "a", email: "a@example.com"})
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, _ := initEnv(t, mainTags...)
+
+	_, ctx := loginUser(t, service, testUser{name: "a", email: "a@example.com"})
 	type args struct {
 		ctx context.Context
 		tag string
@@ -553,20 +516,15 @@ func TestService_DelUserSubbedTag(t *testing.T) {
 }
 
 func TestService_BanUser(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
 	thread, _ := pubThread(t, service, testUser{email: "t@example.com"})
 	post, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
 	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
-	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
-		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
-	}); err != nil {
+	mod.Role = entity.RoleMod
+	_, err := service.User.Repo.UpdateUser(ctx, mod)
+	if err != nil {
 		t.Fatal(err)
 	}
 	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
@@ -620,21 +578,15 @@ func TestService_BanUser(t *testing.T) {
 }
 
 func TestService_BlockPost(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
-	thread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
 
+	thread, _ := pubThread(t, service, testUser{email: "t@example.com"})
 	oriPost, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
 	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
-	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
-		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
-	}); err != nil {
+	mod.Role = entity.RoleMod
+	_, err := service.User.Repo.UpdateUser(ctx, mod)
+	if err != nil {
 		t.Fatal(err)
 	}
 	oriPost.Blocked = true
@@ -664,20 +616,15 @@ func TestService_BlockPost(t *testing.T) {
 }
 
 func TestService_LockThread(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
 	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
 
 	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
-	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
-		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
-	}); err != nil {
+	mod.Role = entity.RoleMod
+	_, err := service.User.Repo.UpdateUser(ctx, mod)
+	if err != nil {
 		t.Fatal(err)
 	}
 	oriThread.Locked = true
@@ -718,20 +665,15 @@ func TestService_LockThread(t *testing.T) {
 }
 
 func TestService_BlockThread(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
 	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
 
 	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
-	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
-		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
-	}); err != nil {
+	mod.Role = entity.RoleMod
+	_, err := service.User.Repo.UpdateUser(ctx, mod)
+	if err != nil {
 		t.Fatal(err)
 	}
 	oriThread.Blocked = true
@@ -761,20 +703,15 @@ func TestService_BlockThread(t *testing.T) {
 }
 
 func TestService_EditTags(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
 	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
 
 	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
-	if err := service.User.Repo.UpdateUser(ctx, mod.ID, &entity.UserUpdate{
-		Role: (*entity.Role)(algo.NullString(string(entity.RoleMod))),
-	}); err != nil {
+	mod.Role = entity.RoleMod
+	_, err := service.User.Repo.UpdateUser(ctx, mod)
+	if err != nil {
 		t.Fatal(err)
 	}
 	oriThread.MainTag = "MainC"
@@ -804,16 +741,11 @@ func TestService_EditTags(t *testing.T) {
 }
 
 func TestService_PubThread(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	getNewDBCtx(t)
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, _ := initEnv(t, mainTags...)
+
 	user, ctx := loginUser(t, service, testUser{email: "a@example.com", name: "a"})
 	gUser, gCtx := loginUser(t, service, testUser{})
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
 	type args struct {
 		ctx    context.Context
 		thread entity.ThreadInput
@@ -926,23 +858,17 @@ func TestService_PubThread(t *testing.T) {
 			if tt.want.Author.Anonymous {
 				tt.want.Author.Author = got.Author.Author
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Service.PubThread() = %v, want %v", got, tt.want)
+			if diff := cmp.Diff(got, tt.want, forumRepoComp); diff != "" {
+				t.Errorf("Service.PubThread() missmatch: %s", diff)
 			}
 		})
 	}
 }
 
 func TestService_SearchThreads(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
 	mainTags := []string{"MainA", "MainB", "MainC"}
-	if err := service.SetMainTags(ctx, mainTags); err != nil {
-		t.Fatal(err)
-	}
+	service, _ := initEnv(t, mainTags...)
+
 	var threads []*entity.Thread
 	tu := testUser{email: "a@example.com", name: "a"}
 	for i := 0; i < 10; i++ {
@@ -957,7 +883,7 @@ func TestService_SearchThreads(t *testing.T) {
 		}
 		threads = append(threads, thread)
 	}
-	_, ctx = loginUser(t, service, testUser{email: "a@example.com"})
+	_, ctx := loginUser(t, service, testUser{email: "a@example.com"})
 	type args struct {
 		ctx   context.Context
 		tags  []string
@@ -1076,15 +1002,9 @@ func TestService_SearchThreads(t *testing.T) {
 }
 
 func TestService_PubPost(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
 	mainTags := []string{"MainA", "MainB", "MainC"}
-	if err := service.SetMainTags(ctx, mainTags); err != nil {
-		t.Fatal(err)
-	}
+	service, _ := initEnv(t, mainTags...)
+
 	thread, _ := pubThread(t, service, testUser{email: "a@example.com", name: "a"})
 	post, _ := pubPost(t, service, testUser{email: "a@example.com", name: "a"}, thread.ID)
 	user1, userCtx1 := loginUser(t, service, testUser{email: "p1@example.com"})
@@ -1233,7 +1153,7 @@ func TestService_PubPost(t *testing.T) {
 			if tt.args.post.Anonymous {
 				tt.want.Author.Author = got.Author.Author
 			}
-			if diff := cmp.Diff(got, tt.want, forumRepoComp, timeCmp); diff != "" {
+			if diff := cmp.Diff(got, tt.want, forumRepoComp); diff != "" {
 				t.Errorf("Service.PubPost() missmatch %s", diff)
 			}
 			if len(tt.want.Data.QuoteIDs) != 0 {
@@ -1243,7 +1163,7 @@ func TestService_PubPost(t *testing.T) {
 				}
 				if len(quoted) == 0 {
 					t.Error("should have a quoted post")
-				} else if diff := cmp.Diff(quoted[0], post, forumRepoComp, timeCmp); diff != "" {
+				} else if diff := cmp.Diff(quoted[0], post, forumRepoComp); diff != "" {
 					t.Errorf("Service.PubPost().Quotes() missmatch: %s", diff)
 				}
 			}
@@ -1261,14 +1181,9 @@ func TestService_PubPost(t *testing.T) {
 }
 
 func TestService_SearchTags(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
 	pubThreadWithTags(t, service, testUser{email: "a@example.com"}, "MainA", []string{"Sub11", "Sub21"})
 	pubThreadWithTags(t, service, testUser{email: "a@example.com"}, "MainB", []string{"Sub12", "Sub22"})
 	pubThreadWithTags(t, service, testUser{email: "a@example.com"}, "MainC", []string{"Sub13", "Sub23"})
@@ -1358,14 +1273,9 @@ func TestService_SearchTags(t *testing.T) {
 }
 
 func TestService_GetUnreadNotiCount(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
 	user, userCtx := loginUser(t, service, testUser{email: "a@example.com"})
 	type args struct {
 		ctx context.Context
@@ -1444,14 +1354,9 @@ func TestService_GetUnreadNotiCount(t *testing.T) {
 }
 
 func TestService_GetNotification(t *testing.T) {
-	service, err := InitDevService()
-	if err != nil {
-		t.Fatal(err)
-	}
-	ctx := getNewDBCtx(t)
-	if err := service.SetMainTags(ctx, []string{"MainA", "MainB", "MainC"}); err != nil {
-		t.Fatal(err)
-	}
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
 	user, _ := loginUser(t, service, testUser{email: "t@example.com"}) // One Welcome Noti
 	thread, _ := pubThread(t, service, testUser{email: *user.Email})
 

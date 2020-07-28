@@ -33,6 +33,7 @@ func (f *ForumRepo) toEntityThread(t *Thread) *entity.Thread {
 		CreatedAt: t.CreatedAt,
 		Author: &entity.Author{
 			UserID:    t.UserID,
+			Guest:     t.Guest,
 			Anonymous: t.Anonymous,
 			Author:    t.Author,
 		},
@@ -144,11 +145,12 @@ func (f *ForumRepo) GetAnonyID(ctx context.Context, userID uid.UID, threadID uid
 	return uid.NewUID().ToBase64String(), nil
 }
 
-func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) error {
+func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) (*entity.Thread, error) {
 	log.Infof("InsertThread(%v)", thread)
 	t := Thread{
 		ID:         thread.ID,
 		UserID:     thread.Author.UserID,
+		Guest:      thread.Author.Guest,
 		Anonymous:  thread.Author.Anonymous,
 		Author:     thread.Author.Author,
 		Title:      thread.Title,
@@ -157,7 +159,10 @@ func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) err
 	}
 	t.Tags = []string{thread.MainTag}
 	t.Tags = append(t.Tags, thread.SubTags...)
-	return f.db(ctx).Insert(&t)
+	if _, err := f.db(ctx).Model(&t).Returning("*").Insert(); err != nil {
+		return nil, dbErrWrapf(err, "InsertThread(thread=%+v)", thread)
+	}
+	return f.toEntityThread(&t), nil
 }
 
 func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity.ThreadUpdate) error {
@@ -184,10 +189,12 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 		CreatedAt: p.CreatedAt,
 		Author: &entity.Author{
 			UserID:    p.UserID,
+			Guest:     p.Guest,
 			Anonymous: p.Anonymous,
 			Author:    p.Author,
 		},
 		Content: p.Content,
+		Blocked: p.Blocked,
 
 		Repo: f,
 		Data: entity.PostData{
@@ -196,8 +203,7 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 			QuotePosts: make([]*entity.Post, 0),
 		},
 	}
-	if p.Blocked != nil && *p.Blocked {
-		post.Blocked = true
+	if post.Blocked {
 		post.Content = entity.BlockedContent
 	}
 	return post
@@ -299,25 +305,26 @@ func (f *ForumRepo) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, er
 	return count, dbErrWrapf(err, "GetPostQuotedCount(id=%v)", id)
 }
 
-func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) error {
+func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) (*entity.Post, error) {
 	log.Infof("InsertPost(%v)", post)
 	newPost := &Post{
 		ID:        post.ID,
 		ThreadID:  post.Data.ThreadID,
 		UserID:    post.Author.UserID,
+		Guest:     post.Author.Guest,
 		Anonymous: post.Author.Anonymous,
 		Author:    post.Author.Author,
 		Content:   post.Content,
 		QuotedIDs: post.Data.QuoteIDs,
 	}
-	if _, err := f.db(ctx).Model(newPost).Insert(); err != nil {
-		return dbErrWrapf(err, "InsertPost.Insert(post=%+v)", post)
+	if _, err := f.db(ctx).Model(newPost).Returning("*").Insert(); err != nil {
+		return nil, dbErrWrapf(err, "InsertPost.Insert(post=%+v)", post)
 	}
 	if _, err := f.db(ctx).Model((*Thread)(nil)).Set("last_post_id=?", post.ID).
 		Where("id = ?", post.Data.ThreadID).Update(); err != nil {
-		return dbErrWrapf(err, "InsertPost.UpdateThread(post=%+v)", post)
+		return nil, dbErrWrapf(err, "InsertPost.UpdateThread(post=%+v)", post)
 	}
-	return nil
+	return f.toEntityPost(newPost), nil
 }
 
 func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.PostUpdate) error {
@@ -367,16 +374,7 @@ func (f *ForumRepo) GetMainTags(ctx context.Context) []string {
 }
 
 func (f *ForumRepo) SetMainTags(ctx context.Context, tags []string) error {
-	var mainTags []Tag
-	tagType := "main"
-	for _, t := range tags {
-		mainTags = append(mainTags, Tag{
-			Name:    t,
-			TagType: &tagType,
-		})
-	}
-	_, err := f.db(ctx).Model(&mainTags).Insert()
-	return dbErrWrapf(err, "SetMainTags(tags=%v)", tags)
+	return f.MainTags.SetMainTags(ctx, tags)
 }
 
 func (f *ForumRepo) CheckDuplicate(ctx context.Context, userID uid.UID, title, content string) error {
@@ -409,6 +407,7 @@ func NewMainTag(tx *postgres.TxAdapter) (*MainTag, error) {
 	for i := range tags {
 		mainTags = append(mainTags, tags[i].Name)
 	}
+	log.Debugf("NewMainTag = %+v", mainTags)
 	return &MainTag{Tags: mainTags}, nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-pg/pg/v9"
 	"github.com/go-redis/redis/v7"
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
@@ -145,12 +146,13 @@ func (u *UserRepo) UpdateUser(ctx context.Context, user *entity.User) (*entity.U
 		if _, err := u.Redis.Set(u.userRedisKey(user.ID), data, entity.TokenExpire).Result(); err != nil {
 			return nil, redisErrWrapf(err, "InsertUser(user=%+v)", user)
 		}
+		return user, nil
 	}
 	var rUser User
 	q := u.db(ctx).Model(&rUser).Where("id = ?", user.ID).
 		Set("name = ?", user.Name).
 		Set("role = ?", user.Role).
-		Set("tags = ?", user.Tags).
+		Set("tags = ?", pg.Array(user.Tags)).
 		Returning("*")
 	_, err := q.Update()
 	if err != nil {

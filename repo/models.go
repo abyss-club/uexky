@@ -15,7 +15,7 @@ type User struct {
 	CreatedAt    time.Time   `pg:"created_at" json:"-"`
 	UpdatedAt    time.Time   `pg:"updated_at" json:"-"`
 	Email        *string     `pg:"email,use_zero" json:"-"`
-	Name         *string     `pg:"name" json:"-"`
+	Name         *string     `pg:"name,user_zero" json:"-"`
 	Role         entity.Role `pg:"role,use_zero" json:"role"`
 	LastReadNoti uid.UID     `pg:"last_read_noti,use_zero" json:"-"`
 	Tags         []string    `pg:"tags,array" json:"tags"`
@@ -33,7 +33,7 @@ type Thread struct {
 	Anonymous  bool      `pg:"anonymous,use_zero"`
 	Guest      bool      `pg:"guest,use_zero"`
 	Author     string    `pg:"author"`
-	Title      *string   `pg:"title"`
+	Title      *string   `pg:"title,use_zero"`
 	Content    string    `pg:"content,use_zero"`
 	Locked     bool      `pg:"locked,use_zero"`
 	Blocked    bool      `pg:"blocked,use_zero"`
@@ -52,7 +52,7 @@ type Post struct {
 	Anonymous bool      `pg:"anonymous,use_zero"`
 	Guest     bool      `pg:"guest,use_zero"`
 	Author    string    `pg:"author"`
-	Blocked   *bool     `pg:"blocked"`
+	Blocked   bool      `pg:"blocked"`
 	Content   string    `pg:"content,use_zero"`
 	QuotedIDs []uid.UID `pg:"quoted_ids,array"`
 }
@@ -64,7 +64,7 @@ type Tag struct {
 	Name      string    `pg:"name,pk"`
 	CreatedAt time.Time `pg:"created_at"`
 	UpdatedAt time.Time `pg:"updated_at"`
-	TagType   *string   `pg:"type"`
+	TagType   *string   `pg:"type,use_zero"`
 }
 
 type Notification struct {
