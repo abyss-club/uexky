@@ -100,54 +100,53 @@ func (f *ForumService) SearchThreads(
 	return f.Repo.GetThreadSlice(ctx, &ThreadsSearch{Tags: tags}, query)
 }
 
-func (n *Thread) String() string {
-	return fmt.Sprintf("<Thread:%v:%s>", n.ID, n.ID.ToBase64String())
+func (f *Thread) String() string {
+	return fmt.Sprintf("<Thread:%v:%s>", f.ID, f.ID.ToBase64String())
 }
 
-func (n *Thread) Replies(ctx context.Context, query SliceQuery) (*PostSlice, error) {
-	return n.Repo.GetPostSlice(ctx, &PostsSearch{ThreadID: &n.ID}, query)
+func (f *Thread) Replies(ctx context.Context, query SliceQuery) (*PostSlice, error) {
+	return f.Repo.GetPostSlice(ctx, &PostsSearch{ThreadID: &f.ID}, query)
 }
 
-func (n *Thread) ReplyCount(ctx context.Context) (int, error) {
-	return n.Repo.GetPostCount(ctx, &PostsSearch{ThreadID: &n.ID})
+func (f *Thread) ReplyCount(ctx context.Context) (int, error) {
+	return f.Repo.GetPostCount(ctx, &PostsSearch{ThreadID: &f.ID})
 }
 
-func (n *Thread) Catalog(ctx context.Context) ([]*ThreadCatalogItem, error) {
-	return n.Repo.GetThreadCatalog(ctx, n.ID)
+func (f *Thread) Catalog(ctx context.Context) ([]*ThreadCatalogItem, error) {
+	return f.Repo.GetThreadCatalog(ctx, f.ID)
 }
 
-func (n *Thread) EditTags(ctx context.Context, mainTag string, subTags []string) error {
-	allMainTags := n.Repo.GetMainTags(ctx)
+func (f *Thread) EditTags(ctx context.Context, mainTag string, subTags []string) (*Thread, error) {
+	allMainTags := f.Repo.GetMainTags(ctx)
 	subTagSet, err := validateThreadTags(allMainTags, mainTag, subTags)
 	if err != nil {
-		return errors.Wrapf(err, "EditTags(mainTag=%s, subTags=%v)", mainTag, subTags)
+		return nil, errors.Wrapf(err, "EditTags(mainTag=%s, subTags=%v)", mainTag, subTags)
 	}
-	update := &ThreadUpdate{MainTag: &mainTag, SubTags: subTagSet}
-	if err := n.Repo.UpdateThread(ctx, n.ID, update); err != nil {
-		return errors.Wrapf(err, "EditTags(mainTag=%s, subTags=%v)", mainTag, subTags)
+	f.MainTag = mainTag
+	f.SubTags = subTagSet
+	thread, err := f.Repo.UpdateThread(ctx, f)
+	if err != nil {
+		return nil, errors.Wrapf(err, "EditTags(mainTag=%s, subTags=%v)", mainTag, subTags)
 	}
-	n.MainTag = mainTag
-	n.SubTags = subTagSet
-	return nil
+	return thread, nil
 }
 
-func (n *Thread) Lock(ctx context.Context) error {
-	locked := true
-	if err := n.Repo.UpdateThread(ctx, n.ID, &ThreadUpdate{Locked: &locked}); err != nil {
-		return errors.Wrap(err, "Lock()")
+func (f *Thread) Lock(ctx context.Context) (*Thread, error) {
+	f.Locked = true
+	thread, err := f.Repo.UpdateThread(ctx, f)
+	if err != nil {
+		return nil, errors.Wrap(err, "Lock()")
 	}
-	n.Locked = true
-	return nil
+	return thread, nil
 }
 
-func (n *Thread) Block(ctx context.Context) error {
-	blocked := true
-	if err := n.Repo.UpdateThread(ctx, n.ID, &ThreadUpdate{Blocked: &blocked}); err != nil {
-		return errors.Wrap(err, "Block()")
+func (f *Thread) Block(ctx context.Context) (*Thread, error) {
+	f.Blocked = true
+	thread, err := f.Repo.UpdateThread(ctx, f)
+	if err != nil {
+		return nil, errors.Wrap(err, "Block()")
 	}
-	n.Blocked = true
-	n.Content = BlockedContent
-	return nil
+	return thread, nil
 }
 
 type Post struct {
@@ -237,14 +236,13 @@ func (p *Post) QuotedCount(ctx context.Context) (int, error) {
 	return p.Repo.GetPostQuotedCount(ctx, p.ID)
 }
 
-func (p *Post) Block(ctx context.Context) error {
-	blocked := true
-	if err := p.Repo.UpdatePost(ctx, p.ID, &PostUpdate{Blocked: &blocked}); err != nil {
-		return errors.Wrap(err, "Block()")
-	}
+func (p *Post) Block(ctx context.Context) (*Post, error) {
 	p.Blocked = true
-	p.Content = BlockedContent
-	return nil
+	post, err := p.Repo.UpdatePost(ctx, p)
+	if err != nil {
+		return nil, errors.Wrap(err, "Block()")
+	}
+	return post, nil
 }
 
 func (f *ForumService) GetMainTags(ctx context.Context) []string {

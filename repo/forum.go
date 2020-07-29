@@ -165,22 +165,16 @@ func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) (*e
 	return f.toEntityThread(&t), nil
 }
 
-func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity.ThreadUpdate) error {
+func (f *ForumRepo) UpdateThread(ctx context.Context, t *entity.Thread) (*entity.Thread, error) {
 	thread := Thread{}
-	q := f.db(ctx).Model(&thread).Where("id = ?", id)
-	if update.Blocked != nil {
-		q.Set("blocked = ?", update.Blocked)
-	}
-	if update.Locked != nil {
-		q.Set("locked = ?", update.Locked)
-	}
-	if update.MainTag != nil {
-		tags := []string{*update.MainTag}
-		tags = append(tags, update.SubTags...)
-		q.Set("tags = ?", pg.Array(tags))
-	}
-	_, err := q.Update()
-	return dbErrWrapf(err, "UpdateThread(id=%v, update=%+v)", id, update)
+	tags := []string{t.MainTag}
+	tags = append(tags, t.SubTags...)
+	q := f.db(ctx).Model(&thread).Where("id = ?", t.ID).
+		Set("tags = ?", pg.Array(tags)).
+		Set("blocked = ?", t.Blocked).
+		Set("locked = ?", t.Locked)
+	_, err := q.Returning("*").Update()
+	return f.toEntityThread(&thread), dbErrWrapf(err, "UpdateThread(thread=%+v)", t)
 }
 
 func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
@@ -327,17 +321,12 @@ func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) (*entity.
 	return f.toEntityPost(newPost), nil
 }
 
-func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.PostUpdate) error {
+func (f *ForumRepo) UpdatePost(ctx context.Context, p *entity.Post) (*entity.Post, error) {
 	post := Post{}
-	q := f.db(ctx).Model(&post).Where("id = ?", id)
-	if update.Blocked != nil {
-		q.Set("blocked = ?", update.Blocked)
-	}
-	_, err := q.Update()
-	if err != nil {
-		return dbErrWrapf(err, "UpdatePost(id=%v, update=%+v)", id, update)
-	}
-	return nil
+	q := f.db(ctx).Model(&post).Where("id = ?", p.ID).
+		Set("blocked = ?", p.Blocked)
+	_, err := q.Returning("*").Update()
+	return f.toEntityPost(&post), dbErrWrapf(err, "UpdatePost(post=%+v)", p)
 }
 
 func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entity.Tag, error) {

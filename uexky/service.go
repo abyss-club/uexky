@@ -177,7 +177,7 @@ func (s *Service) BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, 
 	if err != nil {
 		return nil, err
 	}
-	return post, post.Block(ctx)
+	return post.Block(ctx)
 }
 
 func (s *Service) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
@@ -192,7 +192,7 @@ func (s *Service) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thr
 	if err != nil {
 		return nil, err
 	}
-	return thread, thread.Lock(ctx)
+	return thread.Lock(ctx)
 }
 
 func (s *Service) BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
@@ -207,7 +207,7 @@ func (s *Service) BlockThread(ctx context.Context, threadID uid.UID) (*entity.Th
 	if err != nil {
 		return nil, err
 	}
-	return thread, thread.Block(ctx)
+	return thread.Block(ctx)
 }
 
 func (s *Service) EditTags(
@@ -224,7 +224,7 @@ func (s *Service) EditTags(
 	if err != nil {
 		return nil, err
 	}
-	return thread, thread.EditTags(ctx, mainTag, subTags)
+	return thread.EditTags(ctx, mainTag, subTags)
 }
 
 func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {

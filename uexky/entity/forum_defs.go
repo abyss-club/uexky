@@ -60,7 +60,7 @@ type ForumRepo interface {
 	GetThreadCatalog(ctx context.Context, id uid.UID) ([]*ThreadCatalogItem, error)
 	GetAnonyID(ctx context.Context, userID uid.UID, threadID uid.UID) (string, error)
 	InsertThread(ctx context.Context, thread *Thread) (*Thread, error)
-	UpdateThread(ctx context.Context, id uid.UID, update *ThreadUpdate) error
+	UpdateThread(ctx context.Context, thread *Thread) (*Thread, error)
 
 	GetPost(ctx context.Context, search *PostSearch) (*Post, error)
 	GetPosts(ctx context.Context, search *PostsSearch) ([]*Post, error)
@@ -68,7 +68,7 @@ type ForumRepo interface {
 	GetPostCount(ctx context.Context, search *PostsSearch) (int, error)
 	GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error)
 	InsertPost(ctx context.Context, post *Post) (*Post, error)
-	UpdatePost(ctx context.Context, id uid.UID, update *PostUpdate) error
+	UpdatePost(ctx context.Context, post *Post) (*Post, error)
 
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)
 	GetMainTags(ctx context.Context) []string
