@@ -19,9 +19,8 @@ import (
 )
 
 type ForumRepo struct {
-	Redis *redis.Client
-
-	mainTags []string `wire:"-"`
+	Redis    *redis.Client
+	MainTags *MainTag
 }
 
 func (f *ForumRepo) db(ctx context.Context) postgres.Session {
@@ -34,6 +33,7 @@ func (f *ForumRepo) toEntityThread(t *Thread) *entity.Thread {
 		CreatedAt: t.CreatedAt,
 		Author: &entity.Author{
 			UserID:    t.UserID,
+			Guest:     t.Guest,
 			Anonymous: t.Anonymous,
 			Author:    t.Author,
 		},
@@ -145,11 +145,12 @@ func (f *ForumRepo) GetAnonyID(ctx context.Context, userID uid.UID, threadID uid
 	return uid.NewUID().ToBase64String(), nil
 }
 
-func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) error {
+func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) (*entity.Thread, error) {
 	log.Infof("InsertThread(%v)", thread)
 	t := Thread{
 		ID:         thread.ID,
 		UserID:     thread.Author.UserID,
+		Guest:      thread.Author.Guest,
 		Anonymous:  thread.Author.Anonymous,
 		Author:     thread.Author.Author,
 		Title:      thread.Title,
@@ -158,25 +159,22 @@ func (f *ForumRepo) InsertThread(ctx context.Context, thread *entity.Thread) err
 	}
 	t.Tags = []string{thread.MainTag}
 	t.Tags = append(t.Tags, thread.SubTags...)
-	return f.db(ctx).Insert(&t)
+	if _, err := f.db(ctx).Model(&t).Returning("*").Insert(); err != nil {
+		return nil, dbErrWrapf(err, "InsertThread(thread=%+v)", thread)
+	}
+	return f.toEntityThread(&t), nil
 }
 
-func (f *ForumRepo) UpdateThread(ctx context.Context, id uid.UID, update *entity.ThreadUpdate) error {
+func (f *ForumRepo) UpdateThread(ctx context.Context, t *entity.Thread) (*entity.Thread, error) {
 	thread := Thread{}
-	q := f.db(ctx).Model(&thread).Where("id = ?", id)
-	if update.Blocked != nil {
-		q.Set("blocked = ?", update.Blocked)
-	}
-	if update.Locked != nil {
-		q.Set("locked = ?", update.Locked)
-	}
-	if update.MainTag != nil {
-		tags := []string{*update.MainTag}
-		tags = append(tags, update.SubTags...)
-		q.Set("tags = ?", pg.Array(tags))
-	}
-	_, err := q.Update()
-	return dbErrWrapf(err, "UpdateThread(id=%v, update=%+v)", id, update)
+	tags := []string{t.MainTag}
+	tags = append(tags, t.SubTags...)
+	q := f.db(ctx).Model(&thread).Where("id = ?", t.ID).
+		Set("tags = ?", pg.Array(tags)).
+		Set("blocked = ?", t.Blocked).
+		Set("locked = ?", t.Locked)
+	_, err := q.Returning("*").Update()
+	return f.toEntityThread(&thread), dbErrWrapf(err, "UpdateThread(thread=%+v)", t)
 }
 
 func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
@@ -185,10 +183,12 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 		CreatedAt: p.CreatedAt,
 		Author: &entity.Author{
 			UserID:    p.UserID,
+			Guest:     p.Guest,
 			Anonymous: p.Anonymous,
 			Author:    p.Author,
 		},
 		Content: p.Content,
+		Blocked: p.Blocked,
 
 		Repo: f,
 		Data: entity.PostData{
@@ -197,8 +197,7 @@ func (f *ForumRepo) toEntityPost(p *Post) *entity.Post {
 			QuotePosts: make([]*entity.Post, 0),
 		},
 	}
-	if p.Blocked != nil && *p.Blocked {
-		post.Blocked = true
+	if post.Blocked {
 		post.Content = entity.BlockedContent
 	}
 	return post
@@ -300,38 +299,34 @@ func (f *ForumRepo) GetPostQuotedCount(ctx context.Context, id uid.UID) (int, er
 	return count, dbErrWrapf(err, "GetPostQuotedCount(id=%v)", id)
 }
 
-func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) error {
+func (f *ForumRepo) InsertPost(ctx context.Context, post *entity.Post) (*entity.Post, error) {
 	log.Infof("InsertPost(%v)", post)
 	newPost := &Post{
 		ID:        post.ID,
 		ThreadID:  post.Data.ThreadID,
 		UserID:    post.Author.UserID,
+		Guest:     post.Author.Guest,
 		Anonymous: post.Author.Anonymous,
 		Author:    post.Author.Author,
 		Content:   post.Content,
 		QuotedIDs: post.Data.QuoteIDs,
 	}
-	if _, err := f.db(ctx).Model(newPost).Insert(); err != nil {
-		return dbErrWrapf(err, "InsertPost.Insert(post=%+v)", post)
+	if _, err := f.db(ctx).Model(newPost).Returning("*").Insert(); err != nil {
+		return nil, dbErrWrapf(err, "InsertPost.Insert(post=%+v)", post)
 	}
 	if _, err := f.db(ctx).Model((*Thread)(nil)).Set("last_post_id=?", post.ID).
 		Where("id = ?", post.Data.ThreadID).Update(); err != nil {
-		return dbErrWrapf(err, "InsertPost.UpdateThread(post=%+v)", post)
+		return nil, dbErrWrapf(err, "InsertPost.UpdateThread(post=%+v)", post)
 	}
-	return nil
+	return f.toEntityPost(newPost), nil
 }
 
-func (f *ForumRepo) UpdatePost(ctx context.Context, id uid.UID, update *entity.PostUpdate) error {
+func (f *ForumRepo) UpdatePost(ctx context.Context, p *entity.Post) (*entity.Post, error) {
 	post := Post{}
-	q := f.db(ctx).Model(&post).Where("id = ?", id)
-	if update.Blocked != nil {
-		q.Set("blocked = ?", update.Blocked)
-	}
-	_, err := q.Update()
-	if err != nil {
-		return dbErrWrapf(err, "UpdatePost(id=%v, update=%+v)", id, update)
-	}
-	return nil
+	q := f.db(ctx).Model(&post).Where("id = ?", p.ID).
+		Set("blocked = ?", p.Blocked)
+	_, err := q.Returning("*").Update()
+	return f.toEntityPost(&post), dbErrWrapf(err, "UpdatePost(post=%+v)", p)
 }
 
 func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*entity.Tag, error) {
@@ -353,47 +348,22 @@ func (f *ForumRepo) GetTags(ctx context.Context, search *entity.TagSearch) ([]*e
 	if _, err := f.db(ctx).Query(&tags, sql); err != nil {
 		return nil, dbErrWrapf(err, "GetTags(search=%+v)", search)
 	}
-	mainTags, err := f.GetMainTags(ctx)
-	if err != nil {
-		return nil, err
-	}
 	var entities []*entity.Tag
 	for _, t := range tags {
 		entities = append(entities, &entity.Tag{
 			Name:   t.Tag,
-			IsMain: algo.InStrSlice(mainTags, t.Tag),
+			IsMain: algo.InStrSlice(f.MainTags.Tags, t.Tag),
 		})
 	}
 	return entities, nil
 }
 
-func (f *ForumRepo) GetMainTags(ctx context.Context) ([]string, error) {
-	if f.mainTags != nil {
-		return f.mainTags, nil
-	}
-	var tags []Tag
-	if err := f.db(ctx).Model(&tags).Where("type = ?", "main").Select(); err != nil {
-		return nil, dbErrWrap(err, "GetMainTags()")
-	}
-	var mainTags []string
-	for i := range tags {
-		mainTags = append(mainTags, tags[i].Name)
-	}
-	f.mainTags = mainTags
-	return mainTags, nil
+func (f *ForumRepo) GetMainTags(ctx context.Context) []string {
+	return f.MainTags.Tags
 }
 
 func (f *ForumRepo) SetMainTags(ctx context.Context, tags []string) error {
-	var mainTags []Tag
-	tagType := "main"
-	for _, t := range tags {
-		mainTags = append(mainTags, Tag{
-			Name:    t,
-			TagType: &tagType,
-		})
-	}
-	_, err := f.db(ctx).Model(&mainTags).Insert()
-	return dbErrWrapf(err, "SetMainTags(tags=%v)", tags)
+	return f.MainTags.SetMainTags(ctx, tags)
 }
 
 func (f *ForumRepo) CheckDuplicate(ctx context.Context, userID uid.UID, title, content string) error {
@@ -410,5 +380,39 @@ func (f *ForumRepo) CheckDuplicate(ctx context.Context, userID uid.UID, title, c
 	if got != value { // value already exist
 		return uerr.New(uerr.DuplicatedError, "content is duplicated in 5 minutes")
 	}
+	return nil
+}
+
+type MainTag struct {
+	Tags []string
+}
+
+func NewMainTag(tx *postgres.TxAdapter) (*MainTag, error) {
+	var tags []Tag
+	if err := tx.DB.Model(&tags).Where("type = ?", "main").Select(); err != nil {
+		return nil, dbErrWrap(err, "NewMainTag()")
+	}
+	var mainTags []string
+	for i := range tags {
+		mainTags = append(mainTags, tags[i].Name)
+	}
+	log.Debugf("NewMainTag = %+v", mainTags)
+	return &MainTag{Tags: mainTags}, nil
+}
+
+func (mt *MainTag) SetMainTags(ctx context.Context, tags []string) error {
+	var mainTags []Tag
+	tagType := "main"
+	for _, t := range tags {
+		mainTags = append(mainTags, Tag{
+			Name:    t,
+			TagType: &tagType,
+		})
+	}
+	db := postgres.GetSessionFromContext(ctx)
+	if _, err := db.Model(&mainTags).Insert(); err != nil {
+		return dbErrWrapf(err, "SetMainTags(tags=%v)", tags)
+	}
+	mt.Tags = tags
 	return nil
 }

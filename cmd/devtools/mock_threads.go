@@ -78,10 +78,7 @@ func mockThreads(opt *mockThreadsOpt) error {
 	if err != nil {
 		return errors.Wrap(err, "init service")
 	}
-	mainTags, err := service.GetMainTags(ctx)
-	if err != nil {
-		return errors.Wrap(err, "get main tags")
-	}
+	mainTags := service.GetMainTags(ctx)
 	if len(mainTags) == 0 {
 		return errors.New("no main tags, set main tags first")
 	}

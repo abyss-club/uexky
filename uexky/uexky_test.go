@@ -7,8 +7,8 @@ import (
 	"math/rand"
 	"os"
 	"sort"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
@@ -27,7 +27,11 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func getNewDBCtx(t *testing.T) context.Context {
+var dbLock sync.Mutex
+
+func initEnv(t *testing.T, mainTags ...string) (*Service, context.Context) {
+	dbLock.Lock()
+	defer dbLock.Unlock()
 	if err := postgres.RebuildDB(); err != nil {
 		t.Fatal(err)
 	}
@@ -36,8 +40,19 @@ func getNewDBCtx(t *testing.T) context.Context {
 		t.Fatalf("get database: %v", err)
 	}
 	txAdapter := &postgres.TxAdapter{DB: db}
-	ctx := context.Background()
-	return txAdapter.AttachDB(ctx)
+	ctx := txAdapter.AttachDB(context.Background())
+	service, err := InitDevService()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(mainTags) != 0 {
+		t.Logf("before set mainTags, service.Maintags = %v", service.GetMainTags(context.Background()))
+		if err := service.SetMainTags(ctx, mainTags); err != nil {
+			t.Fatal(errors.Wrapf(err, "SetMainTags(tags=%v)", mainTags))
+		}
+		t.Logf("after set mainTags, service.Maintags = %v", service.GetMainTags(context.Background()))
+	}
+	return service, txAdapter.AttachDB(ctx)
 }
 
 type testUser struct {
@@ -96,10 +111,7 @@ func pubThread(t *testing.T, service *Service, u testUser) (*entity.Thread, cont
 	var user *entity.User
 	var ctx context.Context
 	user, ctx = loginUser(t, service, u)
-	mainTags, err := service.GetMainTags(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	mainTags := service.GetMainTags(ctx)
 	input := entity.ThreadInput{
 		Anonymous: rand.Intn(2) == 0,
 		Content:   uid.RandomBase64Str(50),
@@ -119,10 +131,6 @@ func pubThread(t *testing.T, service *Service, u testUser) (*entity.Thread, cont
 
 func pubThreadWithTags(t *testing.T, service *Service, u testUser, mainTag string, subTags []string) (*entity.Thread, context.Context) {
 	user, ctx := loginUser(t, service, u)
-	_, err := service.GetMainTags(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
 	input := entity.ThreadInput{
 		Anonymous: rand.Intn(2) == 0,
 		Content:   uid.RandomBase64Str(50),
@@ -162,11 +170,6 @@ func pubPost(t *testing.T, service *Service, u testUser, threadID uid.UID, quote
 
 var forumRepoComp = cmp.Comparer(func(lh, rh entity.ForumRepo) bool {
 	return (lh == nil && rh == nil) || (lh != nil && rh != nil)
-})
-
-var timeCmp = cmp.Comparer(func(lh, rh time.Time) bool {
-	delta := lh.Sub(rh)
-	return delta > (-10*time.Millisecond) && delta < (10*time.Millisecond)
 })
 
 var tagSetCmp = cmp.Comparer(func(lh, rh []*entity.Tag) bool {

@@ -29,7 +29,7 @@ var repoSet = wire.NewSet(
 	wire.Struct(new(postgres.TxAdapter), "*"),
 	wire.Bind(new(adapter.Tx), new(*postgres.TxAdapter)),
 	postgres.NewDB,
-
+	repo.NewMainTag,
 	redis.NewClient,
 
 	wire.Struct(new(repo.ForumRepo), "*"),

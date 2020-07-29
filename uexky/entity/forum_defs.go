@@ -59,19 +59,19 @@ type ForumRepo interface {
 	GetThreadSlice(ctx context.Context, search *ThreadsSearch, query SliceQuery) (*ThreadSlice, error)
 	GetThreadCatalog(ctx context.Context, id uid.UID) ([]*ThreadCatalogItem, error)
 	GetAnonyID(ctx context.Context, userID uid.UID, threadID uid.UID) (string, error)
-	InsertThread(ctx context.Context, thread *Thread) error
-	UpdateThread(ctx context.Context, id uid.UID, update *ThreadUpdate) error
+	InsertThread(ctx context.Context, thread *Thread) (*Thread, error)
+	UpdateThread(ctx context.Context, thread *Thread) (*Thread, error)
 
 	GetPost(ctx context.Context, search *PostSearch) (*Post, error)
 	GetPosts(ctx context.Context, search *PostsSearch) ([]*Post, error)
 	GetPostSlice(ctx context.Context, search *PostsSearch, query SliceQuery) (*PostSlice, error)
 	GetPostCount(ctx context.Context, search *PostsSearch) (int, error)
 	GetPostQuotedCount(ctx context.Context, id uid.UID) (int, error)
-	InsertPost(ctx context.Context, post *Post) error
-	UpdatePost(ctx context.Context, id uid.UID, update *PostUpdate) error
+	InsertPost(ctx context.Context, post *Post) (*Post, error)
+	UpdatePost(ctx context.Context, post *Post) (*Post, error)
 
 	GetTags(ctx context.Context, search *TagSearch) ([]*Tag, error)
-	GetMainTags(ctx context.Context) ([]string, error)
+	GetMainTags(ctx context.Context) []string
 	SetMainTags(ctx context.Context, tags []string) error
 
 	CheckDuplicate(ctx context.Context, userID uid.UID, title, content string) error

@@ -76,8 +76,7 @@ func (s *Service) SetUserName(ctx context.Context, name string) (*entity.User, e
 	if err != nil {
 		return nil, err
 	}
-	err = user.SetName(ctx, name)
-	return user, err
+	return user.SetName(ctx, name)
 }
 
 func (s *Service) GetUserThreads(
@@ -118,7 +117,7 @@ func (s *Service) SyncUserTags(ctx context.Context, tags []string) (*entity.User
 	if err != nil {
 		return nil, err
 	}
-	return user, user.SyncTags(ctx, tags)
+	return user.SyncTags(ctx, tags)
 }
 
 func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
@@ -129,7 +128,7 @@ func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 	if err != nil {
 		return nil, err
 	}
-	return user, user.AddSubbedTag(ctx, tag)
+	return user.AddSubbedTag(ctx, tag)
 }
 
 func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
@@ -140,7 +139,7 @@ func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.Use
 	if err != nil {
 		return nil, err
 	}
-	return user, user.DelSubbedTag(ctx, tag)
+	return user.DelSubbedTag(ctx, tag)
 }
 
 func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error) {
@@ -153,13 +152,15 @@ func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UI
 		if err != nil {
 			return false, err
 		}
-		return s.User.BanUser(ctx, post.Author.UserID)
+		_, err = s.User.BanUser(ctx, post.Author.UserID)
+		return false, err
 	} else if threadID != nil {
 		thread, err := s.Forum.GetThreadByID(ctx, *threadID)
 		if err != nil {
 			return false, err
 		}
-		return s.User.BanUser(ctx, thread.Author.UserID)
+		_, err = s.User.BanUser(ctx, thread.Author.UserID)
+		return false, err
 	}
 	return false, errors.New("must specified post id or thread id")
 }
@@ -176,7 +177,7 @@ func (s *Service) BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, 
 	if err != nil {
 		return nil, err
 	}
-	return post, post.Block(ctx)
+	return post.Block(ctx)
 }
 
 func (s *Service) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
@@ -191,7 +192,7 @@ func (s *Service) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thr
 	if err != nil {
 		return nil, err
 	}
-	return thread, thread.Lock(ctx)
+	return thread.Lock(ctx)
 }
 
 func (s *Service) BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
@@ -206,7 +207,7 @@ func (s *Service) BlockThread(ctx context.Context, threadID uid.UID) (*entity.Th
 	if err != nil {
 		return nil, err
 	}
-	return thread, thread.Block(ctx)
+	return thread.Block(ctx)
 }
 
 func (s *Service) EditTags(
@@ -223,7 +224,7 @@ func (s *Service) EditTags(
 	if err != nil {
 		return nil, err
 	}
-	return thread, thread.EditTags(ctx, mainTag, subTags)
+	return thread.EditTags(ctx, mainTag, subTags)
 }
 
 func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {
@@ -300,11 +301,11 @@ func (s *Service) SetMainTags(ctx context.Context, tags []string) error {
 	return s.Forum.SetMainTags(ctx, tags)
 }
 
-func (s *Service) GetMainTags(ctx context.Context) ([]string, error) {
+func (s *Service) GetMainTags(ctx context.Context) []string {
 	return s.Forum.GetMainTags(ctx)
 }
 
-func (s *Service) GetRecommendedTags(ctx context.Context) ([]string, error) {
+func (s *Service) GetRecommendedTags(ctx context.Context) []string {
 	return s.Forum.GetMainTags(ctx)
 }
 

@@ -68,7 +68,7 @@ CREATE TABLE public.post (
     anonymous boolean NOT NULL,
     guest boolean NOT NULL,
     author character varying(16) NOT NULL,
-    blocked boolean DEFAULT false,
+    blocked boolean NOT NULL DEFAULT false,
     content text NOT NULL,
     quoted_ids bigint[]
 );
