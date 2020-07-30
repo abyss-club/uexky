@@ -29,6 +29,7 @@ test:
     - merge_requests
     - web
     - master
+    - tags
   before_script:
     - mkdir -p .cache
     - export GOPATH="$CI_PROJECT_DIR/.cache"
