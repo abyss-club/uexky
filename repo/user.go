@@ -20,18 +20,18 @@ type UserRepo struct {
 	MainTags *MainTag
 }
 
-func (u *UserRepo) SetCode(ctx context.Context, email string, code string) error {
-	_, err := u.Redis.Set(code, email, entity.CodeExpire).Result()
+func (u *UserRepo) SetCode(ctx context.Context, email string, code entity.Code) error {
+	_, err := u.Redis.Set(string(code), email, entity.CodeExpire).Result()
 	return redisErrWrapf(err, "SetCode(email=%s, code=%s)", email, code)
 }
 
-func (u *UserRepo) GetCodeEmail(ctx context.Context, code string) (string, error) {
-	code, err := u.Redis.Get(code).Result()
-	return code, redisErrWrapf(err, "GetCodeEmail(code=%s)", code)
+func (u *UserRepo) GetCodeEmail(ctx context.Context, code entity.Code) (string, error) {
+	email, err := u.Redis.Get(string(code)).Result()
+	return email, redisErrWrapf(err, "GetCodeEmail(code=%s)", code)
 }
 
-func (u *UserRepo) DelCode(ctx context.Context, code string) error {
-	_, err := u.Redis.Del(code).Result()
+func (u *UserRepo) DelCode(ctx context.Context, code entity.Code) error {
+	_, err := u.Redis.Del(string(code)).Result()
 	return redisErrWrapf(err, "DelCode(code=%s)", code)
 }
 

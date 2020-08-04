@@ -20,12 +20,17 @@ func (s *Server) AuthHandler(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	code := req.URL.Query().Get("code")
+	next := req.URL.Query().Get("next")
+
 	token, err := s.Service.SignInByCode(req.Context(), code)
 	if err != nil {
 		writeError(w, err)
 		return
 	}
 	location := fmt.Sprintf("%s://%s", config.Get().Server.Proto, config.Get().Server.Domain)
+	if next != "" {
+		location += next
+	}
 	http.SetCookie(w, token.Cookie())
 	w.Header().Set("Location", location)
 	w.Header().Set("Cache-Control", "no-cache, no-store")

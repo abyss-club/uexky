@@ -17,13 +17,13 @@ type Service struct {
 	TxAdapter adapter.Tx
 }
 
-func (s *Service) TrySignInByEmail(ctx context.Context, email string) (entity.Code, error) {
-	return s.User.TrySignInByEmail(ctx, email)
+func (s *Service) TrySignInByEmail(ctx context.Context, email string, redirectTo string) (entity.Code, error) {
+	return s.User.TrySignInByEmail(ctx, email, redirectTo)
 }
 
 // SignInByCode is only for signed in user
 func (s *Service) SignInByCode(ctx context.Context, code string) (*entity.Token, error) {
-	user, email, err := s.User.SignInByCode(ctx, code)
+	user, email, err := s.User.SignInByCode(ctx, entity.Code(code))
 	if err != nil {
 		return nil, err
 	}

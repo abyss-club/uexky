@@ -51,7 +51,7 @@ func createUser(s *uexky.Service) (*mockUser, error) {
 	ctx := context.Background()
 	ctx = s.TxAdapter.AttachDB(ctx)
 	email := fmt.Sprintf("%s@%s", uid.RandomBase64Str(16), config.Get().Server.Domain)
-	code, err := s.TrySignInByEmail(ctx, email)
+	code, err := s.TrySignInByEmail(ctx, email, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "gen sign in code by email")
 	}

@@ -54,12 +54,13 @@ type ComplexityRoot struct {
 
 	Mutation struct {
 		AddSubbedTag func(childComplexity int, tag string) int
-		Auth         func(childComplexity int, email string) int
 		BanUser      func(childComplexity int, postID *uid.UID, threadID *uid.UID) int
 		BlockPost    func(childComplexity int, postID uid.UID) int
 		BlockThread  func(childComplexity int, threadID uid.UID) int
 		DelSubbedTag func(childComplexity int, tag string) int
 		EditTags     func(childComplexity int, threadID uid.UID, mainTag string, subTags []string) int
+		EmailAuth    func(childComplexity int, email string, redirectTo *string) int
+		GuestAuth    func(childComplexity int, redirectTo *string) int
 		LockThread   func(childComplexity int, threadID uid.UID) int
 		PubPost      func(childComplexity int, post entity.PostInput) int
 		PubThread    func(childComplexity int, thread entity.ThreadInput) int
@@ -186,7 +187,8 @@ type ComplexityRoot struct {
 type MutationResolver interface {
 	PubPost(ctx context.Context, post entity.PostInput) (*entity.Post, error)
 	PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error)
-	Auth(ctx context.Context, email string) (bool, error)
+	EmailAuth(ctx context.Context, email string, redirectTo *string) (bool, error)
+	GuestAuth(ctx context.Context, redirectTo *string) (bool, error)
 	SetName(ctx context.Context, name string) (*entity.User, error)
 	SyncTags(ctx context.Context, tags []string) (*entity.User, error)
 	AddSubbedTag(ctx context.Context, tag string) (*entity.User, error)
@@ -254,18 +256,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.AddSubbedTag(childComplexity, args["tag"].(string)), true
 
-	case "Mutation.auth":
-		if e.complexity.Mutation.Auth == nil {
-			break
-		}
-
-		args, err := ec.field_Mutation_auth_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Mutation.Auth(childComplexity, args["email"].(string)), true
-
 	case "Mutation.banUser":
 		if e.complexity.Mutation.BanUser == nil {
 			break
@@ -325,6 +315,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.EditTags(childComplexity, args["threadId"].(uid.UID), args["mainTag"].(string), args["subTags"].([]string)), true
+
+	case "Mutation.emailAuth":
+		if e.complexity.Mutation.EmailAuth == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_emailAuth_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.EmailAuth(childComplexity, args["email"].(string), args["redirectTo"].(*string)), true
+
+	case "Mutation.guestAuth":
+		if e.complexity.Mutation.GuestAuth == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_guestAuth_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.GuestAuth(childComplexity, args["redirectTo"].(*string)), true
 
 	case "Mutation.lockThread":
 		if e.complexity.Mutation.LockThread == nil {
@@ -1213,8 +1227,12 @@ type ThreadSlice {
 
 extend type Mutation {
   """ Register/Login via email address.
-  An email containing login info will be sent to the provided email address."""
-  auth(email: String!): Boolean!
+  An email containing sign info will be sent to the provided email address.
+  If the user succeed signed in, will be go to ` + "`" + `redirectTo` + "`" + ` or ` + "`" + `/` + "`" + ` (if not specified). """
+  emailAuth(email: String!, redirectTo: String): Boolean!
+  """ Guest sign in.
+  If the user succeed signed in, will be go to ` + "`" + `redirectTo` + "`" + ` or ` + "`" + `/` + "`" + ` (if not specified). """
+  guestAuth(redirectTo: String): Boolean!
   """ Set the Name of user."""
   setName(name: String!): User!
   """ Directly edit tags subscribed by user."""
@@ -1283,20 +1301,6 @@ func (ec *executionContext) field_Mutation_addSubbedTag_args(ctx context.Context
 		}
 	}
 	args["tag"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Mutation_auth_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 string
-	if tmp, ok := rawArgs["email"]; ok {
-		arg0, err = ec.unmarshalNString2string(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["email"] = arg0
 	return args, nil
 }
 
@@ -1391,6 +1395,42 @@ func (ec *executionContext) field_Mutation_editTags_args(ctx context.Context, ra
 		}
 	}
 	args["subTags"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_emailAuth_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["email"]; ok {
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["email"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["redirectTo"]; ok {
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["redirectTo"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_guestAuth_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 *string
+	if tmp, ok := rawArgs["redirectTo"]; ok {
+		arg0, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["redirectTo"] = arg0
 	return args, nil
 }
 
@@ -1792,7 +1832,7 @@ func (ec *executionContext) _Mutation_pubThread(ctx context.Context, field graph
 	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Mutation_auth(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_emailAuth(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1808,7 +1848,7 @@ func (ec *executionContext) _Mutation_auth(ctx context.Context, field graphql.Co
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_auth_args(ctx, rawArgs)
+	args, err := ec.field_Mutation_emailAuth_args(ctx, rawArgs)
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
@@ -1816,7 +1856,48 @@ func (ec *executionContext) _Mutation_auth(ctx context.Context, field graphql.Co
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().Auth(rctx, args["email"].(string))
+		return ec.resolvers.Mutation().EmailAuth(rctx, args["email"].(string), args["redirectTo"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_guestAuth(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_guestAuth_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().GuestAuth(rctx, args["redirectTo"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5842,8 +5923,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "auth":
-			out.Values[i] = ec._Mutation_auth(ctx, field)
+		case "emailAuth":
+			out.Values[i] = ec._Mutation_emailAuth(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "guestAuth":
+			out.Values[i] = ec._Mutation_guestAuth(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
