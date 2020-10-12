@@ -4,6 +4,9 @@ package repo
 
 import (
 	"time"
+
+	"gitlab.com/abyss.club/uexky/lib/uid"
+	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 var Columns = struct {
@@ -364,7 +367,7 @@ type Notification struct {
 	Key         *string                `pg:"key"`
 	CreatedAt   time.Time              `pg:"created_at,use_zero"`
 	UpdatedAt   time.Time              `pg:"updated_at,use_zero"`
-	Type        string                 `pg:"type,use_zero"`
+	Type        entity.NotiType        `pg:"type,use_zero"`
 	SendTo      *int                   `pg:"send_to"`
 	SendToGroup *string                `pg:"send_to_group"`
 	Content     map[string]interface{} `pg:"content"`
@@ -383,14 +386,14 @@ type Pgmigration struct {
 type Post struct {
 	tableName struct{} `pg:"post,,discard_unknown_columns"`
 
-	ID          int64     `pg:"id,pk"`
+	ID          uid.UID   `pg:"id,pk"`
 	CreatedAt   time.Time `pg:"created_at,use_zero"`
 	UpdatedAt   time.Time `pg:"updated_at,use_zero"`
-	ThreadID    int64     `pg:"thread_id,use_zero"`
+	ThreadID    uid.UID   `pg:"thread_id,use_zero"`
 	Anonymous   bool      `pg:"anonymous,use_zero"`
 	UserID      int       `pg:"user_id,use_zero"`
 	UserName    *string   `pg:"user_name"`
-	AnonymousID *int64    `pg:"anonymous_id"`
+	AnonymousID *uid.UID  `pg:"anonymous_id"`
 	Blocked     *bool     `pg:"blocked"`
 	Content     string    `pg:"content,use_zero"`
 
@@ -435,18 +438,18 @@ type TagsMainTag struct {
 type Thread struct {
 	tableName struct{} `pg:"thread,,discard_unknown_columns"`
 
-	ID          int64     `pg:"id,pk"`
+	ID          uid.UID   `pg:"id,pk"`
 	CreatedAt   time.Time `pg:"created_at,use_zero"`
 	UpdatedAt   time.Time `pg:"updated_at,use_zero"`
 	Anonymous   bool      `pg:"anonymous,use_zero"`
 	UserID      int       `pg:"user_id,use_zero"`
 	UserName    *string   `pg:"user_name"`
-	AnonymousID *int64    `pg:"anonymous_id"`
+	AnonymousID *uid.UID  `pg:"anonymous_id"`
 	Title       *string   `pg:"title"`
 	Content     string    `pg:"content,use_zero"`
 	Locked      bool      `pg:"locked,use_zero"`
 	Blocked     bool      `pg:"blocked,use_zero"`
-	LastPostID  int64     `pg:"last_post_id,use_zero"`
+	LastPostID  uid.UID   `pg:"last_post_id,use_zero"`
 
 	User        *User `pg:"fk:user_id"`
 	UserNameRel *User `pg:"fk:user_name"`
@@ -468,15 +471,15 @@ type ThreadsTag struct {
 type User struct {
 	tableName struct{} `pg:"user,,discard_unknown_columns"`
 
-	ID                  int       `pg:"id,pk"`
-	CreatedAt           time.Time `pg:"created_at,use_zero"`
-	UpdatedAt           time.Time `pg:"updated_at,use_zero"`
-	Email               string    `pg:"email,use_zero"`
-	Name                *string   `pg:"name"`
-	Role                string    `pg:"role,use_zero"`
-	LastReadSystemNoti  int       `pg:"last_read_system_noti,use_zero"`
-	LastReadRepliedNoti int       `pg:"last_read_replied_noti,use_zero"`
-	LastReadQuotedNoti  int       `pg:"last_read_quoted_noti,use_zero"`
+	ID                  int         `pg:"id,pk"`
+	CreatedAt           time.Time   `pg:"created_at,use_zero"`
+	UpdatedAt           time.Time   `pg:"updated_at,use_zero"`
+	Email               string      `pg:"email,use_zero"`
+	Name                *string     `pg:"name"`
+	Role                entity.Role `pg:"role,use_zero"`
+	LastReadSystemNoti  int         `pg:"last_read_system_noti,use_zero"`
+	LastReadRepliedNoti int         `pg:"last_read_replied_noti,use_zero"`
+	LastReadQuotedNoti  int         `pg:"last_read_quoted_noti,use_zero"`
 }
 
 type UsersTag struct {

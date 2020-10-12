@@ -105,6 +105,14 @@ func NewUID() UID {
 	return gGenerator.NewUID()
 }
 
+func NewUIDFromTime(t time.Time) UID {
+	timestamp := (t.Sub(timeZero) / time.Millisecond) << 18
+	count := rand.Int63n(512) << 9
+	randnum := rand.Int63n(512)
+	return UID(int64(timestamp) + count + randnum)
+
+}
+
 // UnmarshalGQL for UID scalar type in graphql
 func (u *UID) UnmarshalGQL(v interface{}) error {
 	uidStr, ok := v.(string)

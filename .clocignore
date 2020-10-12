@@ -1,0 +1,5 @@
+./graph/generated/generated.go
+./uexky/entity/generated.go
+./uexky/wire_gen.go
+./auth/wire_gen.go
+./server/wire_gen.go
