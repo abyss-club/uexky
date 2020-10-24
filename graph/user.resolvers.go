@@ -5,18 +5,24 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"gitlab.com/abyss.club/uexky/graph/generated"
+	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
-func (r *mutationResolver) Auth(ctx context.Context, email string) (bool, error) {
-	_, err := r.Service.TrySignInByEmail(ctx, email)
+func (r *mutationResolver) EmailAuth(ctx context.Context, email string, redirectTo *string) (bool, error) {
+	_, err := r.Service.TrySignInByEmail(ctx, email, algo.NullToString(redirectTo))
 	if err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+func (r *mutationResolver) GuestAuth(ctx context.Context, redirectTo *string) (bool, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 func (r *mutationResolver) SetName(ctx context.Context, name string) (*entity.User, error) {

@@ -5,6 +5,7 @@ package entity
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/algo"
@@ -32,9 +33,9 @@ func (s *UserService) RequirePermission(ctx context.Context, action Action) (*Us
 
 // -- sign in/up by email
 
-func newAuthMail(email string, code Code) *adapter.Mail {
+func newAuthMail(email string, code Code, redirectTo string) *adapter.Mail {
 	srvCfg := &(config.Get().Server)
-	authURL := code.SignInURL()
+	authURL := code.SignInURL(redirectTo)
 	return &adapter.Mail{
 		From:    fmt.Sprintf("auth@%s", srvCfg.Domain),
 		To:      email,
@@ -44,20 +45,23 @@ func newAuthMail(email string, code Code) *adapter.Mail {
 	}
 }
 
-func (s *UserService) TrySignInByEmail(ctx context.Context, email string) (Code, error) {
+func (s *UserService) TrySignInByEmail(ctx context.Context, email string, redirectTo string) (Code, error) {
 	// TODO: validate email
+	if redirectTo != "" && !strings.HasPrefix(redirectTo, "/") {
+		return "", uerr.New(uerr.ParamsError, "invalid redirect target")
+	}
 	code := Code(uid.RandomBase64Str(CodeLength))
-	if err := s.Repo.SetCode(ctx, email, string(code)); err != nil {
+	if err := s.Repo.SetCode(ctx, email, code); err != nil {
 		return "", errors.Wrapf(err, "TrySignInByEmail(email=%s)", email)
 	}
-	mail := newAuthMail(email, code)
+	mail := newAuthMail(email, code, redirectTo)
 	if err := s.Mail.SendEmail(ctx, mail); err != nil {
 		return "", errors.Wrapf(err, "TrySignInByEmail(email=%s)", email)
 	}
 	return code, nil
 }
 
-func (s *UserService) SignInByCode(ctx context.Context, code string) (*User, string, error) {
+func (s *UserService) SignInByCode(ctx context.Context, code Code) (*User, string, error) {
 	email, err := s.Repo.GetCodeEmail(ctx, code)
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "SignInByCode(code=%s)", code)

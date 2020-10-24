@@ -61,12 +61,12 @@ var signInUserCmd = &cobra.Command{
 		}
 		ctx := context.Background()
 		ctx = service.TxAdapter.AttachDB(ctx)
-		code, err := service.TrySignInByEmail(ctx, devFlags.email)
+		code, err := service.TrySignInByEmail(ctx, devFlags.email, "")
 		if err != nil {
 			log.Fatal(err)
 		}
 		if devFlags.method == "url" {
-			fmt.Println("Sign In URL: ", code.SignInURL())
+			fmt.Println("Sign In URL: ", code.SignInURL(""))
 			return
 		}
 		token, err := service.SignInByCode(ctx, string(code))

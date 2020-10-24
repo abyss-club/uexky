@@ -69,7 +69,7 @@ func loginUser(t *testing.T, service *Service, u testUser) (*entity.User, contex
 
 func signedInUser(t *testing.T, service *Service, u testUser) (*entity.User, context.Context) {
 	ctx := service.TxAdapter.AttachDB(context.Background())
-	code, err := service.TrySignInByEmail(ctx, u.email)
+	code, err := service.TrySignInByEmail(ctx, u.email, "")
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "TrySignInByEmail"))
 	}

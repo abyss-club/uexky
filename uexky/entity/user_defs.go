@@ -23,9 +23,9 @@ type AuthInfo struct {
 }
 
 type UserRepo interface {
-	SetCode(ctx context.Context, email string, code string) error
-	GetCodeEmail(ctx context.Context, code string) (string, error)
-	DelCode(ctx context.Context, code string) error
+	SetCode(ctx context.Context, email string, code Code) error
+	GetCodeEmail(ctx context.Context, code Code) (string, error)
+	DelCode(ctx context.Context, code Code) error
 
 	GetUserByID(ctx context.Context, id uid.UID) (*User, error)
 	GetUserByAuthInfo(ctx context.Context, ai AuthInfo) (*User, error)
@@ -55,9 +55,9 @@ const authEmailHTML = `<html>
 
 type Code string
 
-func (c Code) SignInURL() string {
+func (c Code) SignInURL(redirectTo string) string {
 	srvCfg := &(config.Get().Server)
-	return fmt.Sprintf("%s://%s/auth/?code=%s", srvCfg.Proto, srvCfg.APIDomain, c)
+	return fmt.Sprintf("%s://%s/auth/?code=%s&next=%s", srvCfg.Proto, srvCfg.APIDomain, c, redirectTo)
 }
 
 type Token struct {

@@ -58,7 +58,7 @@ func TestService_CtxWithUserByToken(t *testing.T) {
 			var gotToken *entity.Token
 			var err error
 			if tt.args.email != "" {
-				code, err := service.TrySignInByEmail(tt.args.ctx, tt.args.email)
+				code, err := service.TrySignInByEmail(tt.args.ctx, tt.args.email, "")
 				if err != nil {
 					t.Fatal(errors.Wrap(err, "TrySignInByEmail"))
 				}
