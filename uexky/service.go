@@ -4,79 +4,43 @@ import (
 	"context"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"gitlab.com/abyss.club/uexky/lib/algo"
+	"gitlab.com/abyss.club/uexky/lib/config"
+	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 type Service struct {
-	User      *entity.UserService
-	Forum     *entity.ForumService
-	Noti      *entity.NotiService
 	TxAdapter adapter.Tx
-}
 
-func (s *Service) TrySignInByEmail(ctx context.Context, email string, redirectTo string) (entity.Code, error) {
-	return s.User.TrySignInByEmail(ctx, email, redirectTo)
-}
-
-// SignInByCode is only for signed in user
-func (s *Service) SignInByCode(ctx context.Context, code string) (*entity.Token, error) {
-	user, email, err := s.User.SignInByCode(ctx, entity.Code(code))
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		user, err = s.User.NewUser(ctx, &entity.User{Email: &email, Role: entity.RoleNormal, ID: uid.NewUID()})
-		if err != nil {
-			return nil, err
-		}
-		if err := s.Noti.NewNotiOnNewUser(ctx, user); err != nil {
-			log.Errorf("%+v", err)
-		}
-	}
-	return user.SetToken(ctx, nil)
-}
-
-// CtxWithUserByToken add user to context by tok is for both signed user and guest user.
-func (s *Service) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, *entity.Token, error) {
-	user, token, err := s.User.SignInByToken(ctx, tok)
-	if err != nil {
-		return nil, nil, err
-	}
-	if user == nil {
-		// must be unsigned user
-		user, err = s.User.NewUser(ctx, &entity.User{Role: entity.RoleGuest, ID: uid.NewUID()})
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	// no need check token is nil
-	// if cannot find user or token, token here is nil, and will make a new one.
-	token, err = user.SetToken(ctx, token)
-	if err != nil {
-		return nil, nil, err
-	}
-	return user.AttachContext(ctx), token, err
+	Repo entity.Repo
 }
 
 func (s *Service) Profile(ctx context.Context) (*entity.User, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	return s.User.RequirePermission(ctx, entity.ActionProfile)
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionProfile); err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 func (s *Service) SetUserName(ctx context.Context, name string) (*entity.User, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionProfile); err != nil {
 		return nil, err
 	}
-	return user.SetName(ctx, name)
+	if err := user.SetName(name); err != nil {
+		return nil, err
+	}
+	return s.Repo.User.Update(ctx, user)
 }
 
 func (s *Service) GetUserThreads(
@@ -85,129 +49,147 @@ func (s *Service) GetUserThreads(
 	if err := Cost(ctx, query.Limit); err != nil {
 		return nil, err
 	}
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionProfile); err != nil {
 		return nil, err
 	}
 	if obj == nil || obj.Email != user.Email {
 		return nil, errors.New("permission denied")
 	}
-	return s.Forum.GetUserThreads(ctx, user, query)
+	return s.Repo.User.ThreadSlice(ctx, user, query)
 }
 
 func (s *Service) GetUserPosts(ctx context.Context, obj *entity.User, query entity.SliceQuery) (*entity.PostSlice, error) {
 	if err := Cost(ctx, query.Limit); err != nil {
 		return nil, err
 	}
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionProfile); err != nil {
 		return nil, err
 	}
 	if obj == nil || obj.Email != user.Email {
 		return nil, errors.New("permission denied")
 	}
-	return s.Forum.GetUserPosts(ctx, user, query)
+	return s.Repo.User.PostSlice(ctx, user, query)
 }
 
 func (s *Service) SyncUserTags(ctx context.Context, tags []string) (*entity.User, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionProfile); err != nil {
 		return nil, err
 	}
-	return user.SyncTags(ctx, tags)
+	user.SetTags(tags)
+	return s.Repo.User.Update(ctx, user)
 }
 
 func (s *Service) AddUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionProfile); err != nil {
 		return nil, err
 	}
-	return user.AddSubbedTag(ctx, tag)
+	user.AddTag(tag)
+	return s.Repo.User.Update(ctx, user)
 }
 
 func (s *Service) DelUserSubbedTag(ctx context.Context, tag string) (*entity.User, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionProfile); err != nil {
 		return nil, err
 	}
-	return user.DelSubbedTag(ctx, tag)
+	user.DelTag(tag)
+	return s.Repo.User.Update(ctx, user)
 }
 
 func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error) {
-	_, err := s.User.RequirePermission(ctx, entity.ActionBanUser)
-	if err != nil {
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionBanUser); err != nil {
 		return false, err
 	}
+	var targetID uid.UID
 	if postID != nil {
-		post, err := s.Forum.GetPostByID(ctx, *postID)
+		post, err := s.Repo.Post.GetByID(ctx, *postID)
 		if err != nil {
 			return false, err
 		}
-		_, err = s.User.BanUser(ctx, post.Author.UserID)
-		return false, err
+		targetID = post.Author.UserID
 	} else if threadID != nil {
-		thread, err := s.Forum.GetThreadByID(ctx, *threadID)
+		thread, err := s.Repo.Thread.GetByID(ctx, *threadID)
 		if err != nil {
 			return false, err
 		}
-		_, err = s.User.BanUser(ctx, thread.Author.UserID)
-		return false, err
+		targetID = thread.Author.UserID
+	} else {
+		return false, uerr.New(uerr.ParamsError, "must specified post id or thread id")
 	}
-	return false, errors.New("must specified post id or thread id")
+	target, err := s.Repo.User.GetByID(ctx, targetID)
+	if err != nil {
+		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
+			return false, nil
+		}
+		return false, errors.Wrap(err, "User.GetByID")
+	}
+	target.Ban()
+	if _, err := s.Repo.User.Update(ctx, target); err != nil {
+		return false, errors.Wrap(err, "User.Update")
+	}
+	return true, nil
 }
 
 func (s *Service) BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	_, err := s.User.RequirePermission(ctx, entity.ActionBlockPost)
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionBlockPost); err != nil {
+		return nil, err
+	}
+	post, err := s.Repo.Post.GetByID(ctx, postID)
 	if err != nil {
 		return nil, err
 	}
-	post, err := s.Forum.GetPostByID(ctx, postID)
-	if err != nil {
-		return nil, err
-	}
-	return post.Block(ctx)
+	post.Block()
+	return s.Repo.Post.Update(ctx, post)
 }
 
 func (s *Service) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	_, err := s.User.RequirePermission(ctx, entity.ActionLockThread)
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionLockThread); err != nil {
+		return nil, err
+	}
+	thread, err := s.Repo.Thread.GetByID(ctx, threadID)
 	if err != nil {
 		return nil, err
 	}
-	thread, err := s.Forum.GetThreadByID(ctx, threadID)
-	if err != nil {
-		return nil, err
-	}
-	return thread.Lock(ctx)
+	thread.Lock()
+	return s.Repo.Thread.Update(ctx, thread)
 }
 
 func (s *Service) BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	_, err := s.User.RequirePermission(ctx, entity.ActionBlockThread)
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionBlockThread); err != nil {
+		return nil, err
+	}
+	thread, err := s.Repo.Thread.GetByID(ctx, threadID)
 	if err != nil {
 		return nil, err
 	}
-	thread, err := s.Forum.GetThreadByID(ctx, threadID)
-	if err != nil {
-		return nil, err
-	}
-	return thread.Block(ctx)
+	thread.Block()
+	return s.Repo.Thread.Update(ctx, thread)
 }
 
 func (s *Service) EditTags(
@@ -216,28 +198,41 @@ func (s *Service) EditTags(
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	_, err := s.User.RequirePermission(ctx, entity.ActionEditTag)
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionEditTag); err != nil {
+		return nil, err
+	}
+	thread, err := s.Repo.Thread.GetByID(ctx, threadID)
 	if err != nil {
 		return nil, err
 	}
-	thread, err := s.Forum.GetThreadByID(ctx, threadID)
-	if err != nil {
+	if err := thread.EditTags(mainTag, subTags); err != nil {
 		return nil, err
 	}
-	return thread.EditTags(ctx, mainTag, subTags)
+	return s.Repo.Thread.Update(ctx, thread)
 }
 
 func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
+	dup, err := s.Repo.Thread.CheckIfDuplicated(ctx, thread.Title, thread.Content)
+	if err != nil {
+		return nil, errors.Wrap(err, "Thread.CheckIfDuplicated")
+	} else if dup {
+		return nil, uerr.New(uerr.ParamsError, "thread is duplicated!")
+	}
 	var newThread *entity.Thread
-	err := s.TxAdapter.WithTx(ctx, func() error {
-		user, err := s.User.RequirePermission(ctx, entity.ActionPubThread)
-		if err != nil {
+	err = s.TxAdapter.WithTx(ctx, func() error {
+		user := entity.GetCurrentUser(ctx)
+		if err := user.RequirePermission(entity.ActionPubThread); err != nil {
 			return errors.Wrapf(err, "PubThread(thread=%+v)", thread)
 		}
-		t, err := s.Forum.NewThread(ctx, user, thread)
+		t, err := entity.NewThread(user, thread)
+		if err != nil {
+			return err
+		}
+		t, err = s.Repo.Thread.Insert(ctx, t)
 		if err != nil {
 			return errors.Wrapf(err, "PubThread(thread=%+v)", thread)
 		}
@@ -253,88 +248,187 @@ func (s *Service) SearchThreads(
 	if err := Cost(ctx, query.Limit); err != nil {
 		return nil, err
 	}
-	return s.Forum.SearchThreads(ctx, tags, query)
+	return s.Repo.Thread.FindAll(ctx, &entity.ThreadsSearch{Tags: tags}, query)
 }
 
 func (s *Service) GetThreadByID(ctx context.Context, id uid.UID) (*entity.Thread, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	return s.Forum.GetThreadByID(ctx, id)
+	return s.Repo.Thread.GetByID(ctx, id)
 }
 
-func (s *Service) PubPost(ctx context.Context, post entity.PostInput) (*entity.Post, error) {
+func (s *Service) PubPost(ctx context.Context, input entity.PostInput) (*entity.Post, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	var user *entity.User
-	var res *entity.NewPostResponse
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionPubPost); err != nil {
+		return nil, errors.Wrapf(err, "PubPost(input=%+v)", input)
+	}
+	if dup, err := s.Repo.Post.CheckIfDuplicate(ctx, user.ID, input.Content); err != nil {
+		return nil, errors.Wrap(err, "Thread.CheckIfDuplicated")
+	} else if dup {
+		return nil, uerr.New(uerr.ParamsError, "post is duplicated!")
+	}
+	var post *entity.Post
+	var thread *entity.Thread
 	err := s.TxAdapter.WithTx(ctx, func() error {
 		var err error
-		user, err = s.User.RequirePermission(ctx, entity.ActionPubPost)
+		thread, err = s.Repo.Thread.GetByID(ctx, input.ThreadID)
 		if err != nil {
-			return errors.Wrapf(err, "PubPost(post=%+v)", post)
+			return errors.Wrap(err, "find thread")
 		}
-		res, err = s.Forum.NewPost(ctx, user, post)
+		var aid uid.UID
+		if input.Anonymous {
+			aid, err = s.Repo.Thread.PostAID(ctx, thread, user)
+			if err != nil {
+				return errors.Wrap(err, "Thread.PostAID")
+			}
+		}
+		post, err = entity.NewPost(&input, user, thread, aid)
 		if err != nil {
-			return errors.Wrapf(err, "PubPost(post=%+v)", post)
+			return errors.Wrap(err, "NewPost")
+		}
+		post, err = s.Repo.Post.Insert(ctx, post)
+		if err != nil {
+			return errors.Wrapf(err, "PubPost(input=%+v)", input)
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	if err := s.Noti.NewNotiOnNewPost(ctx, user, res.Thread, res.Post); err != nil {
+	quotedPost, err := s.Repo.Post.QuotedPosts(ctx, post)
+	if err != nil {
 		return nil, err
 	}
-	return res.Post, nil
+	if err := s.NewNotiOnNewPost(ctx, user, thread, post, quotedPost); err != nil {
+		return nil, err
+	}
+	return post, nil
 }
 
 func (s *Service) GetPostByID(ctx context.Context, id uid.UID) (*entity.Post, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	return s.Forum.GetPostByID(ctx, id)
+	return s.Repo.Post.GetByID(ctx, id)
+}
+
+// TODO: need to be call
+func (s *Service) LoadMainTags(ctx context.Context) error {
+	mainTags, err := s.Repo.Tag.GetMainTags(ctx)
+	if err != nil {
+		return errors.Wrap(err, "get main tags from db")
+	}
+	config.SetMainTags(mainTags)
+	return nil
 }
 
 func (s *Service) SetMainTags(ctx context.Context, tags []string) error {
-	return s.Forum.SetMainTags(ctx, tags)
+	if len(config.GetMainTags()) != 0 {
+		return uerr.New(uerr.ParamsError, "already have main tags")
+	}
+	if err := s.Repo.Tag.SetMainTags(ctx, tags); err != nil {
+		return errors.Wrap(err, "set main tags to db")
+	}
+	config.SetMainTags(tags)
+	return nil
 }
 
 func (s *Service) GetMainTags(ctx context.Context) []string {
-	return s.Forum.GetMainTags(ctx)
+	return config.GetMainTags()
 }
 
 func (s *Service) GetRecommendedTags(ctx context.Context) []string {
-	return s.Forum.GetMainTags(ctx)
+	return config.GetMainTags()
 }
 
 func (s *Service) SearchTags(ctx context.Context, query *string, limit *int) ([]*entity.Tag, error) {
-	if limit != nil {
-		if err := Cost(ctx, *limit); err != nil {
-			return nil, err
-		}
+	search := &entity.TagSearch{
+		Text:  algo.NullToString(query),
+		Limit: algo.NullToIntDefault(limit, 10),
 	}
-	return s.Forum.SearchTags(ctx, query, limit)
+	if err := Cost(ctx, search.Limit); err != nil {
+		return nil, err
+	}
+	return s.Repo.Tag.Search(ctx, search)
 }
 
 func (s *Service) GetUnreadNotiCount(ctx context.Context) (int, error) {
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionProfile); err != nil {
 		return 0, err
 	}
-	return s.Noti.GetUnreadNotiCount(ctx, user)
+	return s.Repo.Noti.GetUnreadCount(ctx, user)
 }
 
 func (s *Service) GetNotification(ctx context.Context, query entity.SliceQuery) (*entity.NotiSlice, error) {
 	if err := Cost(ctx, query.Limit); err != nil {
 		return nil, err
 	}
-	user, err := s.User.RequirePermission(ctx, entity.ActionProfile)
-	if err != nil {
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionProfile); err != nil {
 		return nil, err
 	}
-	return s.Noti.GetNotification(ctx, user, query)
+	slice, err := s.Repo.Noti.GetSlice(ctx, user, query)
+	if err != nil {
+		return nil, errors.Wrapf(err, "GetNotification(user=%+v, query=%+v)", user, query)
+	}
+	if len(slice.Notifications) > 0 {
+		lastRead := slice.Notifications[0].SortKey
+		user.UpdateReadID(lastRead)
+		if _, err := s.Repo.User.Update(ctx, user); err != nil {
+			return nil, errors.Wrapf(err, "GetNotification(user=%+v, query=%+v)", user, query)
+		}
+	}
+	return slice, nil
 }
 
-// TODO: anytime change user, should change the value in ctx.
+func (s *Service) NewNotiOnNewUser(ctx context.Context, user *entity.User) error {
+	noti, err := entity.NewWelcomeNoti(user)
+	if err != nil {
+		return err
+	}
+	return s.Repo.Noti.Insert(ctx, noti)
+}
+
+func (s *Service) NewNotiOnNewPost(ctx context.Context, user *entity.User, thread *entity.Thread, post *entity.Post, quotedPosts []*entity.Post) uerr.ErrSlice {
+	var errs uerr.ErrSlice
+	if user.ID != thread.Author.UserID {
+		if err := s.newRepliedNoti(ctx, user, thread, post); err != nil {
+			errs = append(errs, err) // not exist
+		}
+	}
+	for _, qp := range quotedPosts {
+		if user.ID != qp.Author.UserID {
+			if err := s.newQuotedNoti(ctx, thread, post, qp); err != nil {
+				errs = append(errs, err) // not exist
+			}
+		}
+	}
+	return errs
+}
+
+func (s *Service) newRepliedNoti(ctx context.Context, user *entity.User, thread *entity.Thread, reply *entity.Post) error {
+	key := entity.RepliedNotiKey(thread)
+	prev, err := s.Repo.Noti.GetByKey(ctx, user.ID, key)
+	if err != nil {
+		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
+			prev = nil
+		} else {
+			return errors.Wrap(err, "find prev replied noti")
+		}
+	}
+	noti := entity.NewRepliedNoti(prev, user, thread, reply)
+	if noti == nil {
+		return nil
+	}
+	return s.Repo.Noti.Insert(ctx, noti)
+}
+func (s *Service) newQuotedNoti(ctx context.Context, thread *entity.Thread, post *entity.Post, quotedPost *entity.Post) error {
+	noti := entity.NewQuotedNoti(thread, post, quotedPost)
+	err := s.Repo.Noti.Insert(ctx, noti)
+	return errors.Wrapf(err, "NewQuotedNoti(thread=%+v, post=%+v, quotedPost=%+v)", thread, post, quotedPost)
+}

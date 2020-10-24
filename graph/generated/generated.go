@@ -39,7 +39,9 @@ type Config struct {
 
 type ResolverRoot interface {
 	Mutation() MutationResolver
+	Post() PostResolver
 	Query() QueryResolver
+	Thread() ThreadResolver
 	User() UserResolver
 }
 
@@ -199,6 +201,10 @@ type MutationResolver interface {
 	BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error)
 	EditTags(ctx context.Context, threadID uid.UID, mainTag string, subTags []string) (*entity.Thread, error)
 }
+type PostResolver interface {
+	Quotes(ctx context.Context, obj *entity.Post) ([]*entity.Post, error)
+	QuotedCount(ctx context.Context, obj *entity.Post) (int, error)
+}
 type QueryResolver interface {
 	UnreadNotiCount(ctx context.Context) (int, error)
 	Notification(ctx context.Context, query entity.SliceQuery) (*entity.NotiSlice, error)
@@ -209,6 +215,11 @@ type QueryResolver interface {
 	ThreadSlice(ctx context.Context, tags []string, query entity.SliceQuery) (*entity.ThreadSlice, error)
 	Thread(ctx context.Context, id uid.UID) (*entity.Thread, error)
 	Profile(ctx context.Context) (*entity.User, error)
+}
+type ThreadResolver interface {
+	Replies(ctx context.Context, obj *entity.Thread, query entity.SliceQuery) (*entity.PostSlice, error)
+	ReplyCount(ctx context.Context, obj *entity.Thread) (int, error)
+	Catalog(ctx context.Context, obj *entity.Thread) ([]*entity.ThreadCatalogItem, error)
 }
 type UserResolver interface {
 	Threads(ctx context.Context, obj *entity.User, query entity.SliceQuery) (*entity.ThreadSlice, error)
@@ -1227,10 +1238,10 @@ type ThreadSlice {
 
 extend type Mutation {
   """ Register/Login via email address.
-  An email containing sign info will be sent to the provided email address.
+  An email containing sign info will be sent to the provided email address. 'redirectTo' must start as '/'.
   If the user succeed signed in, will be go to ` + "`" + `redirectTo` + "`" + ` or ` + "`" + `/` + "`" + ` (if not specified). """
   emailAuth(email: String!, redirectTo: String): Boolean!
-  """ Guest sign in.
+  """ Guest sign in. 'redirectTo' must start as '/'.
   If the user succeed signed in, will be go to ` + "`" + `redirectTo` + "`" + ` or ` + "`" + `/` + "`" + ` (if not specified). """
   guestAuth(redirectTo: String): Boolean!
   """ Set the Name of user."""
@@ -2640,7 +2651,7 @@ func (ec *executionContext) _Post_quotes(ctx context.Context, field graphql.Coll
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Quotes(ctx)
+		return ec.resolvers.Post().Quotes(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2671,7 +2682,7 @@ func (ec *executionContext) _Post_quotedCount(ctx context.Context, field graphql
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.QuotedCount(ctx)
+		return ec.resolvers.Post().QuotedCount(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4003,7 +4014,7 @@ func (ec *executionContext) _Thread_replies(ctx context.Context, field graphql.C
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Replies(ctx, args["query"].(entity.SliceQuery))
+		return ec.resolvers.Thread().Replies(rctx, obj, args["query"].(entity.SliceQuery))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4037,7 +4048,7 @@ func (ec *executionContext) _Thread_replyCount(ctx context.Context, field graphq
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ReplyCount(ctx)
+		return ec.resolvers.Thread().ReplyCount(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4071,7 +4082,7 @@ func (ec *executionContext) _Thread_catalog(ctx context.Context, field graphql.C
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Catalog(ctx)
+		return ec.resolvers.Thread().Catalog(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)

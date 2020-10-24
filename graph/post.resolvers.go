@@ -5,6 +5,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"gitlab.com/abyss.club/uexky/graph/generated"
 	"gitlab.com/abyss.club/uexky/lib/uid"
@@ -12,14 +13,26 @@ import (
 )
 
 func (r *mutationResolver) PubPost(ctx context.Context, post entity.PostInput) (*entity.Post, error) {
-	return r.Service.PubPost(ctx, post)
+	return r.Uexky.PubPost(ctx, post)
+}
+
+func (r *postResolver) Quotes(ctx context.Context, obj *entity.Post) ([]*entity.Post, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *postResolver) QuotedCount(ctx context.Context, obj *entity.Post) (int, error) {
+	panic(fmt.Errorf("not implemented"))
 }
 
 func (r *queryResolver) Post(ctx context.Context, id uid.UID) (*entity.Post, error) {
-	return r.Service.GetPostByID(ctx, id)
+	return r.Uexky.GetPostByID(ctx, id)
 }
 
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
+// Post returns generated.PostResolver implementation.
+func (r *Resolver) Post() generated.PostResolver { return &postResolver{r} }
+
 type mutationResolver struct{ *Resolver }
+type postResolver struct{ *Resolver }

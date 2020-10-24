@@ -60,7 +60,7 @@ func InitProdServer() (*Server, error) {
 		TxAdapter: txAdapter,
 	}
 	resolver := &graph.Resolver{
-		Service: service,
+		Uexky: service,
 	}
 	server := &Server{
 		Resolver:  resolver,
