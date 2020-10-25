@@ -2,6 +2,7 @@ package uexky
 
 import (
 	"context"
+	"time"
 
 	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/algo"
@@ -14,8 +15,26 @@ import (
 
 type Service struct {
 	TxAdapter adapter.Tx
+	Repo      *entity.Repo
+}
 
-	Repo entity.Repo
+func NewService(tx adapter.Tx, repo *entity.Repo) (*Service, error) {
+	s := &Service{TxAdapter: tx, Repo: repo}
+	if err := loadMainTags(s); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func loadMainTags(s *Service) error {
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+	defer cancel()
+	mainTags, err := s.Repo.Tag.GetMainTags(ctx)
+	if err != nil {
+		return errors.Wrap(err, "get main tags from db")
+	}
+	config.SetMainTags(mainTags)
+	return nil
 }
 
 // ---- User Part ----
@@ -152,11 +171,9 @@ func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*en
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	dup, err := s.Repo.Thread.CheckIfDuplicated(ctx, thread.Title, thread.Content)
+	err := s.Repo.Thread.CheckIfDuplicated(ctx, thread.Title, thread.Content)
 	if err != nil {
 		return nil, errors.Wrap(err, "Thread.CheckIfDuplicated")
-	} else if dup {
-		return nil, uerr.New(uerr.ParamsError, "thread is duplicated!")
 	}
 	var newThread *entity.Thread
 	err = s.TxAdapter.WithTx(ctx, func() error {
@@ -236,7 +253,7 @@ func (s *Service) SearchThreads(
 	if err := Cost(ctx, query.Limit); err != nil {
 		return nil, err
 	}
-	return s.Repo.Thread.FindAll(ctx, &entity.ThreadsSearch{Tags: tags}, query)
+	return s.Repo.Thread.FindSlice(ctx, &entity.ThreadsSearch{Tags: tags}, query)
 }
 
 func (s *Service) GetThreadByID(ctx context.Context, id uid.UID) (*entity.Thread, error) {
@@ -277,10 +294,8 @@ func (s *Service) PubPost(ctx context.Context, input entity.PostInput) (*entity.
 	if err := user.RequirePermission(entity.ActionPubPost); err != nil {
 		return nil, errors.Wrapf(err, "PubPost(input=%+v)", input)
 	}
-	if dup, err := s.Repo.Post.CheckIfDuplicate(ctx, user.ID, input.Content); err != nil {
+	if err := s.Repo.Post.CheckIfDuplicated(ctx, user.ID, input.Content); err != nil {
 		return nil, errors.Wrap(err, "Thread.CheckIfDuplicated")
-	} else if dup {
-		return nil, uerr.New(uerr.ParamsError, "post is duplicated!")
 	}
 	var post *entity.Post
 	var thread *entity.Thread
@@ -290,7 +305,7 @@ func (s *Service) PubPost(ctx context.Context, input entity.PostInput) (*entity.
 		if err != nil {
 			return errors.Wrap(err, "find thread")
 		}
-		var aid uid.UID
+		var aid string
 		if input.Anonymous {
 			aid, err = s.Repo.Thread.PostAID(ctx, thread, user)
 			if err != nil {
@@ -361,16 +376,6 @@ func (s *Service) GetPostByID(ctx context.Context, id uid.UID) (*entity.Post, er
 
 // ---- Tag Part ----
 
-// TODO: need to be call
-func (s *Service) LoadMainTags(ctx context.Context) error {
-	mainTags, err := s.Repo.Tag.GetMainTags(ctx)
-	if err != nil {
-		return errors.Wrap(err, "get main tags from db")
-	}
-	config.SetMainTags(mainTags)
-	return nil
-}
-
 func (s *Service) SetMainTags(ctx context.Context, tags []string) error {
 	if len(config.GetMainTags()) != 0 {
 		return uerr.New(uerr.ParamsError, "already have main tags")
@@ -411,7 +416,7 @@ func (s *Service) GetUnreadNotiCount(ctx context.Context) (int, error) {
 	return s.Repo.Noti.GetUnreadCount(ctx, user)
 }
 
-func (s *Service) GetNotification(ctx context.Context, query entity.SliceQuery) (*entity.NotiSlice, error) {
+func (s *Service) GetNotifications(ctx context.Context, query entity.SliceQuery) (*entity.NotiSlice, error) {
 	if err := Cost(ctx, query.Limit); err != nil {
 		return nil, err
 	}
@@ -460,7 +465,7 @@ func (s *Service) NewNotiOnNewPost(ctx context.Context, user *entity.User, threa
 
 func (s *Service) newRepliedNoti(ctx context.Context, user *entity.User, thread *entity.Thread, reply *entity.Post) error {
 	key := entity.RepliedNotiKey(thread)
-	prev, err := s.Repo.Noti.GetByKey(ctx, user.ID, key)
+	prev, err := s.Repo.Noti.GetByKey(ctx, user, key)
 	if err != nil {
 		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
 			prev = nil

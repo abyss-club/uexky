@@ -15,7 +15,7 @@ func (r *queryResolver) UnreadNotiCount(ctx context.Context) (int, error) {
 }
 
 func (r *queryResolver) Notification(ctx context.Context, query entity.SliceQuery) (*entity.NotiSlice, error) {
-	return r.Uexky.GetNotification(ctx, query)
+	return r.Uexky.GetNotifications(ctx, query)
 }
 
 // Query returns generated.QueryResolver implementation.

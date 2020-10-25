@@ -22,7 +22,7 @@ func (s *Server) withUser(next http.Handler) http.Handler {
 		if tokenCookie != nil {
 			tok = tokenCookie.Value
 		}
-		ctx, token, err := s.Service.CtxWithUserByToken(r.Context(), tok)
+		ctx, token, err := s.Resolver.Auth.CtxWithUserByToken(r.Context(), tok)
 		if err != nil {
 			writeError(w, err)
 			return

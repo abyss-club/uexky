@@ -41,3 +41,7 @@ func SplitTags(tags ...string) (mains []string, subs []string) {
 	}
 	return
 }
+
+func IsMainTag(tag string) bool {
+	return mainTagSet[tag]
+}

@@ -42,7 +42,7 @@ func InitProdServer() (*Server, error) {
 		Repo: userRepo,
 		Mail: adapter,
 	}
-	forumRepo := &repo.ForumRepo{
+	forumRepo := &repo.TagRepo{
 		Redis:    client,
 		MainTags: mainTag,
 	}

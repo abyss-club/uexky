@@ -8,13 +8,11 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"gitlab.com/abyss.club/uexky/graph"
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uexky/adapter"
 )
 
 type Server struct {
 	Resolver  *graph.Resolver
-	Service   *uexky.Service
 	TxAdapter adapter.Tx
 }
 

@@ -22,7 +22,7 @@ func (s *Server) AuthHandler(w http.ResponseWriter, req *http.Request) {
 	code := req.URL.Query().Get("code")
 	next := req.URL.Query().Get("next")
 
-	token, err := s.Service.SignInByCode(req.Context(), code)
+	token, err := s.Resolver.Auth.SignInByCode(req.Context(), code)
 	if err != nil {
 		writeError(w, err)
 		return

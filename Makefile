@@ -27,6 +27,7 @@ gengql: ## generate all
 
 genwire:
 	@cd ./uexky;wire;cd -
+	@cd ./auth;wire;cd -
 	@cd ./server;wire;cd -
 
 build: mod ## Build the binary file

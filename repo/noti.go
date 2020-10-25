@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
-	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
@@ -13,28 +12,9 @@ import (
 
 type NotiRepo struct{}
 
-func (n *NotiRepo) db(ctx context.Context) postgres.Session {
-	return postgres.GetSessionFromContext(ctx)
-}
-
-func (n *NotiRepo) ToEntityNoti(noti *NotificationQuery) *entity.Notification {
-	e := &entity.Notification{
-		Type:      noti.Type,
-		EventTime: noti.CreatedAt,
-		HasRead:   noti.HasRead,
-		Key:       noti.Key,
-		SortKey:   noti.SortKey,
-		Receivers: noti.Receivers,
-	}
-	if err := e.DecodeContent(noti.Content); err != nil {
-		panic(uerr.Errorf(uerr.InternalError, "read notification error: %w", err))
-	}
-	return e
-}
-
-func (n *NotiRepo) GetUserUnreadCount(ctx context.Context, user *entity.User) (int, error) {
+func (r *NotiRepo) GetUnreadCount(ctx context.Context, user *entity.User) (int, error) {
 	var count int
-	_, err := n.db(ctx).Query(orm.Scan(&count),
+	_, err := db(ctx).Query(orm.Scan(&count),
 		`SELECT count(n.*) FROM notification as n
 		LEFT JOIN public."user" as u ON u.id = ?
 		WHERE sort_key > u.last_read_noti AND n.updated_at > u.created_at
@@ -44,28 +24,26 @@ func (n *NotiRepo) GetUserUnreadCount(ctx context.Context, user *entity.User) (i
 	return count, dbErrWrapf(err, "GetUserUnreadCount(user=%+v)", user)
 }
 
-func (n *NotiRepo) GetNotiByKey(ctx context.Context, userID uid.UID, key string) (*entity.Notification, error) {
+func (r *NotiRepo) GetByKey(ctx context.Context, user *entity.User, key string) (*entity.Notification, error) {
 	var notification NotificationQuery
-	err := n.db(ctx).Model(&notification).
+	err := db(ctx).Model(&notification).
 		Column("notification.*").
 		ColumnExpr("u.last_read_noti >= sort_key as has_read").
-		Join(`LEFT JOIN public."user" as u ON u.id = ?`, userID).
+		Join(`LEFT JOIN public."user" as u ON u.id = ?`, user.ID).
 		Where("key = ?", key).Select()
 	if err != nil {
 		if err == pg.ErrNoRows {
 			return nil, nil
 		}
-		return nil, dbErrWrapf(err, "GetNotiByKey(userID=%v, key=%s)", userID, key)
+		return nil, dbErrWrapf(err, "GetNotiByKey(userID=%v, key=%s)", user.ID, key)
 	}
-	return n.ToEntityNoti(&notification), nil
+	return notification.ToEntity(), nil
 }
 
-func (n *NotiRepo) GetNotiSlice(
-	ctx context.Context, user *entity.User, query entity.SliceQuery,
-) (*entity.NotiSlice, error) {
+func (r *NotiRepo) GetSlice(ctx context.Context, user *entity.User, query entity.SliceQuery) (*entity.NotiSlice, error) {
 	var notifications []NotificationQuery
 	receivers := user.NotiReceivers()
-	q := n.db(ctx).Model(&notifications).
+	q := db(ctx).Model(&notifications).
 		Column("notification.*").
 		ColumnExpr("u.last_read_noti >= sort_key as has_read").
 		Join(`LEFT JOIN public."user" as u on u.id = ?`, user.ID).
@@ -100,7 +78,7 @@ func (n *NotiRepo) GetNotiSlice(
 	sliceInfo := &entity.SliceInfo{HasNext: len(notifications) > query.Limit}
 	var entities []*entity.Notification
 	dealSlice := func(i int, isFirst bool, isLast bool) {
-		entities = append(entities, n.ToEntityNoti(&notifications[i]))
+		entities = append(entities, (&notifications[i]).ToEntity())
 		if isFirst {
 			sliceInfo.FirstCursor = notifications[i].SortKey.ToBase64String()
 		}
@@ -115,38 +93,31 @@ func (n *NotiRepo) GetNotiSlice(
 	}, nil
 }
 
-func (n *NotiRepo) InsertNoti(ctx context.Context, noti *entity.Notification) error {
-	notification := &Notification{
-		Key:       noti.Key,
-		SortKey:   noti.SortKey,
-		Type:      noti.Type,
-		Receivers: noti.Receivers,
-	}
-	content, err := noti.EncodeContent()
+func (r *NotiRepo) Insert(ctx context.Context, noti *entity.Notification) error {
+	n, err := NewNotificaionFromEntity(noti)
 	if err != nil {
 		return err
 	}
-	notification.Content = content
-	_, err = n.db(ctx).Model(notification).Insert()
+	_, err = db(ctx).Model(n).Insert()
 	return dbErrWrapf(err, "InsertNoti(noti=%+v)", noti)
 }
 
-func (n *NotiRepo) UpdateNotiContent(ctx context.Context, noti *entity.Notification) error {
+func (r *NotiRepo) UpdateContent(ctx context.Context, noti *entity.Notification) error {
 	content, err := noti.EncodeContent()
 	if err != nil {
 		return err
 	}
 	var notification Notification
-	_, err = n.db(ctx).Model(&notification).
+	_, err = db(ctx).Model(&notification).
 		Set("content = ?", content).
 		Set("sort_key = ?", noti.SortKey).
 		Where("key = ?", noti.Key).Update()
 	return dbErrWrapf(err, "UpdateNotiContent(noti=%+v)", noti)
 }
 
-func (n *NotiRepo) UpdateReadID(ctx context.Context, userID uid.UID, id uid.UID) error {
-	user := &User{}
-	_, err := n.db(ctx).Model(user).
-		Set("last_read_noti = ?", id).Where("id = ?", userID).Update()
-	return dbErrWrapf(err, "UpdateReadID(userID=%v, id=%v)", userID, id)
+func (r *NotiRepo) UpdateReadID(ctx context.Context, user *entity.User, id uid.UID) error {
+	u := &User{}
+	_, err := db(ctx).Model(u).
+		Set("last_read_noti = ?", id).Where("id = ?", user.ID).Update()
+	return dbErrWrapf(err, "UpdateReadID(userID=%v, id=%v)", user.ID, id)
 }

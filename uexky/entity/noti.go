@@ -19,12 +19,12 @@ type NotiService struct {
 
 type NotiRepo interface {
 	GetUnreadCount(ctx context.Context, user *User) (int, error)
+	GetByKey(ctx context.Context, user *User, key string) (*Notification, error)
 	GetSlice(ctx context.Context, user *User, query SliceQuery) (*NotiSlice, error)
 	Insert(ctx context.Context, notification *Notification) error
-	GetByKey(ctx context.Context, userID uid.UID, key string) (*Notification, error)
 
-	UpdateNotiContent(ctx context.Context, noti *Notification) error
-	UpdateReadID(ctx context.Context, userID uid.UID, id uid.UID) error
+	UpdateContent(ctx context.Context, noti *Notification) error
+	UpdateReadID(ctx context.Context, user *User, id uid.UID) error
 }
 
 type Notification struct {
@@ -97,6 +97,7 @@ func NewRepliedNoti(prev *Notification, user *User, thread *Thread, reply *Post)
 		Type:      NotiTypeReplied,
 		Key:       RepliedNotiKey(thread),
 		SortKey:   reply.ID,
+		EventTime: time.Now(),
 		Receivers: []Receiver{SendToUser(thread.Author.UserID)},
 	}
 	if prev != nil {

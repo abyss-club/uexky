@@ -2,6 +2,7 @@ package entity
 
 import (
 	"context"
+	"time"
 
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
@@ -29,6 +30,8 @@ type User struct {
 	Tags         []string `json:"tags"`
 	LastReadNoti uid.UID  `json:"-"`
 }
+
+const GuestExpireTime = 30 * time.Hour * 24
 
 func NewSignedInUser(email string) *User {
 	return &User{

@@ -10,19 +10,15 @@ import (
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
-type ThreadSearch struct {
-	ID *uid.UID
-}
-
 type ThreadsSearch struct {
 	UserID *uid.UID
 	Tags   []string
 }
 
 type ThreadRepo interface {
-	CheckIfDuplicated(ctx context.Context, title *string, content string) (bool, error)
+	CheckIfDuplicated(ctx context.Context, title *string, content string) error
 	GetByID(ctx context.Context, id uid.UID) (*Thread, error)
-	FindAll(ctx context.Context, params *ThreadsSearch, query SliceQuery) (*ThreadSlice, error)
+	FindSlice(ctx context.Context, params *ThreadsSearch, query SliceQuery) (*ThreadSlice, error)
 
 	Insert(ctx context.Context, thread *Thread) (*Thread, error)
 	Update(ctx context.Context, thread *Thread) (*Thread, error)
@@ -30,7 +26,7 @@ type ThreadRepo interface {
 	Replies(ctx context.Context, thread *Thread, query SliceQuery) (*PostSlice, error)
 	ReplyCount(ctx context.Context, thread *Thread) (int, error)
 	Catalog(ctx context.Context, thread *Thread) ([]*ThreadCatalogItem, error)
-	PostAID(ctx context.Context, thread *Thread, user *User) (uid.UID, error)
+	PostAID(ctx context.Context, thread *Thread, user *User) (string, error)
 }
 
 type Thread struct {
