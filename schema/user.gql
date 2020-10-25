@@ -22,14 +22,6 @@ extend type Mutation {
 
   """ Operations for moderators."""
   banUser(postId: UID, threadId: UID): Boolean!
-  """ Operations for moderators."""
-  blockPost(postId: UID!): Post!
-  """ Operations for moderators."""
-  lockThread(threadId: UID!): Thread!
-  """ Operations for moderators."""
-  blockThread(threadId: UID!): Thread!
-  """ Operations for moderators."""
-  editTags(threadId: UID!, mainTag: String!, subTags: [String!]!): Thread!
 }
 
 enum Role {

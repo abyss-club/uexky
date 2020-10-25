@@ -188,7 +188,11 @@ type ComplexityRoot struct {
 
 type MutationResolver interface {
 	PubPost(ctx context.Context, post entity.PostInput) (*entity.Post, error)
+	BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, error)
 	PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error)
+	LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error)
+	BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error)
+	EditTags(ctx context.Context, threadID uid.UID, mainTag string, subTags []string) (*entity.Thread, error)
 	EmailAuth(ctx context.Context, email string, redirectTo *string) (bool, error)
 	GuestAuth(ctx context.Context, redirectTo *string) (bool, error)
 	SetName(ctx context.Context, name string) (*entity.User, error)
@@ -196,10 +200,6 @@ type MutationResolver interface {
 	AddSubbedTag(ctx context.Context, tag string) (*entity.User, error)
 	DelSubbedTag(ctx context.Context, tag string) (*entity.User, error)
 	BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UID) (bool, error)
-	BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, error)
-	LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error)
-	BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error)
-	EditTags(ctx context.Context, threadID uid.UID, mainTag string, subTags []string) (*entity.Thread, error)
 }
 type PostResolver interface {
 	Quotes(ctx context.Context, obj *entity.Post) ([]*entity.Post, error)
@@ -1113,6 +1113,8 @@ type QuotedNoti {
 extend type Mutation {
   """ Publish a new post."""
   pubPost(post: PostInput!): Post!
+  """ Operations for moderators."""
+  blockPost(postId: UID!): Post!
 }
 
 """ Input object describing a Post to be published."""
@@ -1180,6 +1182,12 @@ type Tag {
 extend type Mutation {
   """ Publish a new Thread."""
   pubThread(thread: ThreadInput!): Thread!
+  """ Operations for moderators."""
+  lockThread(threadId: UID!): Thread!
+  """ Operations for moderators."""
+  blockThread(threadId: UID!): Thread!
+  """ Operations for moderators."""
+  editTags(threadId: UID!, mainTag: String!, subTags: [String!]!): Thread!
 }
 
 """ Construct a new Thread."""
@@ -1255,14 +1263,6 @@ extend type Mutation {
 
   """ Operations for moderators."""
   banUser(postId: UID, threadId: UID): Boolean!
-  """ Operations for moderators."""
-  blockPost(postId: UID!): Post!
-  """ Operations for moderators."""
-  lockThread(threadId: UID!): Thread!
-  """ Operations for moderators."""
-  blockThread(threadId: UID!): Thread!
-  """ Operations for moderators."""
-  editTags(threadId: UID!, mainTag: String!, subTags: [String!]!): Thread!
 }
 
 enum Role {
@@ -1802,6 +1802,47 @@ func (ec *executionContext) _Mutation_pubPost(ctx context.Context, field graphql
 	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_blockPost(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_blockPost_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().BlockPost(rctx, args["postId"].(uid.UID))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*entity.Post)
+	fc.Result = res
+	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_pubThread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -1827,6 +1868,129 @@ func (ec *executionContext) _Mutation_pubThread(ctx context.Context, field graph
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Mutation().PubThread(rctx, args["thread"].(entity.ThreadInput))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*entity.Thread)
+	fc.Result = res
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_lockThread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_lockThread_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().LockThread(rctx, args["threadId"].(uid.UID))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*entity.Thread)
+	fc.Result = res
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_blockThread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_blockThread_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().BlockThread(rctx, args["threadId"].(uid.UID))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*entity.Thread)
+	fc.Result = res
+	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_editTags(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_editTags_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().EditTags(rctx, args["threadId"].(uid.UID), args["mainTag"].(string), args["subTags"].([]string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2128,170 +2292,6 @@ func (ec *executionContext) _Mutation_banUser(ctx context.Context, field graphql
 	res := resTmp.(bool)
 	fc.Result = res
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Mutation_blockPost(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Mutation",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_blockPost_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().BlockPost(rctx, args["postId"].(uid.UID))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*entity.Post)
-	fc.Result = res
-	return ec.marshalNPost2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐPost(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Mutation_lockThread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Mutation",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_lockThread_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().LockThread(rctx, args["threadId"].(uid.UID))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*entity.Thread)
-	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Mutation_blockThread(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Mutation",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_blockThread_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().BlockThread(rctx, args["threadId"].(uid.UID))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*entity.Thread)
-	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Mutation_editTags(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Mutation",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_editTags_args(ctx, rawArgs)
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	fc.Args = args
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().EditTags(rctx, args["threadId"].(uid.UID), args["mainTag"].(string), args["subTags"].([]string))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*entity.Thread)
-	fc.Result = res
-	return ec.marshalNThread2ᚖgitlabᚗcomᚋabyssᚗclubᚋuexkyᚋuexkyᚋentityᚐThread(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _NotiSlice_notifications(ctx context.Context, field graphql.CollectedField, obj *entity.NotiSlice) (ret graphql.Marshaler) {
@@ -5929,8 +5929,28 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "blockPost":
+			out.Values[i] = ec._Mutation_blockPost(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "pubThread":
 			out.Values[i] = ec._Mutation_pubThread(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "lockThread":
+			out.Values[i] = ec._Mutation_lockThread(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "blockThread":
+			out.Values[i] = ec._Mutation_blockThread(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "editTags":
+			out.Values[i] = ec._Mutation_editTags(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -5966,26 +5986,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "banUser":
 			out.Values[i] = ec._Mutation_banUser(ctx, field)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "blockPost":
-			out.Values[i] = ec._Mutation_blockPost(ctx, field)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "lockThread":
-			out.Values[i] = ec._Mutation_lockThread(ctx, field)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "blockThread":
-			out.Values[i] = ec._Mutation_blockThread(ctx, field)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "editTags":
-			out.Values[i] = ec._Mutation_editTags(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

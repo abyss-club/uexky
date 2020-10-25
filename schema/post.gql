@@ -6,6 +6,8 @@ extend type Query {
 extend type Mutation {
   """ Publish a new post."""
   pubPost(post: PostInput!): Post!
+  """ Operations for moderators."""
+  blockPost(postId: UID!): Post!
 }
 
 """ Input object describing a Post to be published."""

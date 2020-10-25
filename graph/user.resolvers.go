@@ -45,22 +45,6 @@ func (r *mutationResolver) BanUser(ctx context.Context, postID *uid.UID, threadI
 	return r.Uexky.BanUser(ctx, postID, threadID)
 }
 
-func (r *mutationResolver) BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, error) {
-	return r.Uexky.BlockPost(ctx, postID)
-}
-
-func (r *mutationResolver) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
-	return r.Uexky.LockThread(ctx, threadID)
-}
-
-func (r *mutationResolver) BlockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
-	return r.Uexky.BlockThread(ctx, threadID)
-}
-
-func (r *mutationResolver) EditTags(ctx context.Context, threadID uid.UID, mainTag string, subTags []string) (*entity.Thread, error) {
-	return r.Uexky.EditTags(ctx, threadID, mainTag, subTags)
-}
-
 func (r *queryResolver) Profile(ctx context.Context) (*entity.User, error) {
 	return r.Uexky.Profile(ctx)
 }

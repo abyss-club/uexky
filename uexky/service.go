@@ -18,6 +18,8 @@ type Service struct {
 	Repo entity.Repo
 }
 
+// ---- User Part ----
+
 func (s *Service) Profile(ctx context.Context) (*entity.User, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
@@ -144,20 +146,36 @@ func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UI
 	return true, nil
 }
 
-func (s *Service) BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, error) {
+// ---- Thread Part ----
+
+func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
-	user := entity.GetCurrentUser(ctx)
-	if err := user.RequirePermission(entity.ActionBlockPost); err != nil {
-		return nil, err
-	}
-	post, err := s.Repo.Post.GetByID(ctx, postID)
+	dup, err := s.Repo.Thread.CheckIfDuplicated(ctx, thread.Title, thread.Content)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "Thread.CheckIfDuplicated")
+	} else if dup {
+		return nil, uerr.New(uerr.ParamsError, "thread is duplicated!")
 	}
-	post.Block()
-	return s.Repo.Post.Update(ctx, post)
+	var newThread *entity.Thread
+	err = s.TxAdapter.WithTx(ctx, func() error {
+		user := entity.GetCurrentUser(ctx)
+		if err := user.RequirePermission(entity.ActionPubThread); err != nil {
+			return errors.Wrapf(err, "PubThread(thread=%+v)", thread)
+		}
+		t, err := entity.NewThread(user, thread)
+		if err != nil {
+			return err
+		}
+		t, err = s.Repo.Thread.Insert(ctx, t)
+		if err != nil {
+			return errors.Wrapf(err, "PubThread(thread=%+v)", thread)
+		}
+		newThread = t
+		return nil
+	})
+	return newThread, err
 }
 
 func (s *Service) LockThread(ctx context.Context, threadID uid.UID) (*entity.Thread, error) {
@@ -212,36 +230,6 @@ func (s *Service) EditTags(
 	return s.Repo.Thread.Update(ctx, thread)
 }
 
-func (s *Service) PubThread(ctx context.Context, thread entity.ThreadInput) (*entity.Thread, error) {
-	if err := Cost(ctx, 1); err != nil {
-		return nil, err
-	}
-	dup, err := s.Repo.Thread.CheckIfDuplicated(ctx, thread.Title, thread.Content)
-	if err != nil {
-		return nil, errors.Wrap(err, "Thread.CheckIfDuplicated")
-	} else if dup {
-		return nil, uerr.New(uerr.ParamsError, "thread is duplicated!")
-	}
-	var newThread *entity.Thread
-	err = s.TxAdapter.WithTx(ctx, func() error {
-		user := entity.GetCurrentUser(ctx)
-		if err := user.RequirePermission(entity.ActionPubThread); err != nil {
-			return errors.Wrapf(err, "PubThread(thread=%+v)", thread)
-		}
-		t, err := entity.NewThread(user, thread)
-		if err != nil {
-			return err
-		}
-		t, err = s.Repo.Thread.Insert(ctx, t)
-		if err != nil {
-			return errors.Wrapf(err, "PubThread(thread=%+v)", thread)
-		}
-		newThread = t
-		return nil
-	})
-	return newThread, err
-}
-
 func (s *Service) SearchThreads(
 	ctx context.Context, tags []string, query entity.SliceQuery,
 ) (*entity.ThreadSlice, error) {
@@ -257,6 +245,29 @@ func (s *Service) GetThreadByID(ctx context.Context, id uid.UID) (*entity.Thread
 	}
 	return s.Repo.Thread.GetByID(ctx, id)
 }
+
+func (s *Service) GetThreadReplies(ctx context.Context, thread *entity.Thread, query entity.SliceQuery) (*entity.PostSlice, error) {
+	if err := Cost(ctx, query.Limit); err != nil {
+		return nil, err
+	}
+	postSlice, err := s.Repo.Thread.Replies(ctx, thread, query)
+	if err != nil {
+		return nil, errors.Wrap(err, "Thread.Replies")
+	}
+	return postSlice, err
+}
+
+func (s *Service) GetThreadReplyCount(ctx context.Context, thread *entity.Thread) (int, error) {
+	count, err := s.Repo.Thread.ReplyCount(ctx, thread)
+	return count, errors.Wrap(err, "Thread.ReplyCount")
+}
+
+func (s *Service) GetThreadCatalog(ctx context.Context, thread *entity.Thread) ([]*entity.ThreadCatalogItem, error) {
+	catalogs, err := s.Repo.Thread.Catalog(ctx, thread)
+	return catalogs, errors.Wrap(err, "Thread.Catalog")
+}
+
+// ---- Post Part ----
 
 func (s *Service) PubPost(ctx context.Context, input entity.PostInput) (*entity.Post, error) {
 	if err := Cost(ctx, 1); err != nil {
@@ -309,12 +320,46 @@ func (s *Service) PubPost(ctx context.Context, input entity.PostInput) (*entity.
 	return post, nil
 }
 
+func (s *Service) BlockPost(ctx context.Context, postID uid.UID) (*entity.Post, error) {
+	if err := Cost(ctx, 1); err != nil {
+		return nil, err
+	}
+	user := entity.GetCurrentUser(ctx)
+	if err := user.RequirePermission(entity.ActionBlockPost); err != nil {
+		return nil, err
+	}
+	post, err := s.Repo.Post.GetByID(ctx, postID)
+	if err != nil {
+		return nil, err
+	}
+	post.Block()
+	return s.Repo.Post.Update(ctx, post)
+}
+
+func (s *Service) GetPostQuotedPosts(ctx context.Context, post *entity.Post) ([]*entity.Post, error) {
+	quotes, err := s.Repo.Post.QuotedPosts(ctx, post)
+	if err != nil {
+		return nil, errors.Wrap(err, "Post.QuotedPosts")
+	}
+	return quotes, nil
+}
+
+func (s *Service) GetPostQuotedCount(ctx context.Context, post *entity.Post) (int, error) {
+	count, err := s.Repo.Post.QuotedCount(ctx, post)
+	if err != nil {
+		return 0, errors.Wrap(err, "Post.QuotedCount")
+	}
+	return count, nil
+}
+
 func (s *Service) GetPostByID(ctx context.Context, id uid.UID) (*entity.Post, error) {
 	if err := Cost(ctx, 1); err != nil {
 		return nil, err
 	}
 	return s.Repo.Post.GetByID(ctx, id)
 }
+
+// ---- Tag Part ----
 
 // TODO: need to be call
 func (s *Service) LoadMainTags(ctx context.Context) error {
@@ -355,6 +400,8 @@ func (s *Service) SearchTags(ctx context.Context, query *string, limit *int) ([]
 	}
 	return s.Repo.Tag.Search(ctx, search)
 }
+
+// ---- Notification Part ----
 
 func (s *Service) GetUnreadNotiCount(ctx context.Context) (int, error) {
 	user := entity.GetCurrentUser(ctx)
