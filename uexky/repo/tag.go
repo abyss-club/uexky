@@ -32,7 +32,7 @@ func (r *TagRepo) SetMainTags(ctx context.Context, mainTags []string) error {
 			TagType: &tagType,
 		})
 	}
-	if _, err := db(ctx).Model(&mainTags).Insert(); err != nil {
+	if _, err := db(ctx).Model(&tags).Insert(); err != nil {
 		return dbErrWrapf(err, "SetMainTags(tags=%v)", tags)
 	}
 	return nil

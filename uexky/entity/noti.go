@@ -19,7 +19,7 @@ type NotiService struct {
 
 type NotiRepo interface {
 	GetUnreadCount(ctx context.Context, user *User) (int, error)
-	GetByKey(ctx context.Context, user *User, key string) (*Notification, error)
+	GetByKey(ctx context.Context, userID uid.UID, key string) (*Notification, error)
 	GetSlice(ctx context.Context, user *User, query SliceQuery) (*NotiSlice, error)
 	Insert(ctx context.Context, notification *Notification) error
 
@@ -36,6 +36,10 @@ type Notification struct {
 	Key       string     `json:"-"` // use to merge notification, must be unique
 	SortKey   uid.UID    `json:"-"` // use to sort and mark read for notification
 	Receivers []Receiver `json:"-"`
+}
+
+func (n *Notification) String() string {
+	return fmt.Sprintf("<Notification:Type(%s):Key(%s):SortKey(%v)>", n.Type, n.Key, n.SortKey)
 }
 
 // -- Receiver
@@ -96,7 +100,7 @@ func NewRepliedNoti(prev *Notification, user *User, thread *Thread, reply *Post)
 	noti := &Notification{
 		Type:      NotiTypeReplied,
 		Key:       RepliedNotiKey(thread),
-		SortKey:   reply.ID,
+		SortKey:   uid.NewUID(),
 		EventTime: time.Now(),
 		Receivers: []Receiver{SendToUser(thread.Author.UserID)},
 	}
@@ -146,10 +150,6 @@ func NewQuotedNoti(thread *Thread, post *Post, quotedPost *Post) *Notification {
 	}
 	log.Infof("NewQuotedNoti, post %v quote post %v, key=%s", post, quotedPost, noti.Key)
 	return noti
-}
-
-func (n *Notification) String() string {
-	return fmt.Sprintf("<Notification:%s:%s:%v>", n.Type, n.Key, n.SortKey)
 }
 
 func (n *Notification) DecodeContent(m map[string]interface{}) error {

@@ -73,7 +73,7 @@ func (u *UserRepo) Insert(ctx context.Context, user *entity.User) (*entity.User,
 			return nil, redisErrWrapf(err, "InsertUser(user=%+v)", user)
 		}
 	} else {
-		_, err := db(ctx).Model(&rUser).Returning("*").Insert()
+		_, err := db(ctx).Model(rUser).Returning("*").Insert()
 		if err != nil {
 			return nil, dbErrWrapf(err, "InsertUser(user=%+v)", user)
 		}
@@ -86,21 +86,22 @@ func (u *UserRepo) Update(ctx context.Context, user *entity.User) (*entity.User,
 	if user.Role == entity.RoleGuest {
 		data, err := json.Marshal(&rUser)
 		if err != nil {
-			return nil, uerr.Wrapf(uerr.ParamsError, err, "InsertUser(user=%+v)", user)
+			return nil, uerr.Wrapf(uerr.ParamsError, err, "UpdateUser(user=%+v)", user)
 		}
 		if _, err := u.Redis.Set(userRedisKey(user.ID), data, entity.GuestExpireTime).Result(); err != nil {
-			return nil, redisErrWrapf(err, "InsertUser(user=%+v)", user)
+			return nil, redisErrWrapf(err, "UpdateUser(user=%+v)", user)
 		}
 		return user, nil
 	}
-	q := db(ctx).Model(&rUser).Where("id = ?", user.ID).
-		Set("name = ?", user.Name).
-		Set("role = ?", user.Role).
-		Set("tags = ?", pg.Array(user.Tags)).
+	q := db(ctx).Model(rUser).Where("id = ?", rUser.ID).
+		Set("name = ?", rUser.Name).
+		Set("role = ?", rUser.Role).
+		Set("tags = ?", pg.Array(rUser.Tags)).
+		Set("last_read_noti = ?", rUser.LastReadNoti).
 		Returning("*")
 	_, err := q.Update()
 	if err != nil {
-		return nil, errors.Wrapf(err, "InsertUser(user=%+v)", user)
+		return nil, errors.Wrapf(err, "UpdateUser(user=%+v)", user)
 	}
 	return rUser.ToEntity(), nil
 }
@@ -116,5 +117,5 @@ func (u *UserRepo) PostSlice(ctx context.Context, user *entity.User, sq entity.S
 	qf := func(prev *orm.Query) *orm.Query {
 		return prev.Where("user_id = ?", user.ID)
 	}
-	return getPostSlice(ctx, qf, &sq, false)
+	return getPostSlice(ctx, qf, &sq, true)
 }

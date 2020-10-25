@@ -23,11 +23,6 @@ type mockThreadsOpt struct {
 	minPostCount int
 }
 
-type mockUser struct {
-	Email string
-	Token string
-}
-
 var mockFlags mockThreadsOpt
 
 func init() {
@@ -47,33 +42,18 @@ var mockDataCmd = &cobra.Command{
 	},
 }
 
-func createUser(s *uexky.Service) (*mockUser, error) {
-	ctx := context.Background()
-	ctx = s.TxAdapter.AttachDB(ctx)
+func createUser(service *uexky.Service) (*entity.User, error) {
+	ctx := service.TxAdapter.AttachDB(context.Background())
 	email := fmt.Sprintf("%s@%s", uid.RandomBase64Str(16), config.Get().Server.Domain)
-	code, err := s.TrySignInByEmail(ctx, email, "")
+	ctx, err := service.AttachEmailUserToCtx(ctx, email)
 	if err != nil {
-		return nil, errors.Wrap(err, "gen sign in code by email")
+		return nil, errors.Wrap(err, "AttachEmailUserToCtx")
 	}
-	token, err := s.SignInByCode(ctx, string(code))
-	if err != nil {
-		return nil, errors.Wrap(err, "sign in by code")
-	}
-	ctx, _, err = s.CtxWithUserByToken(ctx, token.Tok)
-	if err != nil {
-		return nil, errors.Wrap(err, "login user")
-	}
-	name := fmt.Sprintf("name:%s", uid.RandomBase64Str(5))
-	log.Infof("pre create user, %s, %s", email, name)
-	if _, err := s.SetUserName(ctx, name); err != nil {
-		return nil, errors.Wrap(err, "set user name")
-	}
-	log.Infof("create user, %s, %s", email, name)
-	return &mockUser{Email: email, Token: token.Tok}, nil
+	return entity.GetCurrentUser(ctx), nil
 }
 
 func mockThreads(opt *mockThreadsOpt) error {
-	service, err := uexky.InitDevService()
+	service, err := uexky.InitUexkyService()
 	ctx := service.TxAdapter.AttachDB(context.Background())
 	if err != nil {
 		return errors.Wrap(err, "init service")
@@ -82,11 +62,11 @@ func mockThreads(opt *mockThreadsOpt) error {
 	if len(mainTags) == 0 {
 		return errors.New("no main tags, set main tags first")
 	}
-	var users []*mockUser
+	var users []*entity.User
 	for i := 0; i < opt.userCount; i++ {
 		user, err := createUser(service)
 		if err != nil {
-			return errors.Wrap(err, "create user")
+			return err
 		}
 		users = append(users, user)
 	}
@@ -126,7 +106,7 @@ func mockThreads(opt *mockThreadsOpt) error {
 }
 
 func makeThread(
-	service *uexky.Service, users []*mockUser, mainTags []string, subTags []string, postCount int, index int,
+	service *uexky.Service, users []*entity.User, mainTags []string, subTags []string, postCount int, index int,
 ) error {
 	input := &entity.ThreadInput{
 		Anonymous: rand.Intn(2) == 1,
@@ -144,10 +124,7 @@ func makeThread(
 	user := users[rand.Intn(len(users))]
 	var err error
 	ctx := service.TxAdapter.AttachDB(context.Background())
-	ctx, _, err = service.CtxWithUserByToken(ctx, user.Token)
-	if err != nil {
-		return errors.Wrap(err, "ctx with user by token")
-	}
+	ctx = user.AttachContext(ctx)
 	thread, err := service.PubThread(ctx, *input)
 	if err != nil {
 		return errors.Wrap(err, "create thread")
@@ -184,7 +161,7 @@ func quotedCount() int {
 }
 
 func makePost(
-	service *uexky.Service, users []*mockUser, thread *entity.Thread, quotedIds []uid.UID,
+	service *uexky.Service, users []*entity.User, thread *entity.Thread, quotedIds []uid.UID,
 ) (*entity.Post, error) {
 	input := &entity.PostInput{
 		ThreadID:  thread.ID,
@@ -195,10 +172,7 @@ func makePost(
 	user := users[rand.Intn(len(users))]
 	var err error
 	ctx := service.TxAdapter.AttachDB(context.Background())
-	ctx, _, err = service.CtxWithUserByToken(ctx, user.Token)
-	if err != nil {
-		return nil, errors.Wrap(err, "ctx with user by token")
-	}
+	ctx = user.AttachContext(ctx)
 	post, err := service.PubPost(ctx, *input)
 	if err != nil {
 		return nil, errors.Wrap(err, "create post")

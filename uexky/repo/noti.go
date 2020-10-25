@@ -24,18 +24,18 @@ func (r *NotiRepo) GetUnreadCount(ctx context.Context, user *entity.User) (int, 
 	return count, dbErrWrapf(err, "GetUserUnreadCount(user=%+v)", user)
 }
 
-func (r *NotiRepo) GetByKey(ctx context.Context, user *entity.User, key string) (*entity.Notification, error) {
+func (r *NotiRepo) GetByKey(ctx context.Context, userID uid.UID, key string) (*entity.Notification, error) {
 	var notification NotificationQuery
 	err := db(ctx).Model(&notification).
 		Column("notification.*").
 		ColumnExpr("u.last_read_noti >= sort_key as has_read").
-		Join(`LEFT JOIN public."user" as u ON u.id = ?`, user.ID).
+		Join(`LEFT JOIN public."user" as u ON u.id = ?`, userID).
 		Where("key = ?", key).Select()
 	if err != nil {
 		if err == pg.ErrNoRows {
 			return nil, nil
 		}
-		return nil, dbErrWrapf(err, "GetNotiByKey(userID=%v, key=%s)", user.ID, key)
+		return nil, dbErrWrapf(err, "GetNotiByKey(userID=%v, key=%s)", userID, key)
 	}
 	return notification.ToEntity(), nil
 }

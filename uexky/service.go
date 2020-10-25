@@ -30,6 +30,7 @@ func NewService(tx adapter.Tx, repo *entity.Repo) (*Service, error) {
 func loadMainTags(s *Service) error {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 	defer cancel()
+	ctx = s.TxAdapter.AttachDB(ctx)
 	mainTags, err := s.Repo.Tag.GetMainTags(ctx)
 	if err != nil {
 		return errors.Wrap(err, "get main tags from db")
@@ -172,19 +173,20 @@ func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UI
 		return false, err
 	}
 	var targetID uid.UID
-	if postID != nil {
+	switch {
+	case postID != nil:
 		post, err := s.Repo.Post.GetByID(ctx, *postID)
 		if err != nil {
 			return false, err
 		}
 		targetID = post.Author.UserID
-	} else if threadID != nil {
+	case threadID != nil:
 		thread, err := s.Repo.Thread.GetByID(ctx, *threadID)
 		if err != nil {
 			return false, err
 		}
 		targetID = thread.Author.UserID
-	} else {
+	default:
 		return false, uerr.New(uerr.ParamsError, "must specified post id or thread id")
 	}
 	target, err := s.Repo.User.GetByID(ctx, targetID)
@@ -356,16 +358,16 @@ func (s *Service) PubPost(ctx context.Context, input entity.PostInput) (*entity.
 		if err != nil {
 			return errors.Wrapf(err, "PubPost(input=%+v)", input)
 		}
+		quotedPost, err := s.Repo.Post.QuotedPosts(ctx, post)
+		if err != nil {
+			return err
+		}
+		if err := s.NewNotiOnNewPost(ctx, user, thread, post, quotedPost); err != nil {
+			return err
+		}
 		return nil
 	})
 	if err != nil {
-		return nil, err
-	}
-	quotedPost, err := s.Repo.Post.QuotedPosts(ctx, post)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.NewNotiOnNewPost(ctx, user, thread, post, quotedPost); err != nil {
 		return nil, err
 	}
 	return post, nil
@@ -501,7 +503,7 @@ func (s *Service) NewNotiOnNewPost(ctx context.Context, user *entity.User, threa
 
 func (s *Service) newRepliedNoti(ctx context.Context, user *entity.User, thread *entity.Thread, reply *entity.Post) error {
 	key := entity.RepliedNotiKey(thread)
-	prev, err := s.Repo.Noti.GetByKey(ctx, user, key)
+	prev, err := s.Repo.Noti.GetByKey(ctx, thread.Author.UserID, key)
 	if err != nil {
 		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
 			prev = nil
@@ -513,7 +515,10 @@ func (s *Service) newRepliedNoti(ctx context.Context, user *entity.User, thread 
 	if noti == nil {
 		return nil
 	}
-	return s.Repo.Noti.Insert(ctx, noti)
+	if prev == nil {
+		return s.Repo.Noti.Insert(ctx, noti)
+	}
+	return s.Repo.Noti.UpdateContent(ctx, noti)
 }
 func (s *Service) newQuotedNoti(ctx context.Context, thread *entity.Thread, post *entity.Post, quotedPost *entity.Post) error {
 	noti := entity.NewQuotedNoti(thread, post, quotedPost)

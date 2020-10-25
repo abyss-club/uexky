@@ -8,7 +8,7 @@ var mainTagSet map[string]bool
 
 func SetMainTags(tags []string) {
 	mainTags = []string{}
-	mainTagSet := map[string]bool{}
+	mainTagSet = map[string]bool{}
 	for _, t := range tags {
 		if !mainTagSet[t] {
 			mainTags = append(mainTags, t)

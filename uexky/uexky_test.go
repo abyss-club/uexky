@@ -41,7 +41,7 @@ func initEnv(t *testing.T, mainTags ...string) (*Service, context.Context) {
 	}
 	txAdapter := &postgres.TxAdapter{DB: db}
 	ctx := txAdapter.AttachDB(context.Background())
-	service, err := InitDevService()
+	service, err := InitUexkyService()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,36 +69,28 @@ func loginUser(t *testing.T, service *Service, u testUser) (*entity.User, contex
 
 func signedInUser(t *testing.T, service *Service, u testUser) (*entity.User, context.Context) {
 	ctx := service.TxAdapter.AttachDB(context.Background())
-	code, err := service.TrySignInByEmail(ctx, u.email, "")
+	ctx, err := service.AttachEmailUserToCtx(ctx, u.email)
 	if err != nil {
-		t.Fatal(errors.Wrap(err, "TrySignInByEmail"))
+		t.Fatal(errors.Wrap(err, "AttachEmailUserToCtx"))
 	}
-	token, err := service.SignInByCode(ctx, string(code))
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "SignInByCode"))
-	}
-	userCtx, _, err := service.CtxWithUserByToken(ctx, token.Tok)
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "CtxWithUserByToken"))
-	}
-	user, err := service.Profile(userCtx)
+	user, err := service.Profile(ctx)
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "Profile"))
 	}
 	if u.name != "" && user.Name == nil {
-		var err error
-		if user, err = service.SetUserName(userCtx, u.name); err != nil {
+		user, err = service.SetUserName(ctx, u.name)
+		if err != nil {
 			t.Fatal(errors.Wrap(err, "SetUserName"))
 		}
 	}
-	return user, userCtx
+	return user, ctx
 }
 
 func guestUser(t *testing.T, service *Service) (*entity.User, context.Context) {
 	ctx := service.TxAdapter.AttachDB(context.Background())
-	ctx, _, err := service.CtxWithUserByToken(ctx, "")
+	ctx, err := service.AttachGuestUserToCtx(ctx, uid.NewUID())
 	if err != nil {
-		t.Fatal(errors.Wrap(err, "CtxWithUserByToken"))
+		t.Fatal(errors.Wrap(err, "AttachGuestUserToCtx"))
 	}
 	user, err := service.Profile(ctx)
 	if err != nil {
@@ -167,10 +159,6 @@ func pubPost(t *testing.T, service *Service, u testUser, threadID uid.UID, quote
 	}
 	return post, ctx
 }
-
-var forumRepoComp = cmp.Comparer(func(lh, rh entity.ForumRepo) bool {
-	return (lh == nil && rh == nil) || (lh != nil && rh != nil)
-})
 
 var tagSetCmp = cmp.Comparer(func(lh, rh []*entity.Tag) bool {
 	sort.SliceStable(lh, func(i, j int) bool {

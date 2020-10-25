@@ -60,7 +60,7 @@ func (r *ThreadRepo) Insert(ctx context.Context, thread *entity.Thread) (*entity
 	log.Infof("InsertThread(%v)", thread)
 	t := NewThreadFromEntity(thread)
 	t.LastPostID = t.ID
-	if _, err := db(ctx).Model(&t).Returning("*").Insert(); err != nil {
+	if _, err := db(ctx).Model(t).Returning("*").Insert(); err != nil {
 		return nil, dbErrWrapf(err, "InsertThread(thread=%+v)", thread)
 	}
 	return t.ToEntity(), nil
@@ -68,7 +68,7 @@ func (r *ThreadRepo) Insert(ctx context.Context, thread *entity.Thread) (*entity
 
 func (r *ThreadRepo) Update(ctx context.Context, thread *entity.Thread) (*entity.Thread, error) {
 	t := NewThreadFromEntity(thread)
-	q := db(ctx).Model(&t).Where("id = ?", t.ID).
+	q := db(ctx).Model(t).Where("id = ?", t.ID).
 		Set("tags = ?", pg.Array(t.Tags)).
 		Set("blocked = ?", t.Blocked).
 		Set("locked = ?", t.Locked)

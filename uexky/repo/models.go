@@ -87,9 +87,7 @@ func NewThreadFromEntity(thread *entity.Thread) *Thread {
 		Blocked:   thread.Blocked,
 		Tags:      []string{thread.MainTag},
 	}
-	for _, sTag := range thread.SubTags {
-		t.Tags = append(t.Tags, sTag)
-	}
+	t.Tags = append(t.Tags, thread.SubTags...)
 	if !thread.Blocked {
 		t.Content = thread.Content
 	}

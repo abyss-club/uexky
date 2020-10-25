@@ -87,7 +87,7 @@ func (r *PostRepo) QuotedCount(ctx context.Context, post *entity.Post) (int, err
 
 func getPostSlice(ctx context.Context, qf queryFunc, sq *entity.SliceQuery, desc bool) (*entity.PostSlice, error) {
 	var posts []Post
-	q := qf(db(ctx).Model(posts))
+	q := qf(db(ctx).Model(&posts))
 	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
 		if cursor != "" {
 			c, err := uid.ParseUID(cursor)

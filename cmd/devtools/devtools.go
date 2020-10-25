@@ -8,6 +8,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/abyss.club/uexky/auth"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/uexky"
@@ -55,13 +56,12 @@ var signInUserCmd = &cobra.Command{
 		if devFlags.email == "" {
 			log.Fatalf("must specify user email")
 		}
-		service, err := uexky.InitDevService()
+		as, err := auth.InitMockAuthService()
 		if err != nil {
 			log.Fatal(err)
 		}
 		ctx := context.Background()
-		ctx = service.TxAdapter.AttachDB(ctx)
-		code, err := service.TrySignInByEmail(ctx, devFlags.email, "")
+		code, err := as.TrySignInByEmail(ctx, devFlags.email, "")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -69,7 +69,7 @@ var signInUserCmd = &cobra.Command{
 			fmt.Println("Sign In URL: ", code.SignInURL(""))
 			return
 		}
-		token, err := service.SignInByCode(ctx, string(code))
+		token, err := as.SignInByCode(ctx, code)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -84,7 +84,7 @@ var SetMainTagsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		tags := strings.Split(args[0], ",")
 		tagsTrimmed := mapArgs(tags, strings.TrimSpace)
-		service, err := uexky.InitDevService()
+		service, err := uexky.InitUexkyService()
 		if err != nil {
 			log.Fatal(err)
 		}
