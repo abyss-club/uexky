@@ -5,7 +5,6 @@ go 1.14
 require (
 	github.com/99designs/gqlgen v0.11.3
 	github.com/go-pg/pg/v9 v9.1.6
-	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v7 v7.2.0
 	github.com/golang-migrate/migrate/v4 v4.11.0
 	github.com/golang/protobuf v1.4.0 // indirect
@@ -26,6 +25,5 @@ require (
 	github.com/vektah/gqlparser/v2 v2.0.1
 	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79 // indirect
 	golang.org/x/net v0.0.0-20200501053045-e0ff5e5a1de5 // indirect
-	google.golang.org/appengine v1.6.5
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
