@@ -5,11 +5,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
-	"gitlab.com/abyss.club/uexky/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
@@ -38,6 +39,41 @@ func loadMainTags(s *Service) error {
 }
 
 // ---- User Part ----
+
+func (s *Service) AttachEmailUserToCtx(ctx context.Context, email string) (context.Context, error) {
+	user, err := s.Repo.User.GetByEmail(ctx, email)
+	if err != nil {
+		if !errors.Is(err, uerr.New(uerr.NotFoundError)) {
+			return nil, errors.Wrap(err, "User.GetByEmail")
+		}
+
+		// new signed in user
+		user = entity.NewSignedInUser(email)
+		user, err = s.Repo.User.Insert(ctx, user)
+		if err != nil {
+			return nil, errors.Wrap(err, "Create New User")
+		}
+		if err := s.NewNotiOnNewUser(ctx, user); err != nil {
+			log.Error(err, "NewNotiOnNewUser")
+		}
+	}
+	return user.AttachContext(ctx), nil
+}
+
+func (s *Service) AttachGuestUserToCtx(ctx context.Context, id uid.UID) (context.Context, error) {
+	user, err := s.Repo.User.GetGuestByID(ctx, id)
+	if err != nil {
+		if !errors.Is(err, uerr.New(uerr.NotFoundError)) {
+			return nil, errors.Wrap(err, "User.GetByID")
+		}
+		user = entity.NewGuestUser(id)
+		user, err = s.Repo.User.Insert(ctx, user)
+		if err != nil {
+			return nil, errors.Wrap(err, "Create New Guest User")
+		}
+	}
+	return user.AttachContext(ctx), nil
+}
 
 func (s *Service) Profile(ctx context.Context) (*entity.User, error) {
 	if err := Cost(ctx, 1); err != nil {

@@ -3,7 +3,7 @@ package mocks
 import (
 	"context"
 
-	"gitlab.com/abyss.club/uexky/uexky/adapter"
+	"gitlab.com/abyss.club/uexky/adapter"
 )
 
 type MailAdapter struct{}

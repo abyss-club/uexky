@@ -5,36 +5,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-redis/redis/v7"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
-	"gitlab.com/abyss.club/uexky/uexky"
-	"gitlab.com/abyss.club/uexky/uexky/adapter"
-	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 type Service struct {
-	R     R
-	Repo  Repo
-	Mail  adapter.MailAdapter
-	Uexky *uexky.Service
+	Repo *Repo
+	Mail adapter.MailAdapter
 }
 
-type R struct {
-	User entity.UserRepo
-}
-
-type Repo interface {
-	SetCode(ctx context.Context, email string, code Code) error
-	GetCodeEmail(ctx context.Context, code Code) (string, error)
-	DelCode(ctx context.Context, code Code) error
-
-	GetUserByAuthInfo(ctx context.Context, ai AuthInfo) (*entity.User, error)
-	GetToken(ctx context.Context, tok string) (*Token, error)
-	SetToken(ctx context.Context, token *Token) error
-}
+// ---- Sign in/sign up by Email ----
 
 func (s *Service) TrySignInByEmail(ctx context.Context, email string, redirectTo string) (Code, error) {
 	// TODO: validate email
@@ -76,89 +60,41 @@ const authEmailHTML = `<html>
 `
 
 // SignInByCode is only for signed in user
-func (s *Service) SignInByCode(ctx context.Context, code string) (*Token, error) {
-	user, email, err := s.signInByCode(ctx, Code(code))
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		user := entity.NewSignedInUser(email)
-		user, err = s.R.User.Insert(ctx, user)
-		if err != nil {
-			return nil, err
-		}
-		if err := s.Uexky.NewNotiOnNewUser(ctx, user); err != nil {
-			log.Errorf("%+v", err)
-		}
-	}
-	return s.SetToken(ctx, user, nil)
-}
-
-func (s *Service) signInByCode(ctx context.Context, code Code) (*entity.User, string, error) {
+func (s *Service) SignInByCode(ctx context.Context, code Code) (*Token, error) {
 	email, err := s.Repo.GetCodeEmail(ctx, code)
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "SignInByCode(code=%s)", code)
+		return nil, errors.Wrapf(err, "SignInByCode(code=%s)", code)
 	}
-	user, err := s.Repo.GetUserByAuthInfo(ctx, AuthInfo{Email: email, IsGuest: false})
-	if err != nil {
-		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
-			return nil, email, nil
-		}
-		return nil, "", errors.Wrapf(err, "SignInByCode(code=%s)", code)
+	token := NewEmailToken(email)
+	if err := s.Repo.SetToken(ctx, token); err != nil {
+		return nil, errors.Wrap(err, "SetToken")
 	}
-	return user, email, nil
+	return token, nil
 }
 
-// CtxWithUserByToken add user to context by tok is for both signed user and guest user.
-func (s *Service) CtxWithUserByToken(ctx context.Context, tok string) (context.Context, *Token, error) {
-	user, token, err := s.signInByToken(ctx, tok)
-	if err != nil {
-		return nil, nil, err
+// ---- Guest user ----
+
+func (s *Service) SignInGuestUser(ctx context.Context) (*Token, error) {
+	token := NewGuestToken()
+	if err := s.Repo.SetToken(ctx, token); err != nil {
+		return nil, errors.Wrap(err, "SetToken")
 	}
-	if user == nil {
-		// must be unsigned user
-		user := entity.NewGuestUser()
-		_, err = s.R.User.Insert(ctx, user)
-		if err != nil {
-			return nil, nil, err
-		}
-	}
-	// no need check token is nil
-	// if cannot find user or token, token here is nil, and will make a new one.
-	token, err = s.SetToken(ctx, user, token)
-	if err != nil {
-		return nil, nil, err
-	}
-	return user.AttachContext(ctx), token, err
+	return token, nil
 }
 
-func (s *Service) signInByToken(ctx context.Context, tok string) (*entity.User, *Token, error) {
-	if tok == "" {
-		return nil, nil, nil
-	}
+// ---- Regular apis ----
+
+func (s *Service) GetToken(ctx context.Context, tok string) (*Token, error) {
 	token, err := s.Repo.GetToken(ctx, tok)
 	if err != nil {
-		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
-			return nil, nil, nil
-		}
-		return nil, nil, errors.Wrapf(err, "SignInByToken(tok=%s)", tok)
+		return nil, errors.Wrap(err, "GetToken")
 	}
-	user, err := s.Repo.GetUserByAuthInfo(ctx, AuthInfo{UserID: token.UserID, IsGuest: token.UserRole == entity.RoleGuest})
-	return user, token, errors.Wrapf(err, "SignInByToken(tok=%s)", tok)
-}
-
-func (s *Service) SetToken(ctx context.Context, u *entity.User, prev *Token) (*Token, error) {
-	var token *Token
-	if prev != nil {
-		token = prev
-	} else {
-		token = &Token{
-			Tok:      uid.RandomBase64Str(TokenLength),
-			Expire:   TokenExpire,
-			UserID:   u.ID,
-			UserRole: u.Role,
+	// refresh ttl
+	if err := s.Repo.SetToken(ctx, token); err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil, nil
 		}
+		return nil, errors.Wrap(err, "GetToken")
 	}
-	err := s.Repo.SetToken(ctx, token)
-	return token, errors.Wrap(err, "SetToken")
+	return token, nil
 }

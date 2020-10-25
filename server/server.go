@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/99designs/gqlgen/graphql/playground"
+	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/graph"
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/uexky/adapter"
 )
 
 type Server struct {

@@ -23,23 +23,41 @@ func userRedisKey(id uid.UID) string {
 	return fmt.Sprintf("uid:%s", id.ToBase64String())
 }
 
-func (u *UserRepo) GetByID(ctx context.Context, id uid.UID) (*entity.User, error) {
+func (u *UserRepo) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
+	var user User
+	if err := db(ctx).Model(&user).Where("email = ?", email).Select(); err != nil {
+		return nil, dbErrWrapf(err, "GetUserByEmail(email=%v)", email)
+	}
+	return user.ToEntity(), nil
+}
+
+func (u *UserRepo) GetGuestByID(ctx context.Context, id uid.UID) (*entity.User, error) {
 	var user User
 	data, err := u.Redis.Get(userRedisKey(id)).Result()
 	if err != nil {
-		if !errors.Is(err, redis.Nil) {
-			return nil, redisErrWrapf(err, "GetUserByID(id=%v)", id)
-		}
-		// err is redis.Nil, find in database
-		if err := db(ctx).Model(&user).Where("id = ?", id).Select(); err != nil {
-			return nil, dbErrWrapf(err, "GetUserByID(id=%v)", id)
-		}
-		return user.ToEntity(), nil
+		return nil, redisErrWrapf(err, "GetUser(id=%v)", id)
 	}
 	if err := json.Unmarshal([]byte(data), &user); err != nil {
 		return nil, uerr.Wrapf(uerr.InternalError, err, "unmarshal user: %s", data)
 	}
 	return user.ToEntity(), nil
+}
+
+func (u *UserRepo) GetByID(ctx context.Context, id uid.UID) (*entity.User, error) {
+	user, err := u.GetGuestByID(ctx, id)
+	if err == nil {
+		return user, nil
+	}
+	if !errors.Is(err, redis.Nil) {
+		return nil, redisErrWrapf(err, "GetUserByID(id=%v)", id)
+	}
+
+	// err is redis.Nil, find in database
+	var rUser User
+	if err := db(ctx).Model(&rUser).Where("id = ?", id).Select(); err != nil {
+		return nil, dbErrWrapf(err, "GetUserByID(id=%v)", id)
+	}
+	return rUser.ToEntity(), nil
 }
 
 func (u *UserRepo) Insert(ctx context.Context, user *entity.User) (*entity.User, error) {

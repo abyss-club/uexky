@@ -5,7 +5,6 @@ package graph
 
 import (
 	"context"
-	"fmt"
 
 	"gitlab.com/abyss.club/uexky/graph/generated"
 	"gitlab.com/abyss.club/uexky/lib/algo"
@@ -19,10 +18,6 @@ func (r *mutationResolver) EmailAuth(ctx context.Context, email string, redirect
 		return false, err
 	}
 	return true, nil
-}
-
-func (r *mutationResolver) GuestAuth(ctx context.Context, redirectTo *string) (bool, error) {
-	panic(fmt.Errorf("not implemented"))
 }
 
 func (r *mutationResolver) SetName(ctx context.Context, name string) (*entity.User, error) {

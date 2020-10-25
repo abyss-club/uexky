@@ -11,7 +11,9 @@ import (
 
 type UserRepo interface {
 	// Read
+	GetByEmail(ctx context.Context, email string) (*User, error)
 	GetByID(ctx context.Context, id uid.UID) (*User, error)
+	GetGuestByID(ctx context.Context, id uid.UID) (*User, error)
 
 	// Write
 	Insert(ctx context.Context, user *User) (*User, error)
@@ -41,9 +43,9 @@ func NewSignedInUser(email string) *User {
 	}
 }
 
-func NewGuestUser() *User {
+func NewGuestUser(id uid.UID) *User {
 	return &User{
-		ID:   uid.NewUID(),
+		ID:   id,
 		Role: RoleGuest,
 	}
 }
@@ -110,6 +112,7 @@ type contextUser struct {
 	User *User
 }
 
+// GetCurrentUser maybe nil
 func GetCurrentUser(ctx context.Context) *User {
 	user, ok := ctx.Value(userKey).(contextUser)
 	if !ok {

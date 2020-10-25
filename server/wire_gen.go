@@ -6,13 +6,13 @@
 package server
 
 import (
+	"gitlab.com/abyss.club/uexky/auth"
 	"gitlab.com/abyss.club/uexky/graph"
 	"gitlab.com/abyss.club/uexky/lib/mail"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/redis"
-	"gitlab.com/abyss.club/uexky/repo"
 	"gitlab.com/abyss.club/uexky/uexky"
-	"gitlab.com/abyss.club/uexky/uexky/entity"
+	"gitlab.com/abyss.club/uexky/uexky/repo"
 )
 
 // Injectors from wire.go:
@@ -22,6 +22,14 @@ func InitProdServer() (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	authRepo := &auth.Repo{
+		Redis: client,
+	}
+	adapter := mail.NewAdapter()
+	service := &auth.Service{
+		Repo: authRepo,
+		Mail: adapter,
+	}
 	db, err := postgres.NewDB()
 	if err != nil {
 		return nil, err
@@ -29,42 +37,17 @@ func InitProdServer() (*Server, error) {
 	txAdapter := &postgres.TxAdapter{
 		DB: db,
 	}
-	mainTag, err := repo.NewMainTag(txAdapter)
+	entityRepo := repo.NewRepo(client)
+	uexkyService, err := uexky.NewService(txAdapter, entityRepo)
 	if err != nil {
 		return nil, err
 	}
-	userRepo := &repo.UserRepo{
-		Redis:    client,
-		MainTags: mainTag,
-	}
-	adapter := mail.NewAdapter()
-	userService := &entity.UserService{
-		Repo: userRepo,
-		Mail: adapter,
-	}
-	forumRepo := &repo.TagRepo{
-		Redis:    client,
-		MainTags: mainTag,
-	}
-	forumService := &entity.ForumService{
-		Repo: forumRepo,
-	}
-	notiRepo := &repo.NotiRepo{}
-	notiService := &entity.NotiService{
-		Repo: notiRepo,
-	}
-	service := &uexky.Service{
-		User:      userService,
-		Forum:     forumService,
-		Noti:      notiService,
-		TxAdapter: txAdapter,
-	}
 	resolver := &graph.Resolver{
-		Uexky: service,
+		Auth:  service,
+		Uexky: uexkyService,
 	}
 	server := &Server{
 		Resolver:  resolver,
-		Service:   service,
 		TxAdapter: txAdapter,
 	}
 	return server, nil

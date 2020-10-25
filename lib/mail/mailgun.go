@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/mailgun/mailgun-go/v4"
+	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
-	"gitlab.com/abyss.club/uexky/uexky/adapter"
 )
 
 type Adapter struct {

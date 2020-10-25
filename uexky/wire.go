@@ -4,18 +4,21 @@ package uexky
 
 import (
 	"github.com/google/wire"
+	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/redis"
-	"gitlab.com/abyss.club/uexky/repo"
-	"gitlab.com/abyss.club/uexky/uexky/adapter"
+	"gitlab.com/abyss.club/uexky/uexky/repo"
 )
 
 var repoSet = wire.NewSet(
 	wire.Struct(new(postgres.TxAdapter), "*"),
 	wire.Bind(new(adapter.Tx), new(*postgres.TxAdapter)),
 	postgres.NewDB,
-	redis.NewClient,
 	repo.NewRepo,
+)
+
+var InfraSet = wire.NewSet(
+	redis.NewClient,
 )
 
 var ServiceSet = wire.NewSet(
@@ -24,6 +27,6 @@ var ServiceSet = wire.NewSet(
 )
 
 func InitUexkyService() (*Service, error) {
-	wire.Build(ServiceSet)
+	wire.Build(InfraSet, ServiceSet)
 	return &Service{}, nil
 }

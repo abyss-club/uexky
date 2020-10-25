@@ -11,6 +11,7 @@ import (
 	"github.com/go-redis/redis/v7"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
@@ -21,7 +22,7 @@ type ThreadRepo struct {
 }
 
 func (r *ThreadRepo) CheckIfDuplicated(ctx context.Context, title *string, content string) error {
-	msg := fmt.Sprintf("%s:%s", title, content)
+	msg := fmt.Sprintf("%s:%s", algo.NullToString(title), content)
 	key := fmt.Sprintf("%x", sha256.Sum256([]byte(msg)))
 	value := fmt.Sprintf("%v", rand.Int63())
 	if _, err := r.Redis.SetNX(key, value, entity.DuplicatedCheckRange).Result(); err != nil {

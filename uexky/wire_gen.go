@@ -7,10 +7,10 @@ package uexky
 
 import (
 	"github.com/google/wire"
+	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/redis"
-	"gitlab.com/abyss.club/uexky/repo"
-	"gitlab.com/abyss.club/uexky/uexky/adapter"
+	"gitlab.com/abyss.club/uexky/uexky/repo"
 )
 
 // Injectors from wire.go:
@@ -37,7 +37,9 @@ func InitUexkyService() (*Service, error) {
 
 // wire.go:
 
-var repoSet = wire.NewSet(wire.Struct(new(postgres.TxAdapter), "*"), wire.Bind(new(adapter.Tx), new(*postgres.TxAdapter)), postgres.NewDB, redis.NewClient, repo.NewRepo)
+var repoSet = wire.NewSet(wire.Struct(new(postgres.TxAdapter), "*"), wire.Bind(new(adapter.Tx), new(*postgres.TxAdapter)), postgres.NewDB, repo.NewRepo)
+
+var InfraSet = wire.NewSet(redis.NewClient)
 
 var ServiceSet = wire.NewSet(
 	repoSet,

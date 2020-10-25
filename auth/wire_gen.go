@@ -7,14 +7,10 @@ package auth
 
 import (
 	"github.com/google/wire"
+	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/mail"
-	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/redis"
 	"gitlab.com/abyss.club/uexky/mocks"
-	"gitlab.com/abyss.club/uexky/repo"
-	"gitlab.com/abyss.club/uexky/uexky"
-	"gitlab.com/abyss.club/uexky/uexky/adapter"
-	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
 // Injectors from wire.go:
@@ -24,33 +20,15 @@ func InitAuthService() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	userRepo := &repo.UserRepo{
+	repo := &Repo{
 		Redis: client,
 	}
-	r := R{
-		User: userRepo,
-	}
-	repoImpl := &RepoImpl{}
 	adapter := mail.NewAdapter()
-	db, err := postgres.NewDB()
-	if err != nil {
-		return nil, err
+	service := &Service{
+		Repo: repo,
+		Mail: adapter,
 	}
-	txAdapter := &postgres.TxAdapter{
-		DB: db,
-	}
-	entityRepo := repo.NewRepo(client)
-	service, err := uexky.NewService(txAdapter, entityRepo)
-	if err != nil {
-		return nil, err
-	}
-	authService := &Service{
-		R:     r,
-		Repo:  repoImpl,
-		Mail:  adapter,
-		Uexky: service,
-	}
-	return authService, nil
+	return service, nil
 }
 
 func InitMockAuthService() (*Service, error) {
@@ -58,33 +36,15 @@ func InitMockAuthService() (*Service, error) {
 	if err != nil {
 		return nil, err
 	}
-	userRepo := &repo.UserRepo{
+	repo := &Repo{
 		Redis: client,
 	}
-	r := R{
-		User: userRepo,
-	}
-	repoImpl := &RepoImpl{}
 	mailAdapter := &mocks.MailAdapter{}
-	db, err := postgres.NewDB()
-	if err != nil {
-		return nil, err
+	service := &Service{
+		Repo: repo,
+		Mail: mailAdapter,
 	}
-	txAdapter := &postgres.TxAdapter{
-		DB: db,
-	}
-	entityRepo := repo.NewRepo(client)
-	service, err := uexky.NewService(txAdapter, entityRepo)
-	if err != nil {
-		return nil, err
-	}
-	authService := &Service{
-		R:     r,
-		Repo:  repoImpl,
-		Mail:  mailAdapter,
-		Uexky: service,
-	}
-	return authService, nil
+	return service, nil
 }
 
 // wire.go:
@@ -93,14 +53,12 @@ var mailSet = wire.NewSet(wire.Bind(new(adapter.MailAdapter), new(*mail.Adapter)
 
 var mockMailSet = wire.NewSet(wire.Bind(new(adapter.MailAdapter), new(*mocks.MailAdapter)), wire.Struct(new(mocks.MailAdapter), "*"))
 
-var repoSet = wire.NewSet(wire.Bind(new(Repo), new(*RepoImpl)), wire.Struct(new(RepoImpl), "*"), wire.Bind(new(entity.UserRepo), new(*repo.UserRepo)), wire.Struct(new(repo.UserRepo), "*"), wire.Struct(new(R), "*"))
+var InfraSet = wire.NewSet(redis.NewClient)
 
 var ServiceSet = wire.NewSet(
-	repoSet,
-	mailSet, uexky.ServiceSet, wire.Struct(new(Service), "*"),
+	mailSet, wire.Struct(new(Repo), "*"), wire.Struct(new(Service), "*"),
 )
 
 var MockServiceSet = wire.NewSet(
-	repoSet,
-	mockMailSet, uexky.ServiceSet, wire.Struct(new(Service), "*"),
+	mockMailSet, wire.Struct(new(Repo), "*"), wire.Struct(new(Service), "*"),
 )
