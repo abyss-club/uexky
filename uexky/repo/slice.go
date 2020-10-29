@@ -1,42 +1,67 @@
 package repo
 
 import (
+	"fmt"
+
 	"github.com/go-pg/pg/v9/orm"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
-type AppleWhereAndOrderFunc func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error)
-type DealSliceResultFunc func(i int, isFirst bool, isLast bool)
-
-func applySliceQuery(fn AppleWhereAndOrderFunc, q *orm.Query, sq *entity.SliceQuery) (*orm.Query, error) {
-	if (sq.After == nil && sq.Before == nil) || (sq.After != nil && sq.Before != nil) {
-		return nil, uerr.New(uerr.ParamsError, "one and only one of before or after must be specified")
-	}
-	if sq.Limit == 0 {
-		return nil, uerr.New(uerr.ParamsError, "limit must be specified")
-	}
-	nq := q.Limit(sq.Limit + 1) // limit+1 for "hasNext"
-	if sq.After != nil {
-		return fn(nq, true, *sq.After)
-	}
-	return fn(nq, false, *sq.Before)
+type sliceHelper struct {
+	Column      string
+	Desc        bool
+	TransCursor func(string) (interface{}, error)
+	SQ          *entity.SliceQuery
 }
 
-func dealSliceResult(fn DealSliceResultFunc, sq *entity.SliceQuery, length int, reverse bool) {
-	rstLen := sq.Limit
-	if length < sq.Limit {
+func (h *sliceHelper) Select(q *orm.Query) error {
+	if (h.SQ.After == nil && h.SQ.Before == nil) || (h.SQ.After != nil && h.SQ.Before != nil) {
+		return uerr.New(uerr.ParamsError, "one and only one of before or after must be specified")
+	}
+	if h.SQ.Limit == 0 {
+		return uerr.New(uerr.ParamsError, "limit must be specified")
+	}
+
+	var cursor string
+	if h.SQ.After != nil {
+		cursor = *h.SQ.After
+	} else {
+		cursor = *h.SQ.Before
+	}
+	value, err := h.TransCursor(cursor)
+	if err != nil {
+		return uerr.New(uerr.ParamsError, "invalid cursor")
+	}
+	var op string
+	if (h.SQ.After != nil && h.Desc) || (h.SQ.Before != nil && !h.Desc) {
+		op = "<"
+	} else {
+		op = ">"
+	}
+	order := h.Column
+	if (h.SQ.Before != nil && !h.Desc) || (h.SQ.After != nil && h.Desc) {
+		order += " DESC"
+	}
+	q = q.Where(fmt.Sprintf("%s %s ?", h.Column, op), value).
+		Order(order).Limit(h.SQ.Limit + 1)
+	return q.Select()
+}
+
+func (h *sliceHelper) DealResults(length int, fn func(i int)) {
+	rstLen := h.SQ.Limit
+	if length < h.SQ.Limit {
 		rstLen = length
 	}
 	first := 0
 	end := rstLen
 	step := 1
-	if reverse {
+	if h.SQ.Before != nil { // reverse result
 		first = rstLen - 1
 		end = -1
 		step = -1
 	}
 	for i := first; i != end; i += step {
-		fn(i, i == first, i == end-step)
+		fn(i)
 	}
 }

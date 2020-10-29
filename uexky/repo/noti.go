@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
@@ -42,51 +41,29 @@ func (r *NotiRepo) GetByKey(ctx context.Context, userID uid.UID, key string) (*e
 
 func (r *NotiRepo) GetSlice(ctx context.Context, user *entity.User, query entity.SliceQuery) (*entity.NotiSlice, error) {
 	var notifications []NotificationQuery
-	receivers := user.NotiReceivers()
+	var entities []*entity.Notification
 	q := db(ctx).Model(&notifications).
 		Column("notification.*").
 		ColumnExpr("u.last_read_noti >= sort_key as has_read").
 		Join(`LEFT JOIN public."user" as u on u.id = ?`, user.ID).
-		Where("receivers && ?", pg.Array(receivers))
-	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
-		if cursor != "" {
-			c, err := uid.ParseUID(cursor)
-			if err != nil {
-				return nil, uerr.Wrap(uerr.ParamsError, err, "invalid cursor")
-			}
-			if !isAfter {
-				q = q.Where("sort_key > ?", c)
-			} else {
-				q = q.Where("sort_key < ?", c)
-			}
-		}
-		if !isAfter {
-			return q.Order("sort_key"), nil
-		}
-		return q.Order("sort_key DESC"), nil
+		Where("receivers && ?", pg.Array(user.NotiReceivers()))
+	h := sliceHelper{
+		Column:      "sort_key",
+		Desc:        true,
+		TransCursor: func(s string) (interface{}, error) { return uid.ParseUID(s) },
+		SQ:          &query,
 	}
-
-	var err error
-	q, err = applySliceQuery(applySlice, q, &query)
-	if err != nil {
-		return nil, err
-	}
-	if err := q.Select(); err != nil {
+	if err := h.Select(q); err != nil {
 		return nil, dbErrWrapf(err, "GetNotiSlice(user=%+v, query=%+v)", user, query)
 	}
-
-	sliceInfo := &entity.SliceInfo{HasNext: len(notifications) > query.Limit}
-	var entities []*entity.Notification
-	dealSlice := func(i int, isFirst bool, isLast bool) {
+	h.DealResults(len(entities), func(i int) {
 		entities = append(entities, (&notifications[i]).ToEntity())
-		if isFirst {
-			sliceInfo.FirstCursor = notifications[i].SortKey.ToBase64String()
-		}
-		if isLast {
-			sliceInfo.LastCursor = notifications[i].SortKey.ToBase64String()
-		}
+	})
+	sliceInfo := &entity.SliceInfo{
+		HasNext:     len(notifications) > query.Limit,
+		FirstCursor: entities[0].SortKey.ToBase64String(),
+		LastCursor:  entities[len(entities)-1].SortKey.ToBase64String(),
 	}
-	dealSliceResult(dealSlice, &query, len(notifications), query.Before != nil)
 	return &entity.NotiSlice{
 		Notifications: entities,
 		SliceInfo:     sliceInfo,

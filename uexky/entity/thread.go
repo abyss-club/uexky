@@ -30,15 +30,16 @@ type ThreadRepo interface {
 }
 
 type Thread struct {
-	ID        uid.UID   `json:"id"`
-	CreatedAt time.Time `json:"createdAt"`
-	Author    *Author   `json:"author"`
-	Title     *string   `json:"title"`
-	Content   string    `json:"content"`
-	MainTag   string    `json:"main_tag"`
-	SubTags   []string  `json:"sub_tags"`
-	Blocked   bool      `json:"blocked"`
-	Locked    bool      `json:"locked"`
+	ID         uid.UID   `json:"id"`
+	LastPostID uid.UID   `json:"-"` // for sort
+	CreatedAt  time.Time `json:"createdAt"`
+	Author     *Author   `json:"author"`
+	Title      *string   `json:"title"`
+	Content    string    `json:"content"`
+	MainTag    string    `json:"main_tag"`
+	SubTags    []string  `json:"sub_tags"`
+	Blocked    bool      `json:"blocked"`
+	Locked     bool      `json:"locked"`
 }
 
 const (

@@ -9,7 +9,6 @@ import (
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
 	"github.com/go-redis/redis/v7"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/lib/uid"
@@ -87,45 +86,26 @@ func (r *PostRepo) QuotedCount(ctx context.Context, post *entity.Post) (int, err
 
 func getPostSlice(ctx context.Context, qf queryFunc, sq *entity.SliceQuery, desc bool) (*entity.PostSlice, error) {
 	var posts []Post
-	q := qf(db(ctx).Model(&posts))
-	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
-		if cursor != "" {
-			c, err := uid.ParseUID(cursor)
-			if err != nil {
-				return nil, errors.Wrapf(err, "ParseUID(%s)", cursor)
-			}
-			if isAfter != desc {
-				q = q.Where("id > ?", c)
-			} else {
-				q.Where("id < ?", c)
-			}
-		}
-		if isAfter != desc {
-			return q.Order("id"), nil
-		}
-		return q.Order("id DESC"), nil
+	var entities []*entity.Post
+	h := sliceHelper{
+		Column: "id",
+		Desc:   desc,
+		TransCursor: func(s string) (interface{}, error) {
+			return uid.ParseUID(s)
+		},
+		SQ: sq,
 	}
-	var err error
-	q, err = applySliceQuery(applySlice, q, sq)
-	if err != nil {
-		return nil, err
-	}
-	if err := q.Select(); err != nil {
+	if err := h.Select(qf(db(ctx).Model(&posts))); err != nil {
 		return nil, dbErrWrapf(err, "GetPostSlice")
 	}
-
-	sliceInfo := &entity.SliceInfo{HasNext: len(posts) > sq.Limit}
-	var entities []*entity.Post
-	dealSlice := func(i int, isFirst bool, isLast bool) {
+	h.DealResults(len(posts), func(i int) {
 		entities = append(entities, (&posts[i]).ToEntity())
-		if isFirst {
-			sliceInfo.FirstCursor = posts[i].ID.ToBase64String()
-		}
-		if isLast {
-			sliceInfo.LastCursor = posts[i].ID.ToBase64String()
-		}
+	})
+	sliceInfo := &entity.SliceInfo{
+		HasNext:     len(posts) > sq.Limit,
+		FirstCursor: entities[0].ID.ToBase64String(),
+		LastCursor:  entities[0].ID.ToBase64String(),
 	}
-	dealSliceResult(dealSlice, sq, len(posts), sq.Before != nil)
 	return &entity.PostSlice{
 		Posts:     entities,
 		SliceInfo: sliceInfo,

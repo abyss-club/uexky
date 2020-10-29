@@ -9,7 +9,6 @@ import (
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
 	"github.com/go-redis/redis/v7"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
@@ -121,46 +120,26 @@ func (r *ThreadRepo) PostAID(ctx context.Context, thread *entity.Thread, user *e
 
 func getThreadSlice(ctx context.Context, qf queryFunc, sq *entity.SliceQuery) (*entity.ThreadSlice, error) {
 	var threads []Thread
-	q := db(ctx).Model(&threads)
-	q = qf(q)
-	applySlice := func(q *orm.Query, isAfter bool, cursor string) (*orm.Query, error) {
-		if cursor != "" {
-			c, err := uid.ParseUID(cursor)
-			if err != nil {
-				return nil, errors.Wrapf(err, "ParseUID(%s)", cursor)
-			}
-			if !isAfter {
-				q = q.Where("last_post_id > ?", c)
-			} else {
-				q = q.Where("last_post_id < ?", c)
-			}
-		}
-		if !isAfter {
-			return q.Order("last_post_id"), nil
-		}
-		return q.Order("last_post_id DESC"), nil
+	var entities []*entity.Thread
+	h := sliceHelper{
+		Column: "last_post_id",
+		Desc:   true,
+		TransCursor: func(s string) (interface{}, error) {
+			return uid.ParseUID(s)
+		},
+		SQ: sq,
 	}
-	var err error
-	q, err = applySliceQuery(applySlice, q, sq)
-	if err != nil {
-		return nil, err
-	}
-	if err := q.Select(); err != nil {
+	if err := h.Select(qf(db(ctx).Model(&threads))); err != nil {
 		return nil, dbErrWrap(err, "GetThreadSlice")
 	}
-
-	sliceInfo := &entity.SliceInfo{HasNext: len(threads) > sq.Limit}
-	var entities []*entity.Thread
-	dealSlice := func(i int, isFirst bool, isLast bool) {
+	h.DealResults(len(threads), func(i int) {
 		entities = append(entities, (&threads[i]).ToEntity())
-		if isFirst {
-			sliceInfo.FirstCursor = threads[i].LastPostID.ToBase64String()
-		}
-		if isLast {
-			sliceInfo.LastCursor = threads[i].LastPostID.ToBase64String()
-		}
+	})
+	sliceInfo := &entity.SliceInfo{
+		HasNext:     len(threads) > sq.Limit,
+		FirstCursor: entities[0].LastPostID.ToBase64String(),
+		LastCursor:  entities[len(entities)-1].LastPostID.ToBase64String(),
 	}
-	dealSliceResult(dealSlice, sq, len(threads), sq.Before != nil)
 	return &entity.ThreadSlice{
 		Threads:   entities,
 		SliceInfo: sliceInfo,

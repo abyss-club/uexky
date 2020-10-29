@@ -74,18 +74,19 @@ type Thread struct {
 }
 
 func NewThreadFromEntity(thread *entity.Thread) *Thread {
-	// unmapped: LastPostID, UpdatedAt, Content
+	// unmapped: UpdatedAt, Content
 	t := &Thread{
-		ID:        thread.ID,
-		CreatedAt: thread.CreatedAt,
-		UserID:    thread.Author.UserID,
-		Anonymous: thread.Author.Anonymous,
-		Guest:     thread.Author.Guest,
-		Author:    thread.Author.Author,
-		Title:     thread.Title,
-		Locked:    thread.Locked,
-		Blocked:   thread.Blocked,
-		Tags:      []string{thread.MainTag},
+		ID:         thread.ID,
+		LastPostID: thread.LastPostID,
+		CreatedAt:  thread.CreatedAt,
+		UserID:     thread.Author.UserID,
+		Anonymous:  thread.Author.Anonymous,
+		Guest:      thread.Author.Guest,
+		Author:     thread.Author.Author,
+		Title:      thread.Title,
+		Locked:     thread.Locked,
+		Blocked:    thread.Blocked,
+		Tags:       []string{thread.MainTag},
 	}
 	t.Tags = append(t.Tags, thread.SubTags...)
 	if !thread.Blocked {
@@ -96,8 +97,9 @@ func NewThreadFromEntity(thread *entity.Thread) *Thread {
 
 func (t *Thread) ToEntity() *entity.Thread {
 	thread := &entity.Thread{
-		ID:        t.ID,
-		CreatedAt: t.CreatedAt,
+		ID:         t.ID,
+		LastPostID: t.LastPostID,
+		CreatedAt:  t.CreatedAt,
 		Author: &entity.Author{
 			UserID:    t.UserID,
 			Guest:     t.Guest,
