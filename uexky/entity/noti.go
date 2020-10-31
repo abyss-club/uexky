@@ -81,21 +81,9 @@ func RepliedNotiKey(thread *Thread) string {
 	return fmt.Sprintf("replied:%s", thread.ID.ToBase64String())
 }
 
-func NewRepliedNoti(prev *Notification, user *User, thread *Thread, reply *Post) *Notification {
+func NewRepliedNoti(user *User, thread *Thread, reply *Post) *Notification {
 	if thread.Author.Guest {
 		return nil
-	}
-	log.Infof("NewRepliedNoti, User = %#v GetNotiByKey = %#v", user, prev)
-	content := RepliedNoti{
-		Thread: &ThreadOutline{
-			ID:      thread.ID,
-			Title:   thread.Title,
-			Content: thread.Content,
-			MainTag: thread.MainTag,
-			SubTags: thread.SubTags,
-		},
-		FirstReplyID:    reply.ID,
-		NewRepliesCount: 1,
 	}
 	noti := &Notification{
 		Type:      NotiTypeReplied,
@@ -103,19 +91,19 @@ func NewRepliedNoti(prev *Notification, user *User, thread *Thread, reply *Post)
 		SortKey:   uid.NewUID(),
 		EventTime: time.Now(),
 		Receivers: []Receiver{SendToUser(thread.Author.UserID)},
+		Content: RepliedNoti{
+			Thread: &ThreadOutline{
+				ID:      thread.ID,
+				Title:   thread.Title,
+				Content: thread.Content,
+				MainTag: thread.MainTag,
+				SubTags: thread.SubTags,
+			},
+			FirstReplyID:    reply.ID,
+			NewRepliesCount: 1,
+		},
 	}
-	if prev != nil {
-		if !prev.HasRead {
-			oldContent := prev.Content.(RepliedNoti)
-			content.NewRepliesCount = oldContent.NewRepliesCount + 1
-			content.FirstReplyID = oldContent.FirstReplyID
-		}
-		noti.Content = content
-		log.Infof("UpdateNotiContent(%#v), key=%s", noti, noti.Key)
-		return noti
-	}
-	noti.Content = content
-	log.Infof("InsertNoti(%#v), key=%s", noti, noti.Key)
+	log.Infof("NewRepliedNoti(%#v), key=%s", noti, noti.Key)
 	return noti
 }
 
@@ -190,6 +178,23 @@ func (n *Notification) EncodeContent() (map[string]interface{}, error) {
 		return nil, uerr.Wrap(uerr.ParamsError, err, "EncodeContent")
 	}
 	return m, nil
+}
+
+func (n *Notification) AddReply(user *User, thread *Thread, reply *Post) {
+	if n.Type != NotiTypeReplied {
+		panic("AddReply only support Replied Notification")
+	}
+	n.SortKey = uid.NewUID()
+	n.EventTime = time.Now()
+	content := n.Content.(RepliedNoti)
+	if n.HasRead {
+		content.FirstReplyID = reply.ID
+		content.NewRepliesCount = 1
+	} else {
+		content.NewRepliesCount++
+	}
+	n.Content = content
+	log.Infof("UpdateNotiContent(%#v), key=%s", n, n.Key)
 }
 
 // ---- special notifications ----

@@ -56,13 +56,13 @@ func (r *NotiRepo) GetSlice(ctx context.Context, user *entity.User, query entity
 	if err := h.Select(q); err != nil {
 		return nil, dbErrWrapf(err, "GetNotiSlice(user=%+v, query=%+v)", user, query)
 	}
-	h.DealResults(len(entities), func(i int) {
+	h.DealResults(len(notifications), func(i int) {
 		entities = append(entities, (&notifications[i]).ToEntity())
 	})
-	sliceInfo := &entity.SliceInfo{
-		HasNext:     len(notifications) > query.Limit,
-		FirstCursor: entities[0].SortKey.ToBase64String(),
-		LastCursor:  entities[len(entities)-1].SortKey.ToBase64String(),
+	sliceInfo := &entity.SliceInfo{HasNext: len(notifications) > query.Limit}
+	if len(entities) > 0 {
+		sliceInfo.FirstCursor = entities[0].SortKey.ToBase64String()
+		sliceInfo.LastCursor = entities[len(entities)-1].SortKey.ToBase64String()
 	}
 	return &entity.NotiSlice{
 		Notifications: entities,

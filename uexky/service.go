@@ -511,15 +511,17 @@ func (s *Service) newRepliedNoti(ctx context.Context, user *entity.User, thread 
 			return errors.Wrap(err, "find prev replied noti")
 		}
 	}
-	noti := entity.NewRepliedNoti(prev, user, thread, reply)
-	if noti == nil {
-		return nil
-	}
 	if prev == nil {
+		noti := entity.NewRepliedNoti(user, thread, reply)
+		if noti == nil {
+			return nil
+		}
 		return s.Repo.Noti.Insert(ctx, noti)
 	}
-	return s.Repo.Noti.UpdateContent(ctx, noti)
+	prev.AddReply(user, thread, reply)
+	return s.Repo.Noti.UpdateContent(ctx, prev)
 }
+
 func (s *Service) newQuotedNoti(ctx context.Context, thread *entity.Thread, post *entity.Post, quotedPost *entity.Post) error {
 	noti := entity.NewQuotedNoti(thread, post, quotedPost)
 	err := s.Repo.Noti.Insert(ctx, noti)

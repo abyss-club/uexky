@@ -101,10 +101,10 @@ func getPostSlice(ctx context.Context, qf queryFunc, sq *entity.SliceQuery, desc
 	h.DealResults(len(posts), func(i int) {
 		entities = append(entities, (&posts[i]).ToEntity())
 	})
-	sliceInfo := &entity.SliceInfo{
-		HasNext:     len(posts) > sq.Limit,
-		FirstCursor: entities[0].ID.ToBase64String(),
-		LastCursor:  entities[0].ID.ToBase64String(),
+	sliceInfo := &entity.SliceInfo{HasNext: len(posts) > sq.Limit}
+	if len(entities) > 0 {
+		sliceInfo.FirstCursor = entities[0].ID.ToBase64String()
+		sliceInfo.LastCursor = entities[len(entities)-1].ID.ToBase64String()
 	}
 	return &entity.PostSlice{
 		Posts:     entities,

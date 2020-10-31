@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-pg/pg/v9/orm"
+	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/uerr"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
@@ -16,7 +17,7 @@ type sliceHelper struct {
 }
 
 func (h *sliceHelper) Select(q *orm.Query) error {
-	if (h.SQ.After == nil && h.SQ.Before == nil) || (h.SQ.After != nil && h.SQ.Before != nil) {
+	if (h.SQ.After == nil) == (h.SQ.Before == nil) {
 		return uerr.New(uerr.ParamsError, "one and only one of before or after must be specified")
 	}
 	if h.SQ.Limit == 0 {
@@ -29,23 +30,24 @@ func (h *sliceHelper) Select(q *orm.Query) error {
 	} else {
 		cursor = *h.SQ.Before
 	}
-	value, err := h.TransCursor(cursor)
-	if err != nil {
-		return uerr.New(uerr.ParamsError, "invalid cursor")
-	}
-	var op string
-	if (h.SQ.After != nil && h.Desc) || (h.SQ.Before != nil && !h.Desc) {
-		op = "<"
-	} else {
-		op = ">"
+	if cursor != "" {
+		value, err := h.TransCursor(cursor)
+		if err != nil {
+			return errors.Wrap(err, "invalid cursor")
+		}
+		var op string
+		if (h.SQ.After != nil) == h.Desc {
+			op = "<"
+		} else {
+			op = ">"
+		}
+		q = q.Where(fmt.Sprintf("%s %s ?", h.Column, op), value)
 	}
 	order := h.Column
-	if (h.SQ.Before != nil && !h.Desc) || (h.SQ.After != nil && h.Desc) {
+	if (h.SQ.After != nil) == h.Desc {
 		order += " DESC"
 	}
-	q = q.Where(fmt.Sprintf("%s %s ?", h.Column, op), value).
-		Order(order).Limit(h.SQ.Limit + 1)
-	return q.Select()
+	return q.Order(order).Limit(h.SQ.Limit + 1).Select()
 }
 
 func (h *sliceHelper) DealResults(length int, fn func(i int)) {

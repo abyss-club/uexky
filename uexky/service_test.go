@@ -764,11 +764,15 @@ func TestService_PubThread(t *testing.T) {
 			}
 			tt.want.ID = got.ID
 			tt.want.CreatedAt = got.CreatedAt
+			tt.want.LastPostID = got.LastPostID
 			if tt.want.Author.Anonymous {
 				tt.want.Author.Author = got.Author.Author
 			}
 			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Errorf("Service.PubThread() missmatch: %s", diff)
+			}
+			if got.LastPostID != got.ID {
+				t.Errorf("New thread's last_psot_id should equal to id")
 			}
 		})
 	}

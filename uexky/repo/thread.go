@@ -135,10 +135,10 @@ func getThreadSlice(ctx context.Context, qf queryFunc, sq *entity.SliceQuery) (*
 	h.DealResults(len(threads), func(i int) {
 		entities = append(entities, (&threads[i]).ToEntity())
 	})
-	sliceInfo := &entity.SliceInfo{
-		HasNext:     len(threads) > sq.Limit,
-		FirstCursor: entities[0].LastPostID.ToBase64String(),
-		LastCursor:  entities[len(entities)-1].LastPostID.ToBase64String(),
+	sliceInfo := &entity.SliceInfo{HasNext: len(threads) > sq.Limit}
+	if len(entities) > 0 {
+		sliceInfo.FirstCursor = entities[0].LastPostID.ToBase64String()
+		sliceInfo.LastCursor = entities[len(entities)-1].LastPostID.ToBase64String()
 	}
 	return &entity.ThreadSlice{
 		Threads:   entities,
