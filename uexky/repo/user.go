@@ -9,8 +9,9 @@ import (
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
 	"github.com/go-redis/redis/v7"
-	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
+	"gitlab.com/abyss.club/uexky/lib/postgres"
+	librd "gitlab.com/abyss.club/uexky/lib/redis"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
@@ -26,7 +27,7 @@ func userRedisKey(id uid.UID) string {
 func (u *UserRepo) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
 	var user User
 	if err := db(ctx).Model(&user).Where("email = ?", email).Select(); err != nil {
-		return nil, dbErrWrapf(err, "GetUserByEmail(email=%v)", email)
+		return nil, postgres.ErrHandlef(err, "GetUserByEmail(email=%v)", email)
 	}
 	return user.ToEntity(), nil
 }
@@ -35,10 +36,10 @@ func (u *UserRepo) GetGuestByID(ctx context.Context, id uid.UID) (*entity.User, 
 	var user User
 	data, err := u.Redis.Get(userRedisKey(id)).Result()
 	if err != nil {
-		return nil, redisErrWrapf(err, "GetUser(id=%v)", id)
+		return nil, librd.ErrHandlef(err, "GetUser(id=%v)", id)
 	}
 	if err := json.Unmarshal([]byte(data), &user); err != nil {
-		return nil, uerr.Wrapf(uerr.InternalError, err, "unmarshal user: %s", data)
+		return nil, errors.Internal.Handlef(err, "unmarshal user: %s", data)
 	}
 	return user.ToEntity(), nil
 }
@@ -49,13 +50,13 @@ func (u *UserRepo) GetByID(ctx context.Context, id uid.UID) (*entity.User, error
 		return user, nil
 	}
 	if !errors.Is(err, redis.Nil) {
-		return nil, redisErrWrapf(err, "GetUserByID(id=%v)", id)
+		return nil, librd.ErrHandlef(err, "GetUserByID(id=%v)", id)
 	}
 
 	// err is redis.Nil, find in database
 	var rUser User
 	if err := db(ctx).Model(&rUser).Where("id = ?", id).Select(); err != nil {
-		return nil, dbErrWrapf(err, "GetUserByID(id=%v)", id)
+		return nil, postgres.ErrHandlef(err, "GetUserByID(id=%v)", id)
 	}
 	return rUser.ToEntity(), nil
 }
@@ -67,15 +68,15 @@ func (u *UserRepo) Insert(ctx context.Context, user *entity.User) (*entity.User,
 		rUser.UpdatedAt = time.Now()
 		data, err := json.Marshal(&rUser)
 		if err != nil {
-			return nil, uerr.Wrapf(uerr.ParamsError, err, "InsertUser(user=%+v)", user)
+			return nil, errors.BadParams.Handlef(err, "InsertUser(user=%+v)", user)
 		}
 		if _, err := u.Redis.Set(userRedisKey(user.ID), data, entity.GuestExpireTime).Result(); err != nil {
-			return nil, redisErrWrapf(err, "InsertUser(user=%+v)", user)
+			return nil, librd.ErrHandlef(err, "InsertUser(user=%+v)", user)
 		}
 	} else {
 		_, err := db(ctx).Model(rUser).Returning("*").Insert()
 		if err != nil {
-			return nil, dbErrWrapf(err, "InsertUser(user=%+v)", user)
+			return nil, postgres.ErrHandlef(err, "InsertUser(user=%+v)", user)
 		}
 	}
 	return rUser.ToEntity(), nil
@@ -86,10 +87,10 @@ func (u *UserRepo) Update(ctx context.Context, user *entity.User) (*entity.User,
 	if user.Role == entity.RoleGuest {
 		data, err := json.Marshal(&rUser)
 		if err != nil {
-			return nil, uerr.Wrapf(uerr.ParamsError, err, "UpdateUser(user=%+v)", user)
+			return nil, errors.BadParams.Handlef(err, "UpdateUser(user=%+v)", user)
 		}
 		if _, err := u.Redis.Set(userRedisKey(user.ID), data, entity.GuestExpireTime).Result(); err != nil {
-			return nil, redisErrWrapf(err, "UpdateUser(user=%+v)", user)
+			return nil, librd.ErrHandlef(err, "UpdateUser(user=%+v)", user)
 		}
 		return user, nil
 	}

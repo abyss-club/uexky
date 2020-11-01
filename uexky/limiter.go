@@ -3,7 +3,7 @@ package uexky
 import (
 	"context"
 
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 )
 
 type Limiter struct {
@@ -29,8 +29,7 @@ func Cost(ctx context.Context, cost int) error {
 	}
 	limiter.Count += cost
 	if limiter.Count > limiter.Limit {
-		return uerr.Errorf(
-			uerr.ComplexityError,
+		return errors.Complexity.Errorf(
 			"operation has complexity %v at least, which exceeds the limit of %v",
 			limiter.Count, limiter.Limit,
 		)

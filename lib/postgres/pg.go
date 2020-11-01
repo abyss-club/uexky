@@ -5,17 +5,16 @@ import (
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 )
 
 func NewDB() (*pg.DB, error) {
 	opt, err := pg.ParseURL(config.Get().PostgresURI)
 	opt.PoolSize = 16
 	if err != nil {
-		return nil, uerr.Wrap(uerr.ParamsError, err, "parse postgres uri")
+		return nil, errors.BadParams.Handle(err, "parse postgres uri")
 	}
 	return pg.Connect(opt), nil
 }
@@ -76,7 +75,7 @@ func (tx *TxAdapter) WithTx(ctx context.Context, fn func() error) error {
 
 	transaction, err := data.DB.Begin()
 	if err != nil {
-		return uerr.Wrap(uerr.PostgresError, err, "begin transaction")
+		return errors.Postgres.Handle(err, "begin transaction")
 	}
 	data.Tx = transaction
 
@@ -90,7 +89,21 @@ func (tx *TxAdapter) WithTx(ctx context.Context, fn func() error) error {
 	}
 
 	if err := data.Tx.Commit(); err != nil {
-		return uerr.Wrap(uerr.PostgresError, err, "commit transaction")
+		return errors.Postgres.Handle(err, "commit transaction")
 	}
 	return nil
+}
+
+func ErrHandle(err error, a ...interface{}) error {
+	if errors.Is(err, pg.ErrNoRows) {
+		return errors.NotFound.Handle(err, a...)
+	}
+	return errors.Postgres.Handle(err, a...)
+}
+
+func ErrHandlef(err error, format string, a ...interface{}) error {
+	if errors.Is(err, pg.ErrNoRows) {
+		return errors.NotFound.Handlef(err, format, a...)
+	}
+	return errors.Postgres.Handlef(err, format, a...)
 }

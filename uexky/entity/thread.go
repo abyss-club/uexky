@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
@@ -72,7 +72,7 @@ func NewThread(user *User, input ThreadInput) (*Thread, error) {
 		thread.Author.Author = uid.NewUID().ToBase64String()
 	} else {
 		if user.Name == nil {
-			return nil, uerr.New(uerr.ParamsError, "user name must be set")
+			return nil, errors.BadParams.New("user name must be set")
 		}
 		thread.Author.Author = *user.Name
 	}
@@ -87,10 +87,10 @@ func NewThread(user *User, input ThreadInput) (*Thread, error) {
 func validateThreadTags(mainTag string, subTags []string) ([]string, error) {
 	mains, subs := config.SplitTags(append(subTags, mainTag)...)
 	if len(mains) != 1 {
-		return nil, uerr.New(uerr.ParamsError, "must specify only one main tag")
+		return nil, errors.BadParams.New("must specify only one main tag")
 	}
 	if mains[0] != mainTag {
-		return nil, uerr.Errorf(uerr.ParamsError, "%s is not a main tag", mainTag)
+		return nil, errors.BadParams.Errorf("%s is not a main tag", mainTag)
 	}
 	return subs, nil
 }

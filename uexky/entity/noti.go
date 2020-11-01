@@ -9,7 +9,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
@@ -60,7 +60,7 @@ func SendToGroup(group SendGroup) Receiver {
 
 func NewSystemNoti(title, content string, receivers ...Receiver) (*Notification, error) {
 	if len(receivers) == 0 {
-		return nil, uerr.New(uerr.PermissionError, "no receivers")
+		return nil, errors.Permission.New("no receivers")
 	}
 	noti := &Notification{
 		Type:      NotiTypeSystem,
@@ -158,7 +158,7 @@ func (n *Notification) DecodeContent(m map[string]interface{}) error {
 	default:
 		err = fmt.Errorf("can't marshal noti content, invalid type '%s'", n.Type)
 	}
-	return uerr.Wrap(uerr.InternalError, err, "DecodeContent")
+	return errors.Internal.Handle(err, "DecodeContent")
 }
 
 func (n *Notification) EncodeContent() (map[string]interface{}, error) {
@@ -175,7 +175,7 @@ func (n *Notification) EncodeContent() (map[string]interface{}, error) {
 		err = fmt.Errorf("invalid noti type '%s'", n.Type)
 	}
 	if err != nil {
-		return nil, uerr.Wrap(uerr.ParamsError, err, "EncodeContent")
+		return nil, errors.BadParams.Handle(err, "EncodeContent")
 	}
 	return m, nil
 }

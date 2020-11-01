@@ -12,7 +12,7 @@ import (
 	"gitlab.com/abyss.club/uexky/auth"
 	"gitlab.com/abyss.club/uexky/graph/generated"
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 )
 
 func (s *Server) AuthHandler(w http.ResponseWriter, req *http.Request) {
@@ -52,8 +52,13 @@ func (s *Server) GraphQLHandler() http.Handler {
 	server.SetErrorPresenter(func(ctx context.Context, err error) *gqlerror.Error {
 		path := graphql.GetFieldContext(ctx).Path()
 		message := err.Error()
-		code := uerr.ExtractErrorType(err).Code()
-
+		uerr := &errors.Error{}
+		var code string
+		if errors.As(err, &uerr) {
+			code = uerr.Code()
+		} else {
+			code = errors.Internal.Code()
+		}
 		gerr := gqlerror.ErrorPathf(path, message)
 		gerr.Extensions = map[string]interface{}{
 			"code":       code,

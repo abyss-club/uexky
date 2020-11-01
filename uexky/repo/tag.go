@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"gitlab.com/abyss.club/uexky/lib/config"
+	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
@@ -14,7 +15,7 @@ type TagRepo struct {
 func (r *TagRepo) GetMainTags(ctx context.Context) ([]string, error) {
 	var tags []Tag
 	if err := db(ctx).Model(&tags).Where("type= ?", "main").Select(); err != nil {
-		return nil, dbErrWrap(err, "GetMainTags")
+		return nil, postgres.ErrHandle(err, "GetMainTags")
 	}
 	var mainTags []string
 	for _, t := range tags {
@@ -33,7 +34,7 @@ func (r *TagRepo) SetMainTags(ctx context.Context, mainTags []string) error {
 		})
 	}
 	if _, err := db(ctx).Model(&tags).Insert(); err != nil {
-		return dbErrWrapf(err, "SetMainTags(tags=%v)", tags)
+		return postgres.ErrHandlef(err, "SetMainTags(tags=%v)", tags)
 	}
 	return nil
 }
@@ -55,7 +56,7 @@ func (r *TagRepo) Search(ctx context.Context, search *entity.TagSearch) ([]*enti
 		FROM thread group by tag
 	) as tags %s ORDER BY updated_at DESC %s`, where, limit)
 	if _, err := db(ctx).Query(&tags, sql); err != nil {
-		return nil, dbErrWrapf(err, "GetTags(search=%+v)", search)
+		return nil, postgres.ErrHandlef(err, "GetTags(search=%+v)", search)
 	}
 	var entities []*entity.Tag
 	for _, t := range tags {

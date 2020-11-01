@@ -6,11 +6,11 @@ import (
 	"math/rand"
 	"sync"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/config"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
@@ -60,7 +60,7 @@ func mockThreads(opt *mockThreadsOpt) error {
 	}
 	mainTags := service.GetMainTags(ctx)
 	if len(mainTags) == 0 {
-		return errors.New("no main tags, set main tags first")
+		return errors.Internal.New("no main tags, set main tags first")
 	}
 	var users []*entity.User
 	for i := 0; i < opt.userCount; i++ {
@@ -100,7 +100,7 @@ func mockThreads(opt *mockThreadsOpt) error {
 	}
 	wg.Wait()
 	if len(errs) != 0 {
-		return errors.New("create threads error")
+		return errors.Internal.New("create threads error")
 	}
 	return nil
 }

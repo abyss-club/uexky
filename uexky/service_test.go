@@ -8,9 +8,8 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/algo"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
@@ -726,7 +725,7 @@ func TestService_PubThread(t *testing.T) {
 					SubTags:   []string{"SubA", "SubB", "SubC"},
 				},
 			},
-			wantErrIs: uerr.New(uerr.DuplicatedError),
+			wantErrIs: errors.Duplicated.New(),
 		},
 		{
 			name: "guest user",
@@ -987,7 +986,7 @@ func TestService_PubPost(t *testing.T) {
 					Content:   "content2",
 				},
 			},
-			wantErrIs: uerr.New(uerr.DuplicatedError),
+			wantErrIs: errors.Duplicated.New(),
 		},
 		{
 			name: "pub post with quoted post",

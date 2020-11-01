@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"gitlab.com/abyss.club/uexky/lib/algo"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
@@ -56,7 +56,7 @@ func (u *User) Ban() {
 
 func (u *User) SetName(name string) error {
 	if u.Name != nil {
-		return uerr.New(uerr.ParamsError, "already have a name")
+		return errors.BadParams.New("already have a name")
 	}
 	u.Name = algo.NullString(name)
 	return nil
@@ -185,11 +185,11 @@ var ActionRole = map[Action]Role{
 
 func (u *User) RequirePermission(action Action) error {
 	if u == nil {
-		return uerr.New(uerr.AuthError, "permission denied, no user found")
+		return errors.NoAuth.New("permission denied, no user found")
 	}
 	needRole := ActionRole[action]
 	if u.Role.Value() < needRole.Value() {
-		return uerr.New(uerr.PermissionError, "permission denied")
+		return errors.Permission.New("permission denied")
 	}
 	return nil
 }

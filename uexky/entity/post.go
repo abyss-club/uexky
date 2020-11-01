@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
@@ -36,7 +36,7 @@ func (p Post) String() string {
 
 func NewPost(input *PostInput, user *User, thread *Thread, aid string) (*Post, error) {
 	if thread.Locked {
-		return nil, uerr.New(uerr.ParamsError, "thread has been locked")
+		return nil, errors.BadParams.New("thread has been locked")
 	}
 	post := &Post{
 		ID:        uid.NewUID(),
@@ -54,7 +54,7 @@ func NewPost(input *PostInput, user *User, thread *Thread, aid string) (*Post, e
 		post.Author.Author = aid
 	} else {
 		if user.Name == nil {
-			return nil, uerr.New(uerr.ParamsError, "user name must be set")
+			return nil, errors.BadParams.New("user name must be set")
 		}
 		post.Author.Author = *user.Name
 	}

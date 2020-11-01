@@ -6,10 +6,9 @@ import (
 	"strings"
 
 	"github.com/go-redis/redis/v7"
-	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 )
 
@@ -23,7 +22,7 @@ type Service struct {
 func (s *Service) TrySignInByEmail(ctx context.Context, email string, redirectTo string) (Code, error) {
 	// TODO: validate email
 	if redirectTo != "" && !strings.HasPrefix(redirectTo, "/") {
-		return "", uerr.New(uerr.ParamsError, "invalid redirect target")
+		return "", errors.BadParams.New("invalid redirect target")
 	}
 	code := Code(uid.RandomBase64Str(CodeLength))
 	if err := s.Repo.SetCode(ctx, email, code); err != nil {

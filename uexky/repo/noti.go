@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-pg/pg/v9"
 	"github.com/go-pg/pg/v9/orm"
+	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
@@ -20,7 +21,7 @@ func (r *NotiRepo) GetUnreadCount(ctx context.Context, user *entity.User) (int, 
 		AND n.receivers && ?`,
 		user.ID, pg.Array(user.NotiReceivers()),
 	)
-	return count, dbErrWrapf(err, "GetUserUnreadCount(user=%+v)", user)
+	return count, postgres.ErrHandlef(err, "GetUserUnreadCount(user=%+v)", user)
 }
 
 func (r *NotiRepo) GetByKey(ctx context.Context, userID uid.UID, key string) (*entity.Notification, error) {
@@ -34,7 +35,7 @@ func (r *NotiRepo) GetByKey(ctx context.Context, userID uid.UID, key string) (*e
 		if err == pg.ErrNoRows {
 			return nil, nil
 		}
-		return nil, dbErrWrapf(err, "GetNotiByKey(userID=%v, key=%s)", userID, key)
+		return nil, postgres.ErrHandlef(err, "GetNotiByKey(userID=%v, key=%s)", userID, key)
 	}
 	return notification.ToEntity(), nil
 }
@@ -54,7 +55,7 @@ func (r *NotiRepo) GetSlice(ctx context.Context, user *entity.User, query entity
 		SQ:          &query,
 	}
 	if err := h.Select(q); err != nil {
-		return nil, dbErrWrapf(err, "GetNotiSlice(user=%+v, query=%+v)", user, query)
+		return nil, postgres.ErrHandlef(err, "GetNotiSlice(user=%+v, query=%+v)", user, query)
 	}
 	h.DealResults(len(notifications), func(i int) {
 		entities = append(entities, (&notifications[i]).ToEntity())
@@ -76,7 +77,7 @@ func (r *NotiRepo) Insert(ctx context.Context, noti *entity.Notification) error 
 		return err
 	}
 	_, err = db(ctx).Model(n).Insert()
-	return dbErrWrapf(err, "InsertNoti(noti=%+v)", noti)
+	return postgres.ErrHandlef(err, "InsertNoti(noti=%+v)", noti)
 }
 
 func (r *NotiRepo) UpdateContent(ctx context.Context, noti *entity.Notification) error {
@@ -89,12 +90,12 @@ func (r *NotiRepo) UpdateContent(ctx context.Context, noti *entity.Notification)
 		Set("content = ?", content).
 		Set("sort_key = ?", noti.SortKey).
 		Where("key = ?", noti.Key).Update()
-	return dbErrWrapf(err, "UpdateNotiContent(noti=%+v)", noti)
+	return postgres.ErrHandlef(err, "UpdateNotiContent(noti=%+v)", noti)
 }
 
 func (r *NotiRepo) UpdateReadID(ctx context.Context, user *entity.User, id uid.UID) error {
 	u := &User{}
 	_, err := db(ctx).Model(u).
 		Set("last_read_noti = ?", id).Where("id = ?", user.ID).Update()
-	return dbErrWrapf(err, "UpdateReadID(userID=%v, id=%v)", user.ID, id)
+	return postgres.ErrHandlef(err, "UpdateReadID(userID=%v, id=%v)", user.ID, id)
 }

@@ -4,12 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/algo"
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
@@ -44,7 +43,7 @@ func loadMainTags(s *Service) error {
 func (s *Service) AttachEmailUserToCtx(ctx context.Context, email string) (context.Context, error) {
 	user, err := s.Repo.User.GetByEmail(ctx, email)
 	if err != nil {
-		if !errors.Is(err, uerr.New(uerr.NotFoundError)) {
+		if !errors.Is(err, errors.NotFound) {
 			return nil, errors.Wrap(err, "User.GetByEmail")
 		}
 
@@ -64,7 +63,7 @@ func (s *Service) AttachEmailUserToCtx(ctx context.Context, email string) (conte
 func (s *Service) AttachGuestUserToCtx(ctx context.Context, id uid.UID) (context.Context, error) {
 	user, err := s.Repo.User.GetGuestByID(ctx, id)
 	if err != nil {
-		if !errors.Is(err, uerr.New(uerr.NotFoundError)) {
+		if !errors.Is(err, errors.NotFound) {
 			return nil, errors.Wrap(err, "User.GetByID")
 		}
 		user = entity.NewGuestUser(id)
@@ -112,7 +111,7 @@ func (s *Service) GetUserThreads(
 		return nil, err
 	}
 	if obj == nil || obj.Email != user.Email {
-		return nil, errors.New("permission denied")
+		return nil, errors.Permission.New("permission denied")
 	}
 	return s.Repo.User.ThreadSlice(ctx, user, query)
 }
@@ -126,7 +125,7 @@ func (s *Service) GetUserPosts(ctx context.Context, obj *entity.User, query enti
 		return nil, err
 	}
 	if obj == nil || obj.Email != user.Email {
-		return nil, errors.New("permission denied")
+		return nil, errors.Permission.New("permission denied")
 	}
 	return s.Repo.User.PostSlice(ctx, user, query)
 }
@@ -187,11 +186,11 @@ func (s *Service) BanUser(ctx context.Context, postID *uid.UID, threadID *uid.UI
 		}
 		targetID = thread.Author.UserID
 	default:
-		return false, uerr.New(uerr.ParamsError, "must specified post id or thread id")
+		return false, errors.BadParams.New("must specified post id or thread id")
 	}
 	target, err := s.Repo.User.GetByID(ctx, targetID)
 	if err != nil {
-		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
+		if errors.Is(err, errors.NotFound) {
 			return false, nil
 		}
 		return false, errors.Wrap(err, "User.GetByID")
@@ -362,9 +361,7 @@ func (s *Service) PubPost(ctx context.Context, input entity.PostInput) (*entity.
 		if err != nil {
 			return err
 		}
-		if err := s.NewNotiOnNewPost(ctx, user, thread, post, quotedPost); err != nil {
-			return err
-		}
+		s.NewNotiOnNewPost(ctx, user, thread, post, quotedPost)
 		return nil
 	})
 	if err != nil {
@@ -416,7 +413,7 @@ func (s *Service) GetPostByID(ctx context.Context, id uid.UID) (*entity.Post, er
 
 func (s *Service) SetMainTags(ctx context.Context, tags []string) error {
 	if len(config.GetMainTags()) != 0 {
-		return uerr.New(uerr.ParamsError, "already have main tags")
+		return errors.BadParams.New("already have main tags")
 	}
 	if err := s.Repo.Tag.SetMainTags(ctx, tags); err != nil {
 		return errors.Wrap(err, "set main tags to db")
@@ -484,28 +481,26 @@ func (s *Service) NewNotiOnNewUser(ctx context.Context, user *entity.User) error
 	return s.Repo.Noti.Insert(ctx, noti)
 }
 
-func (s *Service) NewNotiOnNewPost(ctx context.Context, user *entity.User, thread *entity.Thread, post *entity.Post, quotedPosts []*entity.Post) uerr.ErrSlice {
-	var errs uerr.ErrSlice
+func (s *Service) NewNotiOnNewPost(ctx context.Context, user *entity.User, thread *entity.Thread, post *entity.Post, quotedPosts []*entity.Post) {
 	if user.ID != thread.Author.UserID {
 		if err := s.newRepliedNoti(ctx, user, thread, post); err != nil {
-			errs = append(errs, err) // not exist
+			log.Error(err)
 		}
 	}
 	for _, qp := range quotedPosts {
 		if user.ID != qp.Author.UserID {
 			if err := s.newQuotedNoti(ctx, thread, post, qp); err != nil {
-				errs = append(errs, err) // not exist
+				log.Error(err)
 			}
 		}
 	}
-	return errs
 }
 
 func (s *Service) newRepliedNoti(ctx context.Context, user *entity.User, thread *entity.Thread, reply *entity.Post) error {
 	key := entity.RepliedNotiKey(thread)
 	prev, err := s.Repo.Noti.GetByKey(ctx, thread.Author.UserID, key)
 	if err != nil {
-		if errors.Is(err, uerr.New(uerr.NotFoundError)) {
+		if errors.Is(err, errors.NotFound) {
 			prev = nil
 		} else {
 			return errors.Wrap(err, "find prev replied noti")

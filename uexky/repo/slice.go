@@ -4,8 +4,7 @@ import (
 	"fmt"
 
 	"github.com/go-pg/pg/v9/orm"
-	"github.com/pkg/errors"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
 
@@ -18,10 +17,10 @@ type sliceHelper struct {
 
 func (h *sliceHelper) Select(q *orm.Query) error {
 	if (h.SQ.After == nil) == (h.SQ.Before == nil) {
-		return uerr.New(uerr.ParamsError, "one and only one of before or after must be specified")
+		return errors.BadParams.New("one and only one of before or after must be specified")
 	}
 	if h.SQ.Limit == 0 {
-		return uerr.New(uerr.ParamsError, "limit must be specified")
+		return errors.BadParams.New("limit must be specified")
 	}
 
 	var cursor string

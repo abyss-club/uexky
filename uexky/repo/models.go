@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"gitlab.com/abyss.club/uexky/lib/config"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
@@ -232,7 +232,7 @@ func (n *NotificationQuery) ToEntity() *entity.Notification {
 		Receivers: n.Receivers,
 	}
 	if err := notification.DecodeContent(n.Content); err != nil {
-		panic(uerr.Errorf(uerr.InternalError, "read notification error: %w", err))
+		panic(errors.Internal.Handle(err, "read notification error"))
 	}
 	return notification
 }

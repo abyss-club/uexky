@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/pelletier/go-toml"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 )
 
 type Config struct {
@@ -76,17 +76,17 @@ func Load(filename string) error {
 	if filename != "" {
 		f, err := os.Open(filename)
 		if err != nil {
-			return uerr.Wrap(uerr.InternalError, err, "open config file")
+			return errors.Internal.Handle(err, "open config file")
 		}
 		if err := toml.NewDecoder(f).Decode(&c); err != nil {
-			return uerr.Wrap(uerr.InternalError, err, "read config file")
+			return errors.Internal.Handle(err, "read config file")
 		}
 	}
 	c.filename = filename
 	patchEnv()
 	mf, err := filepath.Abs(c.MigrationFiles)
 	if err != nil {
-		return uerr.Wrapf(uerr.InternalError, err, "file migrations file path")
+		return errors.Internal.Handle(err, "file migrations file path")
 	}
 	c.MigrationFiles = mf
 	return nil
