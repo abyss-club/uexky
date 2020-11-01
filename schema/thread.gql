@@ -8,6 +8,12 @@ extend type Query {
 extend type Mutation {
   """ Publish a new Thread."""
   pubThread(thread: ThreadInput!): Thread!
+  """ Operations for moderators."""
+  lockThread(threadId: UID!): Thread!
+  """ Operations for moderators."""
+  blockThread(threadId: UID!): Thread!
+  """ Operations for moderators."""
+  editTags(threadId: UID!, mainTag: String!, subTags: [String!]!): Thread!
 }
 
 """ Construct a new Thread."""
@@ -50,7 +56,7 @@ type Thread {
 """ The ID and timestamp of post replied in the thread."""
 type ThreadCatalogItem {
   """ The ID of post."""
-  postId: String!
+  postId: UID!
   createdAt: Time!
 }
 

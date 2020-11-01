@@ -118,7 +118,7 @@ type Tag struct {
 //  The ID and timestamp of post replied in the thread.
 type ThreadCatalogItem struct {
 	//  The ID of post.
-	PostID    string    `json:"postId"`
+	PostID    uid.UID   `json:"postId"`
 	CreatedAt time.Time `json:"createdAt"`
 }
 

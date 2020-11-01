@@ -5,7 +5,7 @@ GO_FILES := $(shell find . -name '*.go' | grep -v /vendor/ | grep -v _test.go)
 
 .PHONY: all test mod tool gen build clean
 
-all: mod build
+all: mod gen build lint
 
 lint: ## Lint the files
 	@golangci-lint run ./...
@@ -27,6 +27,7 @@ gengql: ## generate all
 
 genwire:
 	@cd ./uexky;wire;cd -
+	@cd ./auth;wire;cd -
 	@cd ./server;wire;cd -
 
 build: mod ## Build the binary file

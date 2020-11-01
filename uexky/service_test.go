@@ -8,100 +8,11 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/pkg/errors"
 	"gitlab.com/abyss.club/uexky/lib/algo"
-	"gitlab.com/abyss.club/uexky/lib/uerr"
+	"gitlab.com/abyss.club/uexky/lib/errors"
 	"gitlab.com/abyss.club/uexky/lib/uid"
 	"gitlab.com/abyss.club/uexky/uexky/entity"
 )
-
-func TestService_CtxWithUserByToken(t *testing.T) {
-	service, ctx := initEnv(t)
-	type args struct {
-		ctx   context.Context
-		email string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    *entity.User
-		wantErr bool
-	}{
-		{
-			name: "signed in user",
-			args: args{
-				ctx:   ctx,
-				email: "user1@example.com",
-			},
-			want: &entity.User{
-				Email: algo.NullString("user1@example.com"),
-				Role:  entity.RoleNormal,
-				Repo:  service.User.Repo,
-			},
-		},
-		{
-			name: "guest user first login",
-			args: args{
-				ctx: ctx,
-			},
-			want: &entity.User{
-				Role: entity.RoleGuest,
-				Repo: service.User.Repo,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var signUpToken *entity.Token
-			var signUpUser *entity.User
-			var gotCtx context.Context
-			var gotToken *entity.Token
-			var err error
-			if tt.args.email != "" {
-				code, err := service.TrySignInByEmail(tt.args.ctx, tt.args.email, "")
-				if err != nil {
-					t.Fatal(errors.Wrap(err, "TrySignInByEmail"))
-				}
-				signUpToken, err = service.SignInByCode(ctx, string(code))
-				if err != nil {
-					t.Fatal(errors.Wrap(err, "SignInByCode"))
-				}
-			} else {
-				var err error
-				var signUpCtx context.Context
-				signUpCtx, signUpToken, err = service.CtxWithUserByToken(ctx, "")
-				if err != nil {
-					t.Fatal(errors.Wrap(err, "CtxWithUserByToken"))
-				}
-				signUpUser, err = service.Profile(signUpCtx)
-				if err != nil {
-					t.Fatal(errors.Wrap(err, "Profile"))
-				}
-			}
-			gotCtx, gotToken, err = service.CtxWithUserByToken(tt.args.ctx, signUpToken.Tok)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Service.CtxWithUserByToken() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			gotUser, err := service.Profile(gotCtx)
-			if err != nil {
-				t.Fatal(errors.Wrap(err, "Profile"))
-			}
-			tt.want.ID = gotUser.ID
-			if !reflect.DeepEqual(gotUser, tt.want) {
-				t.Errorf("want user %+v, bug got %+v", tt.want, gotUser)
-			}
-			if !reflect.DeepEqual(signUpToken, gotToken) {
-				t.Errorf("token when signed up is %+v, bug got %+v", signUpToken, gotToken)
-			}
-			if tt.args.email == "" {
-				if !reflect.DeepEqual(signUpUser, gotUser) {
-					t.Errorf("guest user, 2nd time login = %+v, want equal to first time: %+v", gotUser, signUpUser)
-				}
-			}
-		})
-	}
-}
 
 func TestService_SetUserName(t *testing.T) {
 	service, ctx := initEnv(t)
@@ -255,7 +166,7 @@ func TestService_GetUserThreads(t *testing.T) {
 			}
 			for i, thread := range got.Threads {
 				thread.CreatedAt = tt.want.Threads[i].CreatedAt
-				if diff := cmp.Diff(thread, tt.want.Threads[i], forumRepoComp); diff != "" {
+				if diff := cmp.Diff(thread, tt.want.Threads[i]); diff != "" {
 					t.Errorf("Service.GetUserThreads().Threads[%v] diff: %s", i, diff)
 				}
 			}
@@ -369,7 +280,7 @@ func TestService_GetUserPosts(t *testing.T) {
 			}
 			for i, post := range got.Posts {
 				post.CreatedAt = tt.want.Posts[i].CreatedAt
-				if diff := cmp.Diff(post, tt.want.Posts[i], forumRepoComp); diff != "" {
+				if diff := cmp.Diff(post, tt.want.Posts[i]); diff != "" {
 					t.Errorf("Service.GetUserPosts().Posts[%v] diff: %s", i, diff)
 				}
 			}
@@ -523,7 +434,7 @@ func TestService_BanUser(t *testing.T) {
 	post, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
 	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
 	mod.Role = entity.RoleMod
-	_, err := service.User.Repo.UpdateUser(ctx, mod)
+	_, err := service.Repo.User.Update(ctx, mod)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -577,169 +488,6 @@ func TestService_BanUser(t *testing.T) {
 	}
 }
 
-func TestService_BlockPost(t *testing.T) {
-	mainTags := []string{"MainA", "MainB", "MainC"}
-	service, ctx := initEnv(t, mainTags...)
-
-	thread, _ := pubThread(t, service, testUser{email: "t@example.com"})
-	oriPost, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
-	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
-	mod.Role = entity.RoleMod
-	_, err := service.User.Repo.UpdateUser(ctx, mod)
-	if err != nil {
-		t.Fatal(err)
-	}
-	oriPost.Blocked = true
-	oriPost.Content = entity.BlockedContent
-	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
-
-	t.Run("check post in memory", func(t *testing.T) {
-		post, err := service.BlockPost(modCtx, oriPost.ID)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "BlockPost"))
-		}
-		oriPost.CreatedAt = post.CreatedAt
-		if diff := cmp.Diff(post, oriPost, forumRepoComp); diff != "" {
-			t.Errorf("BlockPost() post matched: %s", diff)
-		}
-	})
-	t.Run("check post in database", func(t *testing.T) {
-		post, err := service.GetPostByID(modCtx, oriPost.ID)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "GetPostByID"))
-		}
-		oriPost.CreatedAt = post.CreatedAt
-		if diff := cmp.Diff(post, oriPost, forumRepoComp); diff != "" {
-			t.Errorf("BlockPost() post matched: %s", diff)
-		}
-	})
-}
-
-func TestService_LockThread(t *testing.T) {
-	mainTags := []string{"MainA", "MainB", "MainC"}
-	service, ctx := initEnv(t, mainTags...)
-
-	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
-
-	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
-	mod.Role = entity.RoleMod
-	_, err := service.User.Repo.UpdateUser(ctx, mod)
-	if err != nil {
-		t.Fatal(err)
-	}
-	oriThread.Locked = true
-	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
-
-	t.Run("check thread in memory", func(t *testing.T) {
-		thread, err := service.LockThread(modCtx, oriThread.ID)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "LockThread"))
-		}
-		oriThread.CreatedAt = thread.CreatedAt
-		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
-			t.Errorf("LockThread() not matched: %s", diff)
-		}
-	})
-	t.Run("check thread in database", func(t *testing.T) {
-		thread, err := service.GetThreadByID(modCtx, oriThread.ID)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "GetThreadByID"))
-		}
-		oriThread.CreatedAt = thread.CreatedAt
-		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
-			t.Errorf("LockThread() not matched: %s", diff)
-		}
-	})
-	t.Run("thread locked", func(t *testing.T) {
-		_, ctx := loginUser(t, service, testUser{email: "p@example.com"})
-		input := entity.PostInput{
-			ThreadID:  oriThread.ID,
-			Anonymous: true,
-			Content:   uid.RandomBase64Str(50),
-		}
-		_, err := service.PubPost(ctx, input)
-		if err == nil {
-			t.Errorf("locked thread still can send new post")
-		}
-	})
-}
-
-func TestService_BlockThread(t *testing.T) {
-	mainTags := []string{"MainA", "MainB", "MainC"}
-	service, ctx := initEnv(t, mainTags...)
-
-	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
-
-	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
-	mod.Role = entity.RoleMod
-	_, err := service.User.Repo.UpdateUser(ctx, mod)
-	if err != nil {
-		t.Fatal(err)
-	}
-	oriThread.Blocked = true
-	oriThread.Content = entity.BlockedContent
-	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
-
-	t.Run("check thread in memory", func(t *testing.T) {
-		thread, err := service.BlockThread(modCtx, oriThread.ID)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "BlockThread"))
-		}
-		oriThread.CreatedAt = thread.CreatedAt
-		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
-			t.Errorf("LockThread() not matched: %s", diff)
-		}
-	})
-	t.Run("check thread in database", func(t *testing.T) {
-		thread, err := service.GetThreadByID(modCtx, oriThread.ID)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "GetThreadByID"))
-		}
-		oriThread.CreatedAt = thread.CreatedAt
-		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
-			t.Errorf("LockThread() not matched: %s", diff)
-		}
-	})
-}
-
-func TestService_EditTags(t *testing.T) {
-	mainTags := []string{"MainA", "MainB", "MainC"}
-	service, ctx := initEnv(t, mainTags...)
-
-	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
-
-	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
-	mod.Role = entity.RoleMod
-	_, err := service.User.Repo.UpdateUser(ctx, mod)
-	if err != nil {
-		t.Fatal(err)
-	}
-	oriThread.MainTag = "MainC"
-	oriThread.SubTags = []string{"SubC", "SubB", "SubA"}
-	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
-
-	t.Run("check thread in memory", func(t *testing.T) {
-		thread, err := service.EditTags(modCtx, oriThread.ID, oriThread.MainTag, oriThread.SubTags)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "EditTags"))
-		}
-		oriThread.CreatedAt = thread.CreatedAt
-		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
-			t.Errorf("EditTags() not matched: %s", diff)
-		}
-	})
-	t.Run("check thread in database", func(t *testing.T) {
-		thread, err := service.GetThreadByID(modCtx, oriThread.ID)
-		if err != nil {
-			t.Fatal(errors.Wrap(err, "GetThreadByID"))
-		}
-		oriThread.CreatedAt = thread.CreatedAt
-		if diff := cmp.Diff(thread, oriThread, forumRepoComp); diff != "" {
-			t.Errorf("EditTags() not matched: %s", diff)
-		}
-	})
-}
-
 func TestService_PubThread(t *testing.T) {
 	mainTags := []string{"MainA", "MainB", "MainC"}
 	service, _ := initEnv(t, mainTags...)
@@ -778,7 +526,6 @@ func TestService_PubThread(t *testing.T) {
 				Content: "content",
 				MainTag: "MainA",
 				SubTags: []string{"SubA", "SubB"},
-				Repo:    service.Forum.Repo,
 			},
 		},
 		{
@@ -802,7 +549,6 @@ func TestService_PubThread(t *testing.T) {
 				Content: "content1",
 				MainTag: "MainA",
 				SubTags: []string{"SubA", "SubB", "SubC"},
-				Repo:    service.Forum.Repo,
 			},
 		},
 		{
@@ -816,7 +562,7 @@ func TestService_PubThread(t *testing.T) {
 					SubTags:   []string{"SubA", "SubB", "SubC"},
 				},
 			},
-			wantErrIs: uerr.New(uerr.DuplicatedError),
+			wantErrIs: errors.Duplicated.New(),
 		},
 		{
 			name: "guest user",
@@ -840,7 +586,6 @@ func TestService_PubThread(t *testing.T) {
 				Content: "content",
 				MainTag: "MainA",
 				SubTags: []string{"SubA", "SubB", "SubC"},
-				Repo:    service.Forum.Repo,
 			},
 		},
 	}
@@ -855,14 +600,143 @@ func TestService_PubThread(t *testing.T) {
 			}
 			tt.want.ID = got.ID
 			tt.want.CreatedAt = got.CreatedAt
+			tt.want.LastPostID = got.LastPostID
 			if tt.want.Author.Anonymous {
 				tt.want.Author.Author = got.Author.Author
 			}
-			if diff := cmp.Diff(got, tt.want, forumRepoComp); diff != "" {
+			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Errorf("Service.PubThread() missmatch: %s", diff)
+			}
+			if got.LastPostID != got.ID {
+				t.Errorf("New thread's last_psot_id should equal to id")
 			}
 		})
 	}
+}
+
+func TestService_LockThread(t *testing.T) {
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
+	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+
+	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
+	mod.Role = entity.RoleMod
+	_, err := service.Repo.User.Update(ctx, mod)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oriThread.Locked = true
+	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
+
+	t.Run("check thread in memory", func(t *testing.T) {
+		thread, err := service.LockThread(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "LockThread"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread); diff != "" {
+			t.Errorf("LockThread() not matched: %s", diff)
+		}
+	})
+	t.Run("check thread in database", func(t *testing.T) {
+		thread, err := service.GetThreadByID(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "GetThreadByID"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread); diff != "" {
+			t.Errorf("LockThread() not matched: %s", diff)
+		}
+	})
+	t.Run("thread locked", func(t *testing.T) {
+		_, ctx := loginUser(t, service, testUser{email: "p@example.com"})
+		input := entity.PostInput{
+			ThreadID:  oriThread.ID,
+			Anonymous: true,
+			Content:   uid.RandomBase64Str(50),
+		}
+		_, err := service.PubPost(ctx, input)
+		if err == nil {
+			t.Errorf("locked thread still can send new post")
+		}
+	})
+}
+
+func TestService_BlockThread(t *testing.T) {
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
+	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+
+	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
+	mod.Role = entity.RoleMod
+	_, err := service.Repo.User.Update(ctx, mod)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oriThread.Blocked = true
+	oriThread.Content = entity.BlockedContent
+	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
+
+	t.Run("check thread in memory", func(t *testing.T) {
+		thread, err := service.BlockThread(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "BlockThread"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread); diff != "" {
+			t.Errorf("LockThread() not matched: %s", diff)
+		}
+	})
+	t.Run("check thread in database", func(t *testing.T) {
+		thread, err := service.GetThreadByID(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "GetThreadByID"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread); diff != "" {
+			t.Errorf("LockThread() not matched: %s", diff)
+		}
+	})
+}
+
+func TestService_EditTags(t *testing.T) {
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
+	oriThread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+
+	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
+	mod.Role = entity.RoleMod
+	_, err := service.Repo.User.Update(ctx, mod)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oriThread.MainTag = "MainC"
+	oriThread.SubTags = []string{"SubC", "SubB", "SubA"}
+	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
+
+	t.Run("check thread in memory", func(t *testing.T) {
+		thread, err := service.EditTags(modCtx, oriThread.ID, oriThread.MainTag, oriThread.SubTags)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "EditTags"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread); diff != "" {
+			t.Errorf("EditTags() not matched: %s", diff)
+		}
+	})
+	t.Run("check thread in database", func(t *testing.T) {
+		thread, err := service.GetThreadByID(modCtx, oriThread.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "GetThreadByID"))
+		}
+		oriThread.CreatedAt = thread.CreatedAt
+		if diff := cmp.Diff(thread, oriThread); diff != "" {
+			t.Errorf("EditTags() not matched: %s", diff)
+		}
+	})
 }
 
 func TestService_SearchThreads(t *testing.T) {
@@ -993,9 +867,159 @@ func TestService_SearchThreads(t *testing.T) {
 			}
 			for i, thread := range got.Threads {
 				thread.CreatedAt = tt.want.Threads[i].CreatedAt
-				if diff := cmp.Diff(thread, tt.want.Threads[i], forumRepoComp); diff != "" {
+				if diff := cmp.Diff(thread, tt.want.Threads[i]); diff != "" {
 					t.Errorf("Service.SearchThreads().Threads[%v] diff: %s", i, diff)
 				}
+			}
+		})
+	}
+}
+
+func TestService_GetThreadReplies(t *testing.T) {
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, _ := initEnv(t, mainTags...)
+
+	thread, ctx := pubThread(t, service, testUser{email: "t@example", name: "a"})
+	var posts []*entity.Post
+	for i := 0; i < 10; i++ {
+		post, _ := pubPost(t, service, testUser{email: "p@example"}, thread.ID)
+		posts = append(posts, post)
+	}
+
+	type args struct {
+		ctx    context.Context
+		thread *entity.Thread
+		query  entity.SliceQuery
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *entity.PostSlice
+		wantErr bool
+	}{
+		{
+			name: "first 5",
+			args: args{
+				ctx:    ctx,
+				thread: thread,
+				query: entity.SliceQuery{
+					After: algo.NullString(""),
+					Limit: 5,
+				},
+			},
+			want: &entity.PostSlice{
+				Posts: []*entity.Post{
+					posts[0], posts[1], posts[2], posts[3], posts[4],
+				},
+				SliceInfo: &entity.SliceInfo{
+					FirstCursor: posts[0].ID.ToBase64String(),
+					LastCursor:  posts[4].ID.ToBase64String(),
+					HasNext:     true,
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := service.GetThreadReplies(tt.args.ctx, tt.args.thread, tt.args.query)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Service.GetThreadReplies() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Service.GetThreadReplies() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestService_GetThreadReplyCount(t *testing.T) {
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, _ := initEnv(t, mainTags...)
+
+	thread, ctx := pubThread(t, service, testUser{email: "t@example", name: "a"})
+	for i := 0; i < 10; i++ {
+		pubPost(t, service, testUser{email: "p@example"}, thread.ID)
+	}
+
+	type args struct {
+		ctx    context.Context
+		thread *entity.Thread
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    int
+		wantErr bool
+	}{
+		{
+			name: "normal",
+			args: args{
+				ctx:    ctx,
+				thread: thread,
+			},
+			want:    10,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := service.GetThreadReplyCount(tt.args.ctx, tt.args.thread)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Service.GetThreadReplyCount() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Service.GetThreadReplyCount() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestService_GetThreadCatalog(t *testing.T) {
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, _ := initEnv(t, mainTags...)
+
+	thread, ctx := pubThread(t, service, testUser{email: "t@example", name: "a"})
+	var catalog []*entity.ThreadCatalogItem
+	for i := 0; i < 10; i++ {
+		post, _ := pubPost(t, service, testUser{email: "p@example"}, thread.ID)
+		catalog = append(catalog, &entity.ThreadCatalogItem{
+			PostID:    post.ID,
+			CreatedAt: post.CreatedAt,
+		})
+	}
+
+	type args struct {
+		ctx    context.Context
+		thread *entity.Thread
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []*entity.ThreadCatalogItem
+		wantErr bool
+	}{
+		{
+			name: "normal",
+			args: args{
+				ctx:    ctx,
+				thread: thread,
+			},
+			want:    catalog,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := service.GetThreadCatalog(tt.args.ctx, tt.args.thread)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Service.GetThreadCatalog() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Service.GetThreadCatalog() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1040,12 +1064,8 @@ func TestService_PubPost(t *testing.T) {
 					Anonymous: true,
 					Author:    user1.ID.ToBase64String(),
 				},
-				Content: "content1",
-				Repo:    service.Forum.Repo,
-				Data: entity.PostData{
-					ThreadID:   thread.ID,
-					QuotePosts: []*entity.Post{},
-				},
+				Content:  "content1",
+				ThreadID: thread.ID,
 			},
 		},
 		{
@@ -1064,12 +1084,8 @@ func TestService_PubPost(t *testing.T) {
 					Anonymous: false,
 					Author:    *user2.Name,
 				},
-				Content: "content2",
-				Repo:    service.Forum.Repo,
-				Data: entity.PostData{
-					ThreadID:   thread.ID,
-					QuotePosts: []*entity.Post{},
-				},
+				Content:  "content2",
+				ThreadID: thread.ID,
 			},
 		},
 		{
@@ -1082,7 +1098,7 @@ func TestService_PubPost(t *testing.T) {
 					Content:   "content2",
 				},
 			},
-			wantErrIs: uerr.New(uerr.DuplicatedError),
+			wantErrIs: errors.Duplicated.New(),
 		},
 		{
 			name: "pub post with quoted post",
@@ -1101,13 +1117,9 @@ func TestService_PubPost(t *testing.T) {
 					Anonymous: true,
 					Author:    user1.ID.ToBase64String(),
 				},
-				Content: "content3",
-				Repo:    service.Forum.Repo,
-				Data: entity.PostData{
-					ThreadID:   thread.ID,
-					QuoteIDs:   []uid.UID{post.ID},
-					QuotePosts: []*entity.Post{post},
-				},
+				Content:  "content3",
+				ThreadID: thread.ID,
+				QuoteIDs: []uid.UID{post.ID},
 			},
 			checkQuoted: &quotedChecker{
 				quotedCount: 1,
@@ -1130,12 +1142,8 @@ func TestService_PubPost(t *testing.T) {
 					Anonymous: true,
 					Author:    userG.ID.ToBase64String(),
 				},
-				Content: "contentG",
-				Repo:    service.Forum.Repo,
-				Data: entity.PostData{
-					ThreadID:   thread.ID,
-					QuotePosts: []*entity.Post{},
-				},
+				Content:  "contentG",
+				ThreadID: thread.ID,
 			},
 		},
 	}
@@ -1153,28 +1161,153 @@ func TestService_PubPost(t *testing.T) {
 			if tt.args.post.Anonymous {
 				tt.want.Author.Author = got.Author.Author
 			}
-			if diff := cmp.Diff(got, tt.want, forumRepoComp); diff != "" {
+			if diff := cmp.Diff(got, tt.want); diff != "" {
 				t.Errorf("Service.PubPost() missmatch %s", diff)
 			}
-			if len(tt.want.Data.QuoteIDs) != 0 {
-				quoted, err := got.Quotes(tt.args.ctx)
+			if len(tt.want.QuoteIDs) != 0 {
+				quoted, err := service.Repo.Post.QuotedPosts(tt.args.ctx, got)
 				if err != nil {
 					t.Error(errors.Wrap(err, "Quotes()"))
 				}
 				if len(quoted) == 0 {
 					t.Error("should have a quoted post")
-				} else if diff := cmp.Diff(quoted[0], post, forumRepoComp); diff != "" {
+				} else if diff := cmp.Diff(quoted[0], post); diff != "" {
 					t.Errorf("Service.PubPost().Quotes() missmatch: %s", diff)
 				}
 			}
 			if tt.checkQuoted != nil {
-				gotCount, err := post.QuotedCount(tt.args.ctx)
+				gotCount, err := service.Repo.Post.QuotedCount(tt.args.ctx, post)
 				if err != nil {
 					t.Errorf("quotedPost.QuotedCount error: %v", err)
 				}
 				if gotCount != tt.checkQuoted.quotedCount {
-					t.Errorf("quotedPost.QuotedCount()=%v, want=%v", gotCount, tt.checkQuoted.quotedCount)
+					t.Errorf("Post(%v).QuotedCount()=%v, want=%v", post, gotCount, tt.checkQuoted.quotedCount)
 				}
+			}
+		})
+	}
+}
+
+func TestService_BlockPost(t *testing.T) {
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, ctx := initEnv(t, mainTags...)
+
+	thread, _ := pubThread(t, service, testUser{email: "t@example.com"})
+	oriPost, _ := pubPost(t, service, testUser{email: "p@example.com"}, thread.ID)
+	mod, _ := loginUser(t, service, testUser{email: "mod@example.com"})
+	mod.Role = entity.RoleMod
+	_, err := service.Repo.User.Update(ctx, mod)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oriPost.Blocked = true
+	oriPost.Content = entity.BlockedContent
+	_, modCtx := loginUser(t, service, testUser{email: "mod@example.com"})
+
+	t.Run("check post in memory", func(t *testing.T) {
+		post, err := service.BlockPost(modCtx, oriPost.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "BlockPost"))
+		}
+		oriPost.CreatedAt = post.CreatedAt
+		if diff := cmp.Diff(post, oriPost); diff != "" {
+			t.Errorf("BlockPost() post matched: %s", diff)
+		}
+	})
+	t.Run("check post in database", func(t *testing.T) {
+		post, err := service.GetPostByID(modCtx, oriPost.ID)
+		if err != nil {
+			t.Fatal(errors.Wrap(err, "GetPostByID"))
+		}
+		oriPost.CreatedAt = post.CreatedAt
+		if diff := cmp.Diff(post, oriPost); diff != "" {
+			t.Errorf("BlockPost() post matched: %s", diff)
+		}
+	})
+}
+
+func TestService_GetPostQuotedPosts(t *testing.T) {
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, _ := initEnv(t, mainTags...)
+
+	thread, _ := pubThread(t, service, testUser{email: "t@example", name: "a"})
+	post1, _ := pubPost(t, service, testUser{email: "1@example"}, thread.ID)
+	post2, _ := pubPost(t, service, testUser{email: "2@example"}, thread.ID)
+	post3, _ := pubPost(t, service, testUser{email: "3@example"}, thread.ID)
+	post4, ctx := pubPost(t, service, testUser{email: "4@example"}, thread.ID, post2.ID, post1.ID, post3.ID)
+
+	type args struct {
+		ctx  context.Context
+		post *entity.Post
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []*entity.Post
+		wantErr bool
+	}{
+		{
+			name: "quote 3, test order",
+			args: args{
+				ctx:  ctx,
+				post: post4,
+			},
+			want:    []*entity.Post{post2, post1, post3},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := service.GetPostQuotedPosts(tt.args.ctx, tt.args.post)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Service.GetPostQuotedPosts() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Service.GetPostQuotedPosts() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestService_GetPostQuotedCount(t *testing.T) {
+	mainTags := []string{"MainA", "MainB", "MainC"}
+	service, _ := initEnv(t, mainTags...)
+
+	thread, _ := pubThread(t, service, testUser{email: "t@example", name: "a"})
+	post1, ctx := pubPost(t, service, testUser{email: "1@example"}, thread.ID)
+	pubPost(t, service, testUser{email: "2@example"}, thread.ID, post1.ID)
+	pubPost(t, service, testUser{email: "3@example"}, thread.ID, post1.ID)
+
+	type args struct {
+		ctx  context.Context
+		post *entity.Post
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    int
+		wantErr bool
+	}{
+		{
+			name: "normal",
+			args: args{
+				ctx:  ctx,
+				post: post1,
+			},
+			want:    2,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := service.GetPostQuotedCount(tt.args.ctx, tt.args.post)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Service.GetPostQuotedCount() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Service.GetPostQuotedCount() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1300,9 +1433,11 @@ func TestService_GetUnreadNotiCount(t *testing.T) {
 				ctx: userCtx,
 			},
 			beforeTest: func(t *testing.T) {
-				if err := service.Noti.NewSystemNoti(
-					ctx, "welcome!", "welcome to abyss", entity.SendToGroup(entity.AllUser),
-				); err != nil {
+				noti, err := entity.NewSystemNoti("welcome!", "welcome to abyss", entity.SendToGroup(entity.AllUser))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := service.Repo.Noti.Insert(ctx, noti); err != nil {
 					t.Fatal(err)
 				}
 			},
@@ -1314,7 +1449,7 @@ func TestService_GetUnreadNotiCount(t *testing.T) {
 				ctx: userCtx,
 			},
 			beforeTest: func(t *testing.T) {
-				if _, err := service.GetNotification(userCtx, entity.SliceQuery{
+				if _, err := service.GetNotifications(userCtx, entity.SliceQuery{
 					After: algo.NullString(""),
 					Limit: 5,
 				}); err != nil {
@@ -1378,9 +1513,11 @@ func TestService_GetNotification(t *testing.T) {
 				query: entity.SliceQuery{After: algo.NullString(""), Limit: 5},
 			},
 			beforeTest: func(t *testing.T, want *entity.NotiSlice) {
-				if err := service.Noti.NewSystemNoti(
-					ctx, "Hi everyone!", "Let's Party!", entity.SendToGroup(entity.AllUser),
-				); err != nil {
+				noti, err := entity.NewSystemNoti("Hi everyone!", "Let's Party!", entity.SendToGroup(entity.AllUser))
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := service.Repo.Noti.Insert(ctx, noti); err != nil {
 					t.Fatal(err)
 				}
 				post, _ := pubPost(t, service, testUser{email: "p1@example.com"}, thread.ID)
@@ -1514,7 +1651,7 @@ func TestService_GetNotification(t *testing.T) {
 			}
 			user, ctx := loginUser(t, service, testUser{email: tt.args.email})
 			t.Logf("get user context: %#v, %#v", user, ctx)
-			got, err := service.GetNotification(ctx, tt.args.query)
+			got, err := service.GetNotifications(ctx, tt.args.query)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Service.GetNotification() error = %v, wantErr %v", err, tt.wantErr)
 				return

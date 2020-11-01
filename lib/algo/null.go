@@ -14,3 +14,10 @@ func NullToString(s *string) string {
 func NullInt(i int) *int {
 	return &i
 }
+
+func NullToIntDefault(i *int, def int) int {
+	if i == nil {
+		return def
+	}
+	return *i
+}

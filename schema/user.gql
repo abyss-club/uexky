@@ -8,9 +8,6 @@ extend type Mutation {
   An email containing sign info will be sent to the provided email address. 'redirectTo' must start as '/'.
   If the user succeed signed in, will be go to `redirectTo` or `/` (if not specified). """
   emailAuth(email: String!, redirectTo: String): Boolean!
-  """ Guest sign in. 'redirectTo' must start as '/'.
-  If the user succeed signed in, will be go to `redirectTo` or `/` (if not specified). """
-  guestAuth(redirectTo: String): Boolean!
   """ Set the Name of user."""
   setName(name: String!): User!
   """ Directly edit tags subscribed by user."""
@@ -22,14 +19,6 @@ extend type Mutation {
 
   """ Operations for moderators."""
   banUser(postId: UID, threadId: UID): Boolean!
-  """ Operations for moderators."""
-  blockPost(postId: UID!): Post!
-  """ Operations for moderators."""
-  lockThread(threadId: UID!): Thread!
-  """ Operations for moderators."""
-  blockThread(threadId: UID!): Thread!
-  """ Operations for moderators."""
-  editTags(threadId: UID!, mainTag: String!, subTags: [String!]!): Thread!
 }
 
 enum Role {

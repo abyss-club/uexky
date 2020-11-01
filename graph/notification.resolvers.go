@@ -11,11 +11,11 @@ import (
 )
 
 func (r *queryResolver) UnreadNotiCount(ctx context.Context) (int, error) {
-	return r.Service.GetUnreadNotiCount(ctx)
+	return r.Uexky.GetUnreadNotiCount(ctx)
 }
 
 func (r *queryResolver) Notification(ctx context.Context, query entity.SliceQuery) (*entity.NotiSlice, error) {
-	return r.Service.GetNotification(ctx, query)
+	return r.Uexky.GetNotifications(ctx, query)
 }
 
 // Query returns generated.QueryResolver implementation.

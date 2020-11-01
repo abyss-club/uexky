@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"gitlab.com/abyss.club/uexky/auth"
 	"gitlab.com/abyss.club/uexky/uexky"
 )
 
@@ -9,5 +10,6 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	Service *uexky.Service
+	Auth  *auth.Service
+	Uexky *uexky.Service
 }

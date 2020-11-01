@@ -7,22 +7,15 @@ package uexky
 
 import (
 	"github.com/google/wire"
-	"gitlab.com/abyss.club/uexky/lib/mail"
+	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/postgres"
 	"gitlab.com/abyss.club/uexky/lib/redis"
-	"gitlab.com/abyss.club/uexky/mocks"
-	"gitlab.com/abyss.club/uexky/repo"
-	"gitlab.com/abyss.club/uexky/uexky/adapter"
-	"gitlab.com/abyss.club/uexky/uexky/entity"
+	"gitlab.com/abyss.club/uexky/uexky/repo"
 )
 
 // Injectors from wire.go:
 
-func InitProdService() (*Service, error) {
-	client, err := redis.NewClient()
-	if err != nil {
-		return nil, err
-	}
+func InitUexkyService() (*Service, error) {
 	db, err := postgres.NewDB()
 	if err != nil {
 		return nil, err
@@ -30,102 +23,25 @@ func InitProdService() (*Service, error) {
 	txAdapter := &postgres.TxAdapter{
 		DB: db,
 	}
-	mainTag, err := repo.NewMainTag(txAdapter)
-	if err != nil {
-		return nil, err
-	}
-	userRepo := &repo.UserRepo{
-		Redis:    client,
-		MainTags: mainTag,
-	}
-	adapter := mail.NewAdapter()
-	userService := &entity.UserService{
-		Repo: userRepo,
-		Mail: adapter,
-	}
-	forumRepo := &repo.ForumRepo{
-		Redis:    client,
-		MainTags: mainTag,
-	}
-	forumService := &entity.ForumService{
-		Repo: forumRepo,
-	}
-	notiRepo := &repo.NotiRepo{}
-	notiService := &entity.NotiService{
-		Repo: notiRepo,
-	}
-	service := &Service{
-		User:      userService,
-		Forum:     forumService,
-		Noti:      notiService,
-		TxAdapter: txAdapter,
-	}
-	return service, nil
-}
-
-func InitDevService() (*Service, error) {
 	client, err := redis.NewClient()
 	if err != nil {
 		return nil, err
 	}
-	db, err := postgres.NewDB()
+	entityRepo := repo.NewRepo(client)
+	service, err := NewService(txAdapter, entityRepo)
 	if err != nil {
 		return nil, err
-	}
-	txAdapter := &postgres.TxAdapter{
-		DB: db,
-	}
-	mainTag, err := repo.NewMainTag(txAdapter)
-	if err != nil {
-		return nil, err
-	}
-	userRepo := &repo.UserRepo{
-		Redis:    client,
-		MainTags: mainTag,
-	}
-	mailAdapter := &mocks.MailAdapter{}
-	userService := &entity.UserService{
-		Repo: userRepo,
-		Mail: mailAdapter,
-	}
-	forumRepo := &repo.ForumRepo{
-		Redis:    client,
-		MainTags: mainTag,
-	}
-	forumService := &entity.ForumService{
-		Repo: forumRepo,
-	}
-	notiRepo := &repo.NotiRepo{}
-	notiService := &entity.NotiService{
-		Repo: notiRepo,
-	}
-	service := &Service{
-		User:      userService,
-		Forum:     forumService,
-		Noti:      notiService,
-		TxAdapter: txAdapter,
 	}
 	return service, nil
 }
 
 // wire.go:
 
-var serviceSet = wire.NewSet(wire.Struct(new(Service), "*"), wire.Struct(new(entity.ForumService), "*"), wire.Struct(new(entity.UserService), "*"), wire.Struct(new(entity.NotiService), "*"))
+var repoSet = wire.NewSet(wire.Struct(new(postgres.TxAdapter), "*"), wire.Bind(new(adapter.Tx), new(*postgres.TxAdapter)), postgres.NewDB, repo.NewRepo)
 
-var mailSet = wire.NewSet(wire.Bind(new(adapter.MailAdapter), new(*mail.Adapter)), mail.NewAdapter)
+var InfraSet = wire.NewSet(redis.NewClient)
 
-var repoSet = wire.NewSet(wire.Struct(new(postgres.TxAdapter), "*"), wire.Bind(new(adapter.Tx), new(*postgres.TxAdapter)), postgres.NewDB, repo.NewMainTag, redis.NewClient, wire.Struct(new(repo.ForumRepo), "*"), wire.Struct(new(repo.UserRepo), "*"), wire.Struct(new(repo.NotiRepo), "*"), wire.Bind(new(entity.ForumRepo), new(*repo.ForumRepo)), wire.Bind(new(entity.UserRepo), new(*repo.UserRepo)), wire.Bind(new(entity.NotiRepo), new(*repo.NotiRepo)))
-
-var mockMailSet = wire.NewSet(wire.Bind(new(adapter.MailAdapter), new(*mocks.MailAdapter)), wire.Struct(new(mocks.MailAdapter), "*"))
-
-var ProdServiceSet = wire.NewSet(
-	serviceSet,
+var ServiceSet = wire.NewSet(
 	repoSet,
-	mailSet,
-)
-
-var DevServiceSet = wire.NewSet(
-	serviceSet,
-	repoSet,
-	mockMailSet,
+	NewService,
 )

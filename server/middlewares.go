@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	"gitlab.com/abyss.club/uexky/uexky"
@@ -22,14 +23,25 @@ func (s *Server) withUser(next http.Handler) http.Handler {
 		if tokenCookie != nil {
 			tok = tokenCookie.Value
 		}
-		ctx, token, err := s.Service.CtxWithUserByToken(r.Context(), tok)
+		token, err := s.Resolver.Auth.GetToken(r.Context(), tok)
 		if err != nil {
 			writeError(w, err)
-			return
 		}
-		r = r.WithContext(ctx)
 
-		http.SetCookie(w, token.Cookie())
+		if token != nil {
+			var ctx context.Context
+			if token.User.IsGuest {
+				ctx, err = s.Resolver.Uexky.AttachGuestUserToCtx(r.Context(), token.User.UserID)
+			} else {
+				ctx, err = s.Resolver.Uexky.AttachEmailUserToCtx(r.Context(), token.User.Email)
+			}
+			if err != nil {
+				writeError(w, err)
+				return
+			}
+			r = r.WithContext(ctx)
+			http.SetCookie(w, token.Cookie())
+		}
 
 		next.ServeHTTP(w, r)
 	})
