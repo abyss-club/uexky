@@ -49,8 +49,8 @@ func (u *UserRepo) GetByID(ctx context.Context, id uid.UID) (*entity.User, error
 	if err == nil {
 		return user, nil
 	}
-	if !errors.Is(err, redis.Nil) {
-		return nil, librd.ErrHandlef(err, "GetUserByID(id=%v)", id)
+	if !errors.Is(err, errors.NotFound) {
+		return nil, err
 	}
 
 	// err is redis.Nil, find in database

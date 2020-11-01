@@ -73,28 +73,34 @@ func (e *Error) Code() string {
 	return e.t.Code()
 }
 
-func (e *Error) New(a ...interface{}) *Error {
+func (e *Error) New(a ...interface{}) error {
 	return &Error{
 		t: e.t,
 		e: pkgerrors.New(fmt.Sprint(a...)),
 	}
 }
 
-func (e *Error) Errorf(format string, a ...interface{}) *Error {
+func (e *Error) Errorf(format string, a ...interface{}) error {
 	return &Error{
 		t: e.t,
 		e: pkgerrors.New(fmt.Sprintf(format, a...)),
 	}
 }
 
-func (e *Error) Handle(err error, a ...interface{}) *Error {
+func (e *Error) Handle(err error, a ...interface{}) error {
+	if err == nil {
+		return nil
+	}
 	return &Error{
 		t: e.t,
 		e: pkgerrors.Wrap(err, fmt.Sprint(a...)),
 	}
 }
 
-func (e *Error) Handlef(err error, format string, a ...interface{}) *Error {
+func (e *Error) Handlef(err error, format string, a ...interface{}) error {
+	if err == nil {
+		return nil
+	}
 	return &Error{
 		t: e.t,
 		e: pkgerrors.Wrapf(err, format, a...),
