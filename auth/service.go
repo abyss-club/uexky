@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-redis/redis/v7"
+	log "github.com/sirupsen/logrus"
 	"gitlab.com/abyss.club/uexky/adapter"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/lib/errors"
@@ -67,6 +68,9 @@ func (s *Service) SignInByCode(ctx context.Context, code Code) (*Token, error) {
 	token := NewEmailToken(email)
 	if err := s.Repo.SetToken(ctx, token); err != nil {
 		return nil, errors.Wrap(err, "SetToken")
+	}
+	if err := s.Repo.DelCode(ctx, code); err != nil {
+		log.Error(errors.Wrap(err, "DelCode"))
 	}
 	return token, nil
 }

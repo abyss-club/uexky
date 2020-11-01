@@ -100,7 +100,7 @@ func (r *ThreadRepo) Catalog(ctx context.Context, thread *entity.Thread) ([]*ent
 	var cats []*entity.ThreadCatalogItem
 	for i := range posts {
 		cats = append(cats, &entity.ThreadCatalogItem{
-			PostID:    posts[i].ID.ToBase64String(),
+			PostID:    posts[i].ID,
 			CreatedAt: posts[i].CreatedAt,
 		})
 	}

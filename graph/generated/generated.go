@@ -1216,7 +1216,7 @@ type Thread {
 """ The ID and timestamp of post replied in the thread."""
 type ThreadCatalogItem {
   """ The ID of post."""
-  postId: String!
+  postId: UID!
   createdAt: Time!
 }
 
@@ -4121,9 +4121,9 @@ func (ec *executionContext) _ThreadCatalogItem_postId(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(uid.UID)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNUID2gitlabᚗcomᚋabyssᚗclubᚋuexkyᚋlibᚋuidᚐUID(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _ThreadCatalogItem_createdAt(ctx context.Context, field graphql.CollectedField, obj *entity.ThreadCatalogItem) (ret graphql.Marshaler) {

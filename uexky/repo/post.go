@@ -73,11 +73,16 @@ func (r *PostRepo) QuotedPosts(ctx context.Context, post *entity.Post) ([]*entit
 	if err := q.Select(); err != nil {
 		return nil, postgres.ErrHandlef(err, "GetPostsQuotedPosts(post=%+v)", post)
 	}
-	var ePosts []*entity.Post
+	ePostMap := map[uid.UID]*entity.Post{}
 	for i := range posts {
-		ePosts = append(ePosts, (&posts[i]).ToEntity())
+		p := (&posts[i]).ToEntity()
+		ePostMap[p.ID] = p
 	}
-	return ePosts, nil
+	var rst []*entity.Post
+	for _, id := range post.QuoteIDs {
+		rst = append(rst, ePostMap[id])
+	}
+	return rst, nil
 }
 
 func (r *PostRepo) QuotedCount(ctx context.Context, post *entity.Post) (int, error) {

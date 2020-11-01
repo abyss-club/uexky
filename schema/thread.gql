@@ -56,7 +56,7 @@ type Thread {
 """ The ID and timestamp of post replied in the thread."""
 type ThreadCatalogItem {
   """ The ID of post."""
-  postId: String!
+  postId: UID!
   createdAt: Time!
 }
 
