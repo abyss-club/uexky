@@ -1,9 +1,8 @@
 package errors
 
 import (
-	"fmt"
-
 	stderrors "errors"
+	"fmt"
 
 	pkgerrors "github.com/pkg/errors"
 )

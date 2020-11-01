@@ -107,7 +107,7 @@ func (e *Error) Handlef(err error, format string, a ...interface{}) error {
 	}
 }
 
-func (e *Error) Unwarp() error { return e.e }
+func (e *Error) Unwrap() error { return e.e }
 
 func (e *Error) Cause() error { return e.e }
 
