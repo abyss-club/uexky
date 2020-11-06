@@ -1,4 +1,4 @@
-package repo
+package main
 
 import (
 	"strconv"
@@ -95,14 +95,19 @@ func (m *Migrator) migrateMainTags(pTags []Tag) ([]string, error) {
 	return rst, nil
 }
 
-func maxUID(uids ...uid.UID) uid.UID {
-	var max uid.UID
+func minUID(uids ...uid.UID) uid.UID {
+	var min *uid.UID
 	for _, u := range uids {
-		if u > max {
-			max = u
+		if min == nil {
+			min = &u
+		} else if u < (*min) {
+			min = &u
 		}
 	}
-	return max
+	if min == nil {
+		return 0
+	}
+	return *min
 }
 
 func (m *Migrator) migrateUser(pUser *User, userIDMap, notiIDMap map[int]uid.UID) error {
@@ -117,7 +122,7 @@ func (m *Migrator) migrateUser(pUser *User, userIDMap, notiIDMap map[int]uid.UID
 		Tags:         nil,
 	}
 	// LastReadNoti
-	nUser.LastReadNoti = maxUID(
+	nUser.LastReadNoti = minUID(
 		notiIDMap[pUser.LastReadSystemNoti],
 		notiIDMap[pUser.LastReadRepliedNoti],
 		notiIDMap[pUser.LastReadQuotedNoti],
@@ -147,7 +152,7 @@ func (m *Migrator) migrateThread(pThread *Thread, userIDMap map[int]uid.UID, mai
 		LastPostID: pThread.LastPostID,
 		CreatedAt:  pThread.CreatedAt,
 		UpdatedAt:  pThread.UpdatedAt,
-		UserID:     userIDMap[pThread.User.ID],
+		UserID:     userIDMap[pThread.UserID],
 		Anonymous:  pThread.Anonymous,
 		Guest:      false,
 		Author:     "",
@@ -221,7 +226,7 @@ func (m *Migrator) migratePost(pPost *Post, userIDMap map[int]uid.UID) error {
 		return errors.Wrap(err, "find quoted posts")
 	}
 	for _, quoted := range quoteds {
-		nPost.QuotedIDs = append(nPost.QuotedIDs, quoted.Quoted.ID)
+		nPost.QuotedIDs = append(nPost.QuotedIDs, uid.UID(quoted.QuotedID))
 	}
 
 	if _, err := m.NewDB.Model(nPost).Returning("*").Insert(); err != nil {

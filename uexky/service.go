@@ -503,7 +503,7 @@ func (s *Service) newRepliedNoti(ctx context.Context, user *entity.User, thread 
 		if errors.Is(err, errors.NotFound) {
 			prev = nil
 		} else {
-			return errors.Wrap(err, "find prev replied noti")
+			return errors.Wrap(err, "find upgrade replied noti")
 		}
 	}
 	if prev == nil {
