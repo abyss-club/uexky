@@ -17,6 +17,11 @@ func init() {
 }
 
 func main() {
+	flag.Parse()
+	fmt.Println("prev db: ", prevDB, "new db:", newDB)
+	if prevDB == "" || newDB == "" {
+		panic("you should specified database")
+	}
 	var migrator Migrator
 	var err error
 	migrator.PrevDB, err = connectDB(prevDB)
