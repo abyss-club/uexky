@@ -1,4 +1,4 @@
-package main
+package upgrade
 
 import (
 	"strconv"
@@ -13,8 +13,9 @@ import (
 )
 
 type Migrator struct {
-	PrevDB *pg.DB
-	NewDB  *pg.DB
+	PrevDB  *pg.DB
+	NewDB   *pg.DB
+	NewDBTx *pg.Tx
 }
 
 func (m *Migrator) DoMigrate() error {
@@ -48,32 +49,34 @@ func (m *Migrator) DoMigrate() error {
 		notiIDMap[notis[i].ID] = uid.NewUIDFromTime(notis[i].UpdatedAt)
 	}
 
-	mainTags, err := m.migrateMainTags(pMainTags)
-	if err != nil {
-		return errors.Wrap(err, "migrateMainTags")
-	}
-	for i := range users {
-		if err := m.migrateUser(&users[i], userIDMap, notiIDMap); err != nil {
-			return err
+	return m.NewDB.RunInTransaction(func(tx *pg.Tx) error {
+		m.NewDBTx = tx
+		mainTags, err := m.migrateMainTags(pMainTags)
+		if err != nil {
+			return errors.Wrap(err, "migrateMainTags")
 		}
-	}
-	for i := range threads {
-		if err := m.migrateThread(&threads[i], userIDMap, mainTags); err != nil {
-			return err
+		for i := range users {
+			if err := m.migrateUser(&users[i], userIDMap, notiIDMap); err != nil {
+				return err
+			}
 		}
-	}
-	for i := range posts {
-		if err := m.migratePost(&posts[i], userIDMap); err != nil {
-			return err
+		for i := range threads {
+			if err := m.migrateThread(&threads[i], userIDMap, mainTags); err != nil {
+				return err
+			}
 		}
-	}
-	for i := range notis {
-		if err := m.migrateNotification(&notis[i], userIDMap, notiIDMap); err != nil {
-			return err
+		for i := range posts {
+			if err := m.migratePost(&posts[i], userIDMap); err != nil {
+				return err
+			}
 		}
-	}
-
-	return nil
+		for i := range notis {
+			if err := m.migrateNotification(&notis[i], userIDMap, notiIDMap); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func (m *Migrator) migrateMainTags(pTags []Tag) ([]string, error) {
@@ -85,7 +88,7 @@ func (m *Migrator) migrateMainTags(pTags []Tag) ([]string, error) {
 			TagType: &tagType,
 		})
 	}
-	if _, err := m.NewDB.Model(&tags).Insert(); err != nil {
+	if _, err := m.NewDBTx.Model(&tags).Insert(); err != nil {
 		return nil, errors.Wrap(err, "insert main tags")
 	}
 	var rst []string
@@ -127,20 +130,15 @@ func (m *Migrator) migrateUser(pUser *User, userIDMap, notiIDMap map[int]uid.UID
 		notiIDMap[pUser.LastReadRepliedNoti],
 		notiIDMap[pUser.LastReadQuotedNoti],
 	)
-	if nUser.ID == 0 || nUser.LastReadNoti == 0 {
-		return errors.New("user's id and last_read_noti can't be zero")
-	}
 	// Tags
 	var tags []UsersTag
 	if err := m.PrevDB.Model(&tags).Where("user_id = ?", pUser.ID).Select(); err != nil {
 		return errors.Wrap(err, "find user's tag")
-
 	}
 	for _, tag := range tags {
 		nUser.Tags = append(nUser.Tags, tag.TagName)
 	}
-
-	if _, err := m.NewDB.Model(nUser).Returning("*").Insert(); err != nil {
+	if _, err := m.NewDBTx.Model(nUser).Returning("*").Insert(); err != nil {
 		return errors.Wrapf(err, "insert user %v", pUser.ID)
 	}
 	return nil
@@ -186,7 +184,7 @@ func (m *Migrator) migrateThread(pThread *Thread, userIDMap map[int]uid.UID, mai
 	}
 	nThread.Tags = append([]string{mainTag}, subTags...)
 
-	if _, err := m.NewDB.Model(nThread).Returning("*").Insert(); err != nil {
+	if _, err := m.NewDBTx.Model(nThread).Returning("*").Insert(); err != nil {
 		return errors.Wrapf(err, "insert thread %v", pThread.ID)
 	}
 	return nil
@@ -221,7 +219,7 @@ func (m *Migrator) migratePost(pPost *Post, userIDMap map[int]uid.UID) error {
 
 	// QuotedIDs
 	var quoteds []PostsQuote
-	q := m.PrevDB.Model(&quoteds).Where("qouter_id = ?", pPost.ID).Order("quoted_id")
+	q := m.PrevDB.Model(&quoteds).Where("quoter_id = ?", pPost.ID).Order("quoted_id")
 	if err := q.Select(); err != nil {
 		return errors.Wrap(err, "find quoted posts")
 	}
@@ -229,7 +227,7 @@ func (m *Migrator) migratePost(pPost *Post, userIDMap map[int]uid.UID) error {
 		nPost.QuotedIDs = append(nPost.QuotedIDs, uid.UID(quoted.QuotedID))
 	}
 
-	if _, err := m.NewDB.Model(nPost).Returning("*").Insert(); err != nil {
+	if _, err := m.NewDBTx.Model(nPost).Returning("*").Insert(); err != nil {
 		return errors.Wrap(err, "insert post")
 	}
 	return nil
@@ -269,9 +267,9 @@ func (m *Migrator) migrateNotification(pNoti *Notification, userIDMap, notiIDMap
 		return errors.Errorf("invalide noti type")
 	}
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "parse notification (%v)", *pNoti.Key)
 	}
-	if _, err := m.NewDB.Model(&nNoti).Insert(); err != nil {
+	if _, err := m.NewDBTx.Model(&nNoti).Insert(); err != nil {
 		return errors.Wrap(err, "insert noti")
 	}
 	return nil
@@ -310,7 +308,7 @@ func (m *Migrator) fillRepliedContent(pNoti *Notification, nNoti *repo.Notificat
 		return errors.Wrapf(err, "invalivd thread id: %s", pc.ThreadID)
 	}
 	thread := repo.Thread{}
-	q := m.NewDB.Model(&thread).Where("id = ?", threadID)
+	q := m.NewDBTx.Model(&thread).Where("id = ?", threadID)
 	if err := q.Select(); err != nil {
 		return errors.Wrapf(err, "GetByID(id=%+v)", threadID)
 	}
@@ -335,7 +333,7 @@ func (m *Migrator) fillQuotedContent(pNoti *Notification, nNoti *repo.Notificati
 	type pContent struct {
 		ThreadID string `mapstructure:"threadId"`
 		QuotedID string `mapstructure:"quotedId"`
-		PostID   string `mapstructure:"threadId"`
+		PostID   string `mapstructure:"postId"`
 	}
 	var pc pContent
 	if err := mapstructure.Decode(pNoti.Content, &pc); err != nil {
@@ -355,11 +353,11 @@ func (m *Migrator) fillQuotedContent(pNoti *Notification, nNoti *repo.Notificati
 	}
 
 	var quoted repo.Post
-	if err := m.NewDB.Model(&quoted).Where("id = ?", quotedID).Select(); err != nil {
+	if err := m.NewDBTx.Model(&quoted).Where("id = ?", quotedID).Select(); err != nil {
 		return errors.Wrapf(err, "GetPost(id=%v)", quotedID)
 	}
 	var post repo.Post
-	if err := m.NewDB.Model(&post).Where("id = ?", postID).Select(); err != nil {
+	if err := m.NewDBTx.Model(&post).Where("id = ?", postID).Select(); err != nil {
 		return errors.Wrapf(err, "GetPost(id=%v)", postID)
 	}
 
