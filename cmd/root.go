@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gitlab.com/abyss.club/uexky/cmd/devtools"
+	"gitlab.com/abyss.club/uexky/cmd/upgrade"
 	"gitlab.com/abyss.club/uexky/lib/config"
 	"gitlab.com/abyss.club/uexky/server"
 )
@@ -14,7 +15,7 @@ import (
 func init() {
 	cobra.OnInitialize(initLog, initConfig)
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file")
-	rootCmd.AddCommand(migrateCmd, devtools.Command, uidCmd, adminCmd)
+	rootCmd.AddCommand(migrateCmd, devtools.Command, uidCmd, adminCmd, upgrade.Command)
 }
 
 func initLog() {
